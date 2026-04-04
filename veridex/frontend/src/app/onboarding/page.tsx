@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import GitHubConnectButton from '@/components/GitHubConnectButton';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
+import { updateProfile } from '@/lib/api';
 
 const PROFESSION_CATEGORIES = [
   { id: 'software', label: 'Software Engineering', icon: '💻' },
@@ -20,13 +22,39 @@ const ROLES = [
 ];
 
 export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[70vh]"><LoadingSpinner /></div>}>
+      <OnboardingContent />
+    </Suspense>
+  );
+}
+
+function OnboardingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, token, isLoading: authLoading, updateUser } = useAuth();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>(['worker']);
   const [professionCategory, setProfessionCategory] = useState<string | null>(null);
   const [githubConnected, setGithubConnected] = useState(false);
+
+  // Auth guard: redirect to verify if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/verify');
+    }
+  }, [user, authLoading, router]);
+
+  // Detect GitHub OAuth callback
+  useEffect(() => {
+    const githubStatus = searchParams.get('github');
+    if (githubStatus === 'connected') {
+      setGithubConnected(true);
+      setStep(3); // Go to platform connections step
+    }
+  }, [searchParams]);
 
   const toggleRole = (roleId: string) => {
     setSelectedRoles((prev) =>
@@ -37,15 +65,22 @@ export default function OnboardingPage() {
   };
 
   const handleGitHubConnect = () => {
-    // TODO: Implement GitHub OAuth flow
     setGithubConnected(true);
   };
 
   const handleComplete = async () => {
+    if (!token) return;
     setIsLoading(true);
     try {
-      // TODO: Save user profile to backend
-      // await updateUserProfile({ displayName, roles: selectedRoles, professionCategory });
+      const result = await updateProfile(
+        {
+          display_name: displayName,
+          roles: selectedRoles,
+          profession_category: professionCategory || 'other',
+        },
+        token
+      );
+      updateUser(result.user);
       router.push('/dashboard');
     } catch (error) {
       console.error('Failed to complete onboarding:', error);

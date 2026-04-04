@@ -391,3 +391,99 @@ GET  /api/stake/:userId        # Get user's stakes
 ## Questions?
 
 Ping in the team chat or check the code comments marked with `// TODO`.
+
+---
+
+**Person 1 Handoff Note (Apr 4):**
+
+Auth layer is fully implemented and live. World ID verification, JWT sessions, GitHub OAuth, and auth middleware are all wired end-to-end.
+
+### What was built
+
+**Session system:** Custom JWTs signed with `JWT_SECRET` (7-day expiry). Token is stored in `localStorage` as `veridex_token` and sent as `Authorization: Bearer <token>` on every authenticated request. The auth middleware now resolves to a real Supabase user UUID — no more `mock-user-id`.
+
+**World ID:** Uses `@worldcoin/idkit` (IDKit v4) — works in any browser via QR code, no World App required. Backend signs an `rp_context` using `@worldcoin/idkit-server` which the frontend fetches before opening the widget. Proof is verified against `https://developer.world.org/api/v4/verify/{rp_id}`.
+
+**React Auth Context:** Available via `useAuth()` from `@/contexts/AuthContext`. Provides `{ user, token, isLoading, login, logout, updateUser }`. Hydrates from localStorage on page load via `GET /api/auth/me` — refresh-safe.
+
+**GitHub OAuth:** Full server-side flow. The user's JWT is encoded into the OAuth `state` param so the callback can associate the GitHub account to the right user. After callback, `worker_profiles.github_username` and `github_data` are populated.
+
+### Files created
+| File | Purpose |
+|------|---------|
+| `veridex/frontend/src/contexts/AuthContext.tsx` | React auth context + localStorage session |
+| `veridex/frontend/src/components/Providers.tsx` | Client wrapper for `layout.tsx` |
+
+### Files modified
+| File | What changed |
+|------|-------------|
+| `veridex/backend/src/middleware/auth.ts` | Real JWT verification (was hardcoded `mock-user-id`) |
+| `veridex/backend/src/routes/auth.ts` | JWT generation, `/me`, `/profile`, `/rp-context`, full GitHub OAuth callback |
+| `veridex/backend/.env.example` | Added `JWT_SECRET`, `WORLD_RP_ID`, `WORLD_ID_PRIVATE_KEY`, fixed `GITHUB_CALLBACK_URL` (was port 3000, must be 8000) |
+| `veridex/frontend/src/components/WorldIDButton.tsx` | Real IDKit widget (was mock) with dev-mode fallback |
+| `veridex/frontend/src/components/Navbar.tsx` | Consumes `useAuth()` — shows real user + logout button |
+| `veridex/frontend/src/components/GitHubConnectButton.tsx` | Real OAuth redirect with token |
+| `veridex/frontend/src/app/verify/page.tsx` | Wired to backend + Auth Context login + redirect logic |
+| `veridex/frontend/src/app/onboarding/page.tsx` | Auth guard, GitHub detection, profile save |
+| `veridex/frontend/src/app/layout.tsx` | Wrapped with `<Providers>` |
+| `veridex/frontend/src/lib/api.ts` | Added `verifyWorldId`, `getMe`, `updateProfile` |
+| `veridex/frontend/src/lib/worldid.ts` | Cleaned up stubs, kept types + `isDevMode()` |
+
+### How to set up
+
+**Backend `backend/.env`** — create this file (not committed):
+```env
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+WORLD_APP_ID=app_8d1cc770a29beeb3298b2d1b8c8542d3
+WORLD_RP_ID=rp_dd4522c570eaf65d
+WORLD_ID_PRIVATE_KEY=0x27b2ac78b1a2d08fc423a88d7bcd1e515bcf5495517637a9741b1f31fc985a43
+WORLD_ID_ACTION=verify-human
+JWT_SECRET=veridex-hackathon-secret-2024
+DEV_SKIP_WORLDID_VERIFY=false
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
+GITHUB_CALLBACK_URL=http://localhost:8000/api/auth/github/callback
+PORT=8000
+FRONTEND_URL=http://localhost:3000
+GEMINI_SCORING_API_KEY=...
+GEMINI_CHATBOT_API_KEY=...
+```
+
+**Frontend `frontend/.env.local`** — create this file (not committed):
+```env
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_WORLD_APP_ID=app_8d1cc770a29beeb3298b2d1b8c8542d3
+NEXT_PUBLIC_DEV_MOCK_WORLDID=false
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+Set `NEXT_PUBLIC_DEV_MOCK_WORLDID=true` and `DEV_SKIP_WORLDID_VERIFY=true` to bypass World ID during local dev (no phone scan needed).
+
+### How to use auth from other code (P2, P3, P4)
+
+**Getting a token (for testing):**
+```bash
+curl -X POST http://localhost:8000/api/auth/verify \
+  -H "Content-Type: application/json" \
+  -d '{"merkle_root":"test","nullifier_hash":"test-user-1","proof":"test","verification_level":"orb"}'
+# Returns: { success: true, user: {...}, isNewUser: true, token: "eyJ..." }
+```
+(Requires `DEV_SKIP_WORLDID_VERIFY=true` on backend)
+
+**Making authenticated API calls (frontend):**
+```typescript
+import { useAuth } from '@/contexts/AuthContext';
+const { user, token } = useAuth();
+// token is the Bearer token — pass it to any api.ts function that takes a token param
+```
+
+**New API endpoints added:**
+- `GET /api/auth/rp-context` — get signed World ID context (called by WorldIDButton internally)
+- `GET /api/auth/me` — returns the current user (requires Bearer token)
+- `PUT /api/auth/profile` — update `display_name`, `roles`, `profession_category` (requires Bearer token)
+
+**Notes for P2:** After GitHub OAuth completes, `worker_profiles.github_username` is populated. You can then call `POST /api/reputation/ingest` for that user to pull their GitHub data.
+
+**Notes for P3:** Use `useAuth()` hook for the current user everywhere. Call `updateProfile()` from `api.ts` to save onboarding data. Auth guards: check `if (!user && !isLoading) router.push('/verify')`.

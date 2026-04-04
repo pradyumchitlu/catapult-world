@@ -1,35 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import WorldIDButton from '@/components/WorldIDButton';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function VerifyPage() {
   const router = useRouter();
-  const [isVerifying, setIsVerifying] = useState(false);
+  const { user, isLoading, login } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
-  const handleVerificationSuccess = async (proof: any) => {
-    setIsVerifying(true);
-    setError(null);
+  // If already logged in, redirect
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, isLoading, router]);
 
-    try {
-      // TODO: Send proof to backend for verification
-      // const result = await verifyWorldId(proof);
-      // Store user session
-      // Redirect to onboarding
+  const handleVerificationSuccess = (result: { user: any; isNewUser: boolean; token: string }) => {
+    setError(null);
+    login(result.token, result.user);
+
+    if (result.isNewUser) {
       router.push('/onboarding');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed');
-    } finally {
-      setIsVerifying(false);
+    } else {
+      router.push('/dashboard');
     }
   };
 
   const handleVerificationError = (error: string) => {
     setError(error);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh]">
@@ -39,17 +49,10 @@ export default function VerifyPage() {
           Prove you&apos;re a unique human with World ID. This is the foundation of your trust profile.
         </p>
 
-        {isVerifying ? (
-          <div className="flex flex-col items-center gap-4">
-            <LoadingSpinner />
-            <p className="text-worldcoin-gray-400">Verifying...</p>
-          </div>
-        ) : (
-          <WorldIDButton
-            onSuccess={handleVerificationSuccess}
-            onError={handleVerificationError}
-          />
-        )}
+        <WorldIDButton
+          onSuccess={handleVerificationSuccess}
+          onError={handleVerificationError}
+        />
 
         {error && (
           <div className="mt-4 p-3 bg-veridex-error/20 border border-veridex-error rounded-lg text-veridex-error text-sm">

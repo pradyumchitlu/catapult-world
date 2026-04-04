@@ -1,17 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import type { User } from '@/types';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Navbar() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const router = useRouter();
 
-  useEffect(() => {
-    // TODO: Get current user from auth context/session
-    // Placeholder: check if user is logged in
-  }, []);
+  const handleLogout = () => {
+    logout();
+    router.push('/');
+  };
 
   const navLinks = [
     { href: '/browse', label: 'Browse Workers' },
@@ -61,6 +63,12 @@ export default function Navbar() {
                   </div>
                   <span className="hidden sm:inline text-sm">{user.display_name}</span>
                 </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-worldcoin-gray-400 hover:text-white transition-colors"
+                >
+                  Logout
+                </button>
               </>
             ) : (
               <Link href="/verify" className="btn-primary text-sm">

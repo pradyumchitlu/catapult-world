@@ -1,16 +1,24 @@
 'use client';
 
+import { useAuth } from '@/contexts/AuthContext';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface GitHubConnectButtonProps {
   onConnect: () => void;
   isConnected: boolean;
 }
 
 export default function GitHubConnectButton({ onConnect, isConnected }: GitHubConnectButtonProps) {
+  const { token } = useAuth();
+
   const handleConnect = () => {
-    // TODO: Implement GitHub OAuth flow
-    // Redirect to backend OAuth endpoint
-    // window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/github`;
-    onConnect();
+    if (token) {
+      // Redirect to backend GitHub OAuth with user's JWT in query param
+      window.location.href = `${API_URL}/api/auth/github?token=${token}`;
+    } else {
+      onConnect();
+    }
   };
 
   return (
