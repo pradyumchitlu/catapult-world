@@ -67,17 +67,14 @@ export default function LandingPage() {
       {/* Spacer so content starts below the splash */}
       <div style={{ height: '100vh' }} />
 
-      <div style={{ ...col, maxWidth: '860px', paddingTop: '0' }}>
+      <div style={{ ...col, maxWidth: '1000px', paddingTop: '0' }}>
         {/* ── 1. Hero ─────────────────────────────────────────────── */}
         <div
           style={{
             position: 'relative',
             zIndex: 1,
             paddingTop: '80px',
-            paddingBottom: '64px',
-            background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)',
-            backgroundSize: '400% 400%',
-            animation: 'aurora-shift 10s ease infinite',
+            paddingBottom: '100px',
           }}
         >
           <h1 style={{ ...headingLg, margin: '0 0 28px 0' }}>
@@ -106,220 +103,203 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        {/* ── 2. Protocol Flow ──────────────────────────────────────── */}
-        <GlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
+        {/* ── 2. How It Works — full-width, 2×2 inner grid ───────────── */}
+        <GlassCard className="fade-up fade-up-2" style={{ marginBottom: '20px' }}>
           <span style={sectionLabel}>How It Works</span>
-
-          {[
-            {
-              num: '01',
-              title: 'Verify',
-              body: 'Prove you\'re human with World ID proof-of-personhood. Connect GitHub, add professional credentials, or build reputation purely through peer reviews.',
-            },
-            {
-              num: '02',
-              title: 'Score',
-              body: 'An auditable algorithm computes your trust score from verified signals — developer activity, peer reviews, and staking data. Six components, weighted by what\'s available.',
-            },
-            {
-              num: '03',
-              title: 'Stake',
-              body: 'People who believe in you stake WLD on your reputation. Staking creates skin-in-the-game — higher stakes mean more impact on your trust score. Three integrity mechanisms prevent gaming.',
-            },
-            {
-              num: '04',
-              title: 'Evaluate',
-              body: 'Clients evaluate workers through an AI chatbot grounded in real data. Paste a job description and get a contextual fit score with evidence — not guesswork.',
-            },
-          ].map((step, i, arr) => (
-            <div key={step.num}>
-              <div style={{ padding: i === 0 ? '0 0 32px 0' : '32px 0' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '36px',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <span
-                    style={{
-                      ...gradientText,
-                      fontFamily: 'var(--font-fraunces), Georgia, serif',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      letterSpacing: '0.04em',
-                      lineHeight: '1.75',
-                      minWidth: '24px',
-                    }}
-                  >
-                    {step.num}
-                  </span>
-                  <div>
-                    <p style={{ ...headingSm, margin: '0 0 10px 0' }}>
-                      {step.title}
-                    </p>
-                    <p style={textSecondary}>{step.body}</p>
-                  </div>
-                </div>
-              </div>
-              {i < arr.length - 1 && <div style={separator} />}
-            </div>
-          ))}
-        </GlassCard>
-
-        {/* ── 3. Capabilities ──────────────────────────────────────── */}
-        <GlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
-          <span style={sectionLabel}>Capabilities</span>
-
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '32px',
+            }}
+          >
             {[
               {
-                title: 'Portable Identity',
-                body: 'Your trust score travels with you. No more starting from zero on every new platform, marketplace, or collaboration.',
+                num: '01',
+                title: 'Verify',
+                body: "Prove you're human with World ID proof-of-personhood. Connect GitHub, add professional credentials, or build reputation purely through peer reviews.",
               },
               {
-                title: 'Staked Reviews',
-                body: 'Reviewers back their feedback with WLD. Higher stakes mean more impact on your score — and more accountability.',
+                num: '02',
+                title: 'Score',
+                body: "An auditable algorithm computes your trust score from verified signals — developer activity, peer reviews, and staking data. Six components, weighted by what's available.",
               },
               {
-                title: 'Social Staking',
-                body: 'Anyone can stake WLD on workers they believe in. Your network\'s conviction becomes economic signal.',
+                num: '03',
+                title: 'Stake',
+                body: "People who believe in you stake WLD on your reputation. Staking creates skin-in-the-game — higher stakes mean more impact on your trust score. Three integrity mechanisms prevent gaming.",
               },
               {
-                title: 'AI Evaluation',
-                body: 'Clients chat with an AI grounded in real data — repos, reviews, scores. No hallucinated credentials.',
+                num: '04',
+                title: 'Evaluate',
+                body: "Clients evaluate workers through an AI chatbot grounded in real data. Paste a job description and get a contextual fit score with evidence — not guesswork.",
               },
-              {
-                title: 'Agent Delegation',
-                body: 'Spawn AI agents that inherit 70% of your trust score. Full accountability — anyone can trace agent to human.',
-              },
-              {
-                title: 'Open Protocol',
-                body: 'External APIs let any platform query trust scores and agent identities. Build on top of the trust layer.',
-              },
-            ].map((feature, i, arr) => (
-              <div key={feature.title}>
-                <div
+            ].map((step) => (
+              <div key={step.num}>
+                <span
                   style={{
-                    display: 'flex',
-                    gap: '32px',
-                    padding: i === 0 ? '0 0 28px 0' : '28px 0',
-                    alignItems: 'flex-start',
+                    ...gradientText,
+                    fontFamily: 'var(--font-fraunces), Georgia, serif',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    display: 'block',
+                    marginBottom: '10px',
                   }}
                 >
-                  <p
-                    style={{
-                      ...headingSm,
-                      fontSize: '15px',
-                      minWidth: '180px',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {feature.title}
-                  </p>
-                  <p
-                    style={{
-                      ...textSecondary,
-                      fontSize: '15px',
-                      lineHeight: '1.6',
-                    }}
-                  >
-                    {feature.body}
-                  </p>
-                </div>
-                {i < arr.length - 1 && <div style={separator} />}
+                  {step.num}
+                </span>
+                <p style={{ ...headingSm, margin: '0 0 8px 0' }}>{step.title}</p>
+                <p style={{ ...textSecondary, fontSize: '14px', lineHeight: '1.65' }}>{step.body}</p>
               </div>
             ))}
           </div>
         </GlassCard>
 
-        {/* ── 4. Integrity Pull-quote ────────────────────────────────── */}
-        <GlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
-          <span style={sectionLabel}>Trust Integrity</span>
+        {/* ── 3–5. Bento grid ──────────────────────────────────────────── */}
+        <div className="bento-grid">
 
-          <div style={{ position: 'relative', marginBottom: '32px' }}>
-            <span
+          {/* Capabilities — left, row 1 */}
+          <GlassCard
+            className="fade-up fade-up-2"
+            style={{ gridColumn: '1', gridRow: '1' }}
+          >
+            <span style={sectionLabel}>Capabilities</span>
+            <div
               style={{
-                ...gradientText,
-                fontFamily: 'var(--font-fraunces), Georgia, serif',
-                fontSize: '120px',
-                fontWeight: 700,
-                lineHeight: '0.7',
-                display: 'block',
-                marginBottom: '-16px',
-                opacity: 0.35,
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '24px 32px',
               }}
             >
-              &ldquo;
-            </span>
-            <blockquote
+              {[
+                {
+                  title: 'Portable Identity',
+                  body: 'Your trust score travels with you across every platform and collaboration.',
+                },
+                {
+                  title: 'Staked Reviews',
+                  body: 'Reviewers back their feedback with WLD — higher stakes mean more accountability.',
+                },
+                {
+                  title: 'Social Staking',
+                  body: "Anyone can stake WLD on workers they believe in. Your network's conviction becomes signal.",
+                },
+                {
+                  title: 'AI Evaluation',
+                  body: 'Clients chat with an AI grounded in real data — repos, reviews, scores. No guesswork.',
+                },
+                {
+                  title: 'Agent Delegation',
+                  body: 'Spawn AI agents that inherit 70% of your trust score with full traceability.',
+                },
+                {
+                  title: 'Open Protocol',
+                  body: 'External APIs let any platform query trust scores and agent identities.',
+                },
+              ].map((feature) => (
+                <div key={feature.title}>
+                  <p style={{ ...headingSm, fontSize: '14px', margin: '0 0 6px 0' }}>
+                    {feature.title}
+                  </p>
+                  <p style={{ ...textSecondary, fontSize: '14px', lineHeight: '1.6' }}>
+                    {feature.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+
+          {/* Trust Integrity — right, spans rows 1+2 */}
+          <GlassCard
+            className="fade-up fade-up-2"
+            style={{ gridColumn: '2', gridRow: '1 / 3' }}
+          >
+            <span style={sectionLabel}>Trust Integrity</span>
+
+            <div style={{ position: 'relative', marginBottom: '28px' }}>
+              <span
+                style={{
+                  ...gradientText,
+                  fontFamily: 'var(--font-fraunces), Georgia, serif',
+                  fontSize: '96px',
+                  fontWeight: 700,
+                  lineHeight: '0.7',
+                  display: 'block',
+                  marginBottom: '-12px',
+                  opacity: 0.3,
+                }}
+              >
+                &ldquo;
+              </span>
+              <blockquote
+                style={{
+                  fontFamily: 'var(--font-fraunces), Georgia, serif',
+                  fontSize: '22px',
+                  fontWeight: 400,
+                  fontStyle: 'italic',
+                  lineHeight: '1.4',
+                  letterSpacing: '-0.01em',
+                  color: '#1E293B',
+                  margin: 0,
+                }}
+              >
+                Trust that can&apos;t be gamed is trust worth building on.
+              </blockquote>
+            </div>
+
+            <div style={{ ...separator, margin: '24px 0' }} />
+
+            <p style={{ ...textSecondary, fontSize: '14px', lineHeight: '1.7', margin: '0 0 16px 0' }}>
+              Three integrity mechanisms prevent manipulation. Reviews are weighted
+              by reviewer credibility and stake amount — a low-trust reviewer with a
+              tiny stake barely moves the needle. Mutual reviews are automatically
+              detected and flagged.
+            </p>
+            <p style={{ ...textSecondary, fontSize: '14px', lineHeight: '1.7' }}>
+              Stake concentration has diminishing returns — the first 100 WLD from
+              one staker counts fully, but each additional 100 WLD is worth
+              progressively less. No single actor can inflate a score.
+            </p>
+          </GlassCard>
+
+          {/* Get Started — left, row 2 */}
+          <GlassCard
+            className="fade-up fade-up-3"
+            style={{ gridColumn: '1', gridRow: '2' }}
+          >
+            <span style={sectionLabel}>Get Started</span>
+
+            <h2 style={{ ...headingMd, margin: '0 0 16px 0' }}>
+              Build your portable trust profile today.
+            </h2>
+
+            <p style={{ ...textSecondary, maxWidth: '420px', margin: '0 0 28px 0' }}>
+              Verify with World ID, connect your credentials, and start building
+              reputation that belongs to you. Every verified user starts with 1,000 WLD.
+            </p>
+
+            <Link
+              href="/verify"
               style={{
-                fontFamily: 'var(--font-fraunces), Georgia, serif',
-                fontSize: '28px',
-                fontWeight: 400,
-                fontStyle: 'italic',
-                lineHeight: '1.35',
-                letterSpacing: '-0.01em',
-                color: '#1E293B',
-                margin: 0,
+                fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                fontSize: '15px',
+                fontWeight: 500,
+                color: '#2563EB',
+                textDecoration: 'none',
+                borderBottom: '1.5px solid rgba(37,99,235,0.4)',
+                paddingBottom: '2px',
+                transition: 'border-color 0.15s ease',
               }}
             >
-              Trust that can&apos;t be gamed is trust worth building on.
-            </blockquote>
-          </div>
+              Verify Your Identity →
+            </Link>
+          </GlassCard>
 
-          <p style={{ ...textSecondary, margin: '0 0 20px 0' }}>
-            Three integrity mechanisms prevent manipulation. Reviews are weighted
-            by reviewer credibility and stake amount — a low-trust reviewer with a
-            tiny stake barely moves the needle. Mutual reviews are automatically
-            detected and flagged.
-          </p>
-          <p style={textSecondary}>
-            Stake concentration has diminishing returns — the first 100 WLD from
-            one staker counts fully, but each additional 100 WLD is worth
-            progressively less. No single actor can inflate a score.
-          </p>
-        </GlassCard>
-
-        {/* ── 5. CTA ────────────────────────────────────────────────── */}
-        <GlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
-          <span style={sectionLabel}>Get Started</span>
-
-          <h2 style={{ ...headingMd, margin: '0 0 20px 0' }}>
-            Build your portable trust profile today.
-          </h2>
-
-          <p
-            style={{
-              ...textSecondary,
-              maxWidth: '480px',
-              margin: '0 0 32px 0',
-            }}
-          >
-            Verify with World ID, connect your credentials, and start building
-            reputation that belongs to you. Every verified user starts with 1,000
-            WLD.
-          </p>
-
-          <Link
-            href="/verify"
-            style={{
-              fontFamily: 'var(--font-inter), system-ui, sans-serif',
-              fontSize: '16px',
-              fontWeight: 500,
-              color: '#2563EB',
-              textDecoration: 'none',
-              borderBottom: '1.5px solid rgba(37,99,235,0.4)',
-              paddingBottom: '2px',
-              transition: 'border-color 0.15s ease',
-            }}
-          >
-            Verify Your Identity →
-          </Link>
-        </GlassCard>
+        </div>
 
         {/* ── 6. Footer ─────────────────────────────────────────────── */}
-        <GlassCard>
+        <GlassCard style={{ marginBottom: '64px' }}>
           <div
             style={{
               display: 'flex',
