@@ -1,82 +1,81 @@
 'use client';
 
+import { colors } from '@/lib/styles';
 import type { QueryLogEntry } from '@/types';
 
 interface QueryLogProps {
   entries: QueryLogEntry[];
 }
 
+const TYPE_LABEL: Record<string, string> = {
+  profile_view: 'Profile View',
+  api_query: 'API Query',
+  chat_query: 'Chat Evaluation',
+  contextual_score: 'Fit Score',
+};
+
+const TYPE_STYLE: Record<string, { background: string; color: string }> = {
+  profile_view:     { background: 'rgba(100,116,139,0.1)', color: colors.textTertiary },
+  api_query:        { background: 'rgba(14,165,233,0.1)',  color: '#0EA5E9' },
+  chat_query:       { background: 'rgba(37,99,235,0.1)',   color: colors.primary },
+  contextual_score: { background: 'rgba(245,158,11,0.1)',  color: colors.warning },
+};
+
 export default function QueryLog({ entries }: QueryLogProps) {
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getQueryTypeLabel = (type: string) => {
-    switch (type) {
-      case 'profile_view':
-        return 'Profile View';
-      case 'api_query':
-        return 'API Query';
-      case 'chat_query':
-        return 'Chat Evaluation';
-      case 'contextual_score':
-        return 'Fit Score';
-      default:
-        return type;
-    }
-  };
-
-  const getQueryTypeColor = (type: string) => {
-    switch (type) {
-      case 'profile_view':
-        return 'bg-worldcoin-gray-600';
-      case 'api_query':
-        return 'bg-veridex-secondary/20 text-veridex-secondary';
-      case 'chat_query':
-        return 'bg-veridex-primary/20 text-veridex-primary';
-      case 'contextual_score':
-        return 'bg-veridex-warning/20 text-veridex-warning';
-      default:
-        return 'bg-worldcoin-gray-600';
-    }
-  };
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   if (entries.length === 0) {
     return (
-      <div className="text-center py-8 text-worldcoin-gray-400">
+      <div style={{ textAlign: 'center', padding: '32px 0', color: '#94A3B8', fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '14px' }}>
         No profile views yet.
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', fontSize: '13px', fontFamily: 'var(--font-inter), system-ui, sans-serif', borderCollapse: 'collapse' }}>
         <thead>
-          <tr className="text-worldcoin-gray-400 text-left">
-            <th className="pb-3 font-medium">Viewer</th>
-            <th className="pb-3 font-medium">Type</th>
-            <th className="pb-3 font-medium text-right">Time</th>
+          <tr>
+            {['Viewer', 'Type', 'Time'].map((h, i) => (
+              <th
+                key={h}
+                style={{
+                  paddingBottom: '12px',
+                  fontWeight: 500,
+                  color: colors.textMuted,
+                  textAlign: i === 2 ? 'right' : 'left',
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  fontSize: '11px',
+                }}
+              >
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-worldcoin-gray-700">
-          {entries.map((entry) => (
-            <tr key={entry.id}>
-              <td className="py-3">
+        <tbody>
+          {entries.map((entry, i) => (
+            <tr key={entry.id} style={{ borderTop: i > 0 ? '1px solid rgba(37,99,235,0.08)' : 'none' }}>
+              <td style={{ padding: '12px 0', color: colors.textPrimary }}>
                 {entry.querier_info || 'Anonymous'}
               </td>
-              <td className="py-3">
-                <span className={`px-2 py-1 rounded text-xs ${getQueryTypeColor(entry.query_type)}`}>
-                  {getQueryTypeLabel(entry.query_type)}
+              <td style={{ padding: '12px 0' }}>
+                <span
+                  style={{
+                    ...(TYPE_STYLE[entry.query_type] || TYPE_STYLE.profile_view),
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                  }}
+                >
+                  {TYPE_LABEL[entry.query_type] || entry.query_type}
                 </span>
               </td>
-              <td className="py-3 text-right text-worldcoin-gray-400">
+              <td style={{ padding: '12px 0', textAlign: 'right', color: colors.textMuted }}>
                 {formatDate(entry.created_at)}
               </td>
             </tr>

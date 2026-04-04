@@ -1,6 +1,7 @@
 'use client';
 
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import { sectionLabel, headingSm, colors } from '@/lib/styles';
 import type { ScoreComponents } from '@/types';
 
 interface ScoreBreakdownProps {
@@ -16,57 +17,112 @@ const COMPONENT_LABELS: Record<keyof ScoreComponents, string> = {
   peer_trust: 'Peer Trust',
 };
 
+function getBarColor(value: number): string {
+  if (value >= 80) return colors.success;
+  if (value >= 60) return colors.primary;
+  if (value >= 40) return colors.warning;
+  return colors.rose;
+}
+
 export default function ScoreBreakdown({ components }: ScoreBreakdownProps) {
-  const chartData = Object.entries(components).map(([key, value]) => ({
-    component: COMPONENT_LABELS[key as keyof ScoreComponents],
+  const entries = Object.entries(components) as [keyof ScoreComponents, number][];
+  const hasData = entries.some(([, v]) => v > 0);
+
+  const chartData = entries.map(([key, value]) => ({
+    component: COMPONENT_LABELS[key],
     value,
     fullMark: 100,
   }));
 
   return (
-    <div className="card">
-      <h3 className="text-lg font-semibold mb-4">Score Breakdown</h3>
+    <div
+      className="rounded-2xl border border-white/40 bg-white/30 backdrop-blur-xl shadow-[0_8px_32px_rgba(37,99,235,0.06)]"
+      style={{ padding: '28px' }}
+    >
+      <span style={sectionLabel}>Score Breakdown</span>
 
-      {/* Radar Chart */}
-      <div className="h-64 mb-6">
-        <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={chartData}>
-            <PolarGrid stroke="#404040" />
-            <PolarAngleAxis
-              dataKey="component"
-              tick={{ fill: '#A3A3A3', fontSize: 12 }}
-            />
-            <PolarRadiusAxis
-              angle={90}
-              domain={[0, 100]}
-              tick={{ fill: '#737373', fontSize: 10 }}
-            />
-            <Radar
-              name="Score"
-              dataKey="value"
-              stroke="#2563EB"
-              fill="#2563EB"
-              fillOpacity={0.3}
-            />
-          </RadarChart>
-        </ResponsiveContainer>
+      {/* Radar Chart — only render when there is non-zero data.
+          recharts generates d="Z" (invalid SVG path) when all values are 0,
+          because the polygon degenerates to a single point. */}
+      <div style={{ height: '240px', marginBottom: '24px' }}>
+        {hasData ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={chartData}>
+              <PolarGrid stroke="rgba(37,99,235,0.12)" />
+              <PolarAngleAxis
+                dataKey="component"
+                tick={{ fill: colors.textTertiary, fontSize: 11, fontFamily: 'var(--font-inter), system-ui, sans-serif' }}
+              />
+              <PolarRadiusAxis
+                angle={90}
+                domain={[0, 100]}
+                tick={{ fill: colors.textMuted, fontSize: 9 }}
+                axisLine={false}
+              />
+              <Radar
+                name="Score"
+                dataKey="value"
+                stroke={colors.primary}
+                fill={colors.primary}
+                fillOpacity={0.15}
+                strokeWidth={2}
+              />
+            </RadarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', border: '2px dashed rgba(37,99,235,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '28px', opacity: 0.4 }}>📊</span>
+            </div>
+            <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: colors.textMuted, margin: 0 }}>
+              Score components will appear after GitHub sync
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Component List */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Component bars */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         {Object.entries(components).map(([key, value]) => (
-          <div key={key} className="flex justify-between items-center">
-            <span className="text-sm text-worldcoin-gray-400">
-              {COMPONENT_LABELS[key as keyof ScoreComponents]}
-            </span>
-            <div className="flex items-center gap-2">
-              <div className="w-16 h-2 bg-worldcoin-gray-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-veridex-primary rounded-full"
-                  style={{ width: `${value}%` }}
-                />
-              </div>
-              <span className="text-sm font-medium w-8 text-right">{value}</span>
+          <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                  fontSize: '12px',
+                  color: colors.textTertiary,
+                }}
+              >
+                {COMPONENT_LABELS[key as keyof ScoreComponents]}
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: getBarColor(value),
+                }}
+              >
+                {value}
+              </span>
+            </div>
+            <div
+              style={{
+                height: '4px',
+                borderRadius: '2px',
+                background: 'rgba(37,99,235,0.1)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${value}%`,
+                  borderRadius: '2px',
+                  background: getBarColor(value),
+                  transition: 'width 0.6s ease-in-out',
+                }}
+              />
             </div>
           </div>
         ))}

@@ -20,23 +20,27 @@ export default function VerifyPage() {
   const router = useRouter();
   const { user, isLoading, login } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
 
-  // If already logged in, redirect
+  // If already logged in (session restored from localStorage), redirect to dashboard
   useEffect(() => {
-    if (!isLoading && user) {
+    if (!isLoading && user && !pendingRedirect) {
       router.push('/dashboard');
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router, pendingRedirect]);
+
+  // Fire redirect after login() has settled
+  useEffect(() => {
+    if (pendingRedirect) {
+      router.push(pendingRedirect);
+    }
+  }, [pendingRedirect, router]);
 
   const handleVerificationSuccess = (result: { user: any; isNewUser: boolean; token: string }) => {
     setError(null);
+    const destination = result.isNewUser ? '/onboarding' : '/dashboard';
+    setPendingRedirect(destination);
     login(result.token, result.user);
-
-    if (result.isNewUser) {
-      router.push('/onboarding');
-    } else {
-      router.push('/dashboard');
-    }
   };
 
   const handleVerificationError = (error: string) => {

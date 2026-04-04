@@ -4,8 +4,19 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import GitHubConnectButton from '@/components/GitHubConnectButton';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import GlassCard from '@/components/GlassCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { updateProfile } from '@/lib/api';
+import { updateProfile, triggerIngestion } from '@/lib/api';
+import {
+  col,
+  headingMd,
+  headingSm,
+  sectionLabel,
+  separator,
+  textSecondary,
+  gradientText,
+  colors,
+} from '@/lib/styles';
 
 const PROFESSION_CATEGORIES = [
   { id: 'software', label: 'Software Engineering', icon: '💻' },
@@ -21,9 +32,11 @@ const ROLES = [
   { id: 'client', label: 'Client', description: 'Find and evaluate workers' },
 ];
 
+const STEPS = ['Profile', 'Profession', 'Connect'];
+
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-[70vh]"><LoadingSpinner /></div>}>
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh' }}><LoadingSpinner /></div>}>
       <OnboardingContent />
     </Suspense>
   );
@@ -40,32 +53,24 @@ function OnboardingContent() {
   const [professionCategory, setProfessionCategory] = useState<string | null>(null);
   const [githubConnected, setGithubConnected] = useState(false);
 
-  // Auth guard: redirect to verify if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/verify');
     }
   }, [user, authLoading, router]);
 
-  // Detect GitHub OAuth callback
   useEffect(() => {
     const githubStatus = searchParams.get('github');
     if (githubStatus === 'connected') {
       setGithubConnected(true);
-      setStep(3); // Go to platform connections step
+      setStep(3);
     }
   }, [searchParams]);
 
   const toggleRole = (roleId: string) => {
     setSelectedRoles((prev) =>
-      prev.includes(roleId)
-        ? prev.filter((r) => r !== roleId)
-        : [...prev, roleId]
+      prev.includes(roleId) ? prev.filter((r) => r !== roleId) : [...prev, roleId]
     );
-  };
-
-  const handleGitHubConnect = () => {
-    setGithubConnected(true);
   };
 
   const handleComplete = async () => {
@@ -81,6 +86,8 @@ function OnboardingContent() {
         token
       );
       updateUser(result.user);
+      // Fire ingestion so GitHub data is scored immediately (non-blocking)
+      triggerIngestion(result.user.id, token).catch(() => {});
       router.push('/dashboard');
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
@@ -90,145 +97,318 @@ function OnboardingContent() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh]">
-      <div className="card max-w-lg w-full">
-        {/* Progress indicator */}
-        <div className="flex justify-between mb-8">
-          {[1, 2, 3].map((s) => (
-            <div
-              key={s}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                s === step
-                  ? 'bg-veridex-primary text-white'
-                  : s < step
-                  ? 'bg-veridex-success text-white'
-                  : 'bg-worldcoin-gray-700 text-worldcoin-gray-400'
-              }`}
-            >
-              {s < step ? '✓' : s}
-            </div>
-          ))}
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)', backgroundSize: '400% 400%', animation: 'aurora-shift 10s ease infinite' }}>
+      <div style={{ ...col, maxWidth: '560px', paddingTop: '80px', paddingBottom: '80px' }}>
+
+        {/* Header */}
+        <div className="fade-up fade-up-1" style={{ marginBottom: '40px' }}>
+          <span style={sectionLabel}>Onboarding</span>
+          <h1
+            style={{
+              fontFamily: 'var(--font-fraunces), Georgia, serif',
+              fontSize: '42px',
+              fontWeight: 700,
+              lineHeight: '1.15',
+              letterSpacing: '-0.02em',
+              margin: '0 0 12px 0',
+              ...gradientText,
+            }}
+          >
+            Welcome to Veridex.
+          </h1>
+          <p style={{ ...textSecondary, maxWidth: '440px' }}>
+            Let&apos;s set up your trust profile in a few quick steps.
+          </p>
         </div>
 
-        {step === 1 && (
-          <div>
-            <h2 className="text-2xl font-bold mb-2">Welcome to Veridex!</h2>
-            <p className="text-worldcoin-gray-400 mb-6">
-              Let&apos;s set up your profile. First, tell us your name.
-            </p>
-            <input
-              type="text"
-              placeholder="Display name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="input w-full mb-6"
-            />
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-3">
-                What roles are you interested in?
-              </label>
-              <div className="space-y-2">
-                {ROLES.map((role) => (
-                  <button
-                    key={role.id}
-                    onClick={() => toggleRole(role.id)}
-                    className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                      selectedRoles.includes(role.id)
-                        ? 'border-veridex-primary bg-veridex-primary/10'
-                        : 'border-worldcoin-gray-600 hover:border-worldcoin-gray-500'
-                    }`}
+        {/* Step indicator */}
+        <div className="fade-up fade-up-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px' }}>
+          {STEPS.map((label, i) => {
+            const s = i + 1;
+            const isDone = s < step;
+            const isActive = s === step;
+            return (
+              <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                      background: isDone
+                        ? colors.success
+                        : isActive
+                        ? colors.primary
+                        : 'rgba(37,99,235,0.08)',
+                      color: isDone || isActive ? '#fff' : colors.textMuted,
+                      transition: 'all 0.3s ease',
+                      boxShadow: isActive ? '0 0 0 4px rgba(37,99,235,0.12)' : 'none',
+                    }}
                   >
-                    <div className="font-medium">{role.label}</div>
-                    <div className="text-sm text-worldcoin-gray-400">{role.description}</div>
-                  </button>
-                ))}
+                    {isDone ? '✓' : s}
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                      fontSize: '13px',
+                      fontWeight: isActive ? 600 : 400,
+                      color: isActive ? colors.primary : colors.textTertiary,
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    {label}
+                  </span>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '1px',
+                      background: s < step ? colors.success : 'rgba(37,99,235,0.15)',
+                      transition: 'background 0.3s ease',
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Card */}
+        <GlassCard className="fade-up fade-up-3" style={{ padding: '40px' }}>
+
+          {/* ── Step 1: Name & Roles ── */}
+          {step === 1 && (
+            <div>
+              <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>
+                Who are you?
+              </h2>
+              <p style={{ ...textSecondary, fontSize: '14px', marginBottom: '28px' }}>
+                Pick a display name and the roles you&apos;re interested in.
+              </p>
+
+              <div style={{ marginBottom: '24px' }}>
+                <label
+                  style={{
+                    ...headingSm,
+                    fontSize: '13px',
+                    color: colors.textTertiary,
+                    display: 'block',
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                  }}
+                >
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Alex Chen"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="input"
+                  style={{ fontSize: '15px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '28px' }}>
+                <label
+                  style={{
+                    ...headingSm,
+                    fontSize: '13px',
+                    color: colors.textTertiary,
+                    display: 'block',
+                    marginBottom: '12px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                  }}
+                >
+                  I am a...
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {ROLES.map((role) => {
+                    const selected = selectedRoles.includes(role.id);
+                    return (
+                      <button
+                        key={role.id}
+                        onClick={() => toggleRole(role.id)}
+                        style={{
+                          padding: '14px 18px',
+                          borderRadius: '12px',
+                          border: `1.5px solid ${selected ? colors.primary : 'rgba(37,99,235,0.15)'}`,
+                          background: selected ? 'rgba(37,99,235,0.06)' : 'rgba(255,255,255,0.5)',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          boxShadow: selected ? '0 0 0 3px rgba(37,99,235,0.08)' : 'none',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                            fontSize: '15px',
+                            fontWeight: 600,
+                            color: selected ? colors.primary : colors.textPrimary,
+                            marginBottom: '2px',
+                          }}
+                        >
+                          {role.label}
+                        </div>
+                        <div style={{ ...textSecondary, fontSize: '13px' }}>
+                          {role.description}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setStep(2)}
+                disabled={!displayName.trim() || selectedRoles.length === 0}
+                className="btn-primary"
+                style={{ width: '100%' }}
+              >
+                Continue →
+              </button>
+            </div>
+          )}
+
+          {/* ── Step 2: Profession ── */}
+          {step === 2 && (
+            <div>
+              <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>
+                Your profession
+              </h2>
+              <p style={{ ...textSecondary, fontSize: '14px', marginBottom: '28px' }}>
+                What kind of work do you do? This helps tailor your trust profile.
+              </p>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '12px',
+                  marginBottom: '28px',
+                }}
+              >
+                {PROFESSION_CATEGORIES.map((cat) => {
+                  const selected = professionCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setProfessionCategory(cat.id)}
+                      style={{
+                        padding: '20px 12px',
+                        borderRadius: '12px',
+                        border: `1.5px solid ${selected ? colors.primary : 'rgba(37,99,235,0.15)'}`,
+                        background: selected ? 'rgba(37,99,235,0.06)' : 'rgba(255,255,255,0.5)',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: selected ? '0 0 0 3px rgba(37,99,235,0.08)' : 'none',
+                      }}
+                    >
+                      <div style={{ fontSize: '28px', marginBottom: '8px' }}>{cat.icon}</div>
+                      <div
+                        style={{
+                          fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          color: selected ? colors.primary : colors.textPrimary,
+                        }}
+                      >
+                        {cat.label}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => setStep(1)} className="btn-secondary" style={{ flex: 1 }}>
+                  ← Back
+                </button>
+                <button
+                  onClick={() => setStep(3)}
+                  disabled={!professionCategory}
+                  className="btn-primary"
+                  style={{ flex: 2 }}
+                >
+                  Continue →
+                </button>
               </div>
             </div>
-            <button
-              onClick={() => setStep(2)}
-              disabled={!displayName.trim() || selectedRoles.length === 0}
-              className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Continue
-            </button>
-          </div>
-        )}
+          )}
 
-        {step === 2 && (
-          <div>
-            <h2 className="text-2xl font-bold mb-2">Your Profession</h2>
-            <p className="text-worldcoin-gray-400 mb-6">
-              What kind of work do you do? This helps us tailor your profile.
-            </p>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {PROFESSION_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setProfessionCategory(cat.id)}
-                  className={`p-4 rounded-lg border text-center transition-colors ${
-                    professionCategory === cat.id
-                      ? 'border-veridex-primary bg-veridex-primary/10'
-                      : 'border-worldcoin-gray-600 hover:border-worldcoin-gray-500'
-                  }`}
+          {/* ── Step 3: Connect Platforms ── */}
+          {step === 3 && (
+            <div>
+              <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>
+                Connect platforms
+              </h2>
+              <p style={{ ...textSecondary, fontSize: '14px', marginBottom: '28px' }}>
+                Link your accounts for stronger trust signals. Totally optional — you can build reputation through reviews alone.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                <GitHubConnectButton
+                  onConnect={() => setGithubConnected(true)}
+                  isConnected={githubConnected}
+                />
+
+                {/* LinkedIn — coming soon */}
+                <div
+                  style={{
+                    padding: '16px 18px',
+                    borderRadius: '12px',
+                    border: '1.5px solid rgba(37,99,235,0.1)',
+                    background: 'rgba(255,255,255,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px',
+                    opacity: 0.5,
+                    cursor: 'not-allowed',
+                  }}
                 >
-                  <div className="text-2xl mb-2">{cat.icon}</div>
-                  <div className="text-sm font-medium">{cat.label}</div>
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setStep(1)} className="btn-secondary flex-1">
-                Back
-              </button>
-              <button
-                onClick={() => setStep(3)}
-                disabled={!professionCategory}
-                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div>
-            <h2 className="text-2xl font-bold mb-2">Connect Platforms</h2>
-            <p className="text-worldcoin-gray-400 mb-6">
-              Connect your accounts to build your trust profile. This is optional — you can also build reputation through reviews.
-            </p>
-            <div className="space-y-3 mb-6">
-              <GitHubConnectButton
-                onConnect={handleGitHubConnect}
-                isConnected={githubConnected}
-              />
-              <button className="w-full p-4 rounded-lg border border-worldcoin-gray-600 text-left opacity-50 cursor-not-allowed">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">💼</span>
+                  <span style={{ fontSize: '20px' }}>💼</span>
                   <div>
-                    <div className="font-medium">LinkedIn</div>
-                    <div className="text-sm text-worldcoin-gray-400">Coming soon</div>
+                    <div style={{ ...headingSm, fontSize: '14px' }}>LinkedIn</div>
+                    <div style={{ ...textSecondary, fontSize: '12px' }}>Coming soon</div>
                   </div>
                 </div>
-              </button>
+              </div>
+
+              <div style={separator} />
+
+              <p style={{ ...textSecondary, fontSize: '13px', marginBottom: '24px' }}>
+                No developer accounts? No problem — reviews from clients build your reputation just as effectively.
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => setStep(2)} className="btn-secondary" style={{ flex: 1 }}>
+                  ← Back
+                </button>
+                <button
+                  onClick={handleComplete}
+                  disabled={isLoading}
+                  className="btn-primary"
+                  style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  {isLoading ? <LoadingSpinner /> : 'Finish Setup →'}
+                </button>
+              </div>
             </div>
-            <p className="text-sm text-worldcoin-gray-500 mb-6">
-              No developer accounts? No problem! You can build reputation through client reviews.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setStep(2)} className="btn-secondary flex-1">
-                Back
-              </button>
-              <button
-                onClick={handleComplete}
-                disabled={isLoading}
-                className="btn-primary flex-1 disabled:opacity-50"
-              >
-                {isLoading ? <LoadingSpinner /> : 'Complete Setup'}
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </GlassCard>
+
+        <div style={{ height: '64px' }} />
       </div>
     </div>
   );

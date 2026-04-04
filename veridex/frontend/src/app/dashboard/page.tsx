@@ -1,20 +1,38 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import TrustScoreCard from '@/components/TrustScoreCard';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
 import ReviewsList from '@/components/ReviewsList';
-import QueryLog from '@/components/QueryLog';
 import JobDescriptionInput from '@/components/JobDescriptionInput';
 import ContextualScoreCard from '@/components/ContextualScoreCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import type { WorkerProfile, Review, QueryLogEntry, ContextualScoreBreakdown } from '@/types';
+import GlassCard from '@/components/GlassCard';
+import { useAuth } from '@/contexts/AuthContext';
+import { getReputation, getContextualScore } from '@/lib/api';
+import {
+  col,
+  headingLg,
+  headingMd,
+  headingSm,
+  sectionLabel,
+  separator,
+  textSecondary,
+  textMuted,
+  gradientText,
+  colors,
+} from '@/lib/styles';
+import type { WorkerProfile, Review, ContextualScoreBreakdown } from '@/types';
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { user, token, isLoading: authLoading } = useAuth();
+
   const [profile, setProfile] = useState<WorkerProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [queryLog, setQueryLog] = useState<QueryLogEntry[]>([]);
   const [totalStaked, setTotalStaked] = useState(0);
+  const [stakerCount, setStakerCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [contextualScore, setContextualScore] = useState<{
     fit_score: number;
@@ -22,35 +40,30 @@ export default function DashboardPage() {
   } | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
 
+  // Auth guard
   useEffect(() => {
-    // TODO: Fetch user profile, reviews, query log, and stakes
+    if (!authLoading && !user) {
+      router.push('/verify');
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
     const fetchData = async () => {
       try {
-        // Placeholder data for scaffolding
-        setProfile({
-          id: '1',
-          user_id: '1',
-          github_username: 'example',
-          github_data: {},
-          linkedin_data: {},
-          other_platforms: {},
-          computed_skills: ['TypeScript', 'React', 'Node.js'],
-          specializations: ['Frontend', 'Full-stack'],
-          years_experience: 5,
-          overall_trust_score: 78,
-          score_components: {
-            developer_competence: 85,
-            collaboration: 72,
-            consistency: 80,
-            specialization_depth: 75,
-            activity_recency: 90,
-            peer_trust: 65,
-          },
-          ingestion_status: 'completed',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-        setTotalStaked(2500);
+        const data = await getReputation(user.id);
+        setProfile(data.profile);
+        setReviews(data.reviews || []);
+        setTotalStaked(data.totalStaked || 0);
+        setStakerCount(data.stakerCount || 0);
+
+        // Keep polling while ingestion is in progress
+        if (data.profile?.ingestion_status === 'processing' || data.profile?.ingestion_status === 'pending') {
+          pollTimer = setTimeout(fetchData, 3000);
+        }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
       } finally {
@@ -59,30 +72,17 @@ export default function DashboardPage() {
     };
 
     fetchData();
-  }, []);
+    return () => { if (pollTimer) clearTimeout(pollTimer); };
+  }, [user]);
 
   const handleEvaluateFit = async (jobDescription: string) => {
+    if (!user) return;
     setIsEvaluating(true);
     try {
-      // TODO: Call contextual score API
-      // const result = await getContextualScore(profile.user_id, jobDescription);
-      // setContextualScore(result);
-
-      // Placeholder
+      const result = await getContextualScore(user.id, jobDescription, token || undefined) as any;
       setContextualScore({
-        fit_score: 72,
-        breakdown: {
-          met: [
-            { requirement: 'React experience', evidence: '8 React repositories over 2 years' },
-            { requirement: 'TypeScript', evidence: 'Primary language in 12 repos' },
-          ],
-          partial: [
-            { requirement: 'AWS experience', evidence: 'Some Lambda usage', gap: 'No extensive cloud infrastructure experience' },
-          ],
-          missing: [
-            { requirement: 'Kubernetes' },
-          ],
-        },
+        fit_score: result.fit_score,
+        breakdown: result.score_breakdown,
       });
     } catch (error) {
       console.error('Failed to evaluate fit:', error);
@@ -91,69 +91,254 @@ export default function DashboardPage() {
     }
   };
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <LoadingSpinner />
       </div>
     );
   }
 
   if (!profile) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-worldcoin-gray-400">No profile found. Please complete onboarding.</p>
-      </div>
-    );
+    router.push('/onboarding');
+    return null;
   }
 
-  return (
-    <div className="max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-8">Worker Dashboard</h1>
+  const githubData = profile.github_data as Record<string, any> || {};
 
-      <div className="grid lg:grid-cols-3 gap-6 mb-8">
-        {/* Trust Score */}
-        <div className="lg:col-span-1">
-          <TrustScoreCard score={profile.overall_trust_score} />
-          <div className="card mt-4">
-            <div className="text-sm text-worldcoin-gray-400 mb-1">Total WLD Staked on You</div>
-            <div className="text-2xl font-bold text-veridex-primary">{totalStaked.toLocaleString()} WLD</div>
+  return (
+    <div style={{ background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)', backgroundSize: '400% 400%', animation: 'aurora-shift 10s ease infinite', minHeight: '100vh' }}>
+      <div style={{ ...col, maxWidth: '1100px' }}>
+
+        {/* ── Header ── */}
+        <div className="fade-up fade-up-1" style={{ marginBottom: '48px' }}>
+          <span style={sectionLabel}>Dashboard</span>
+          <h1 style={{ ...headingLg, fontSize: '48px', margin: '0 0 12px 0' }}>
+            {user?.display_name || 'Your Profile'}
+          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+            {profile.github_username && (
+              <a
+                href={`https://github.com/${profile.github_username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                  fontSize: '14px',
+                  color: colors.textSecondary,
+                  textDecoration: 'none',
+                }}
+              >
+                <span>⚙</span> @{profile.github_username}
+              </a>
+            )}
+            {user?.profession_category && (
+              <span style={{ ...textSecondary, fontSize: '14px', textTransform: 'capitalize' }}>
+                {user.profession_category.replace('_', ' ')}
+              </span>
+            )}
+            {profile.years_experience != null && (
+              <span style={{ ...textSecondary, fontSize: '14px' }}>
+                {profile.years_experience}y experience
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Score Breakdown */}
-        <div className="lg:col-span-2">
-          <ScoreBreakdown components={profile.score_components} />
-        </div>
-      </div>
-
-      {/* Evaluate My Fit Section */}
-      <div className="card mb-8">
-        <h2 className="text-xl font-semibold mb-4">Evaluate My Fit</h2>
-        <p className="text-worldcoin-gray-400 mb-4">
-          Paste a job description to see how well your profile matches the requirements.
-        </p>
-        <JobDescriptionInput onSubmit={handleEvaluateFit} isLoading={isEvaluating} />
-        {contextualScore && (
-          <div className="mt-6">
-            <ContextualScoreCard
-              fitScore={contextualScore.fit_score}
-              breakdown={contextualScore.breakdown}
-            />
+        {/* ── Ingestion banner ── */}
+        {(profile.ingestion_status === 'processing' || profile.ingestion_status === 'pending') && (
+          <div
+            className="fade-up fade-up-2"
+            style={{
+              marginBottom: '24px',
+              padding: '14px 20px',
+              borderRadius: '12px',
+              background: 'rgba(37,99,235,0.06)',
+              border: '1px solid rgba(37,99,235,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              fontFamily: 'var(--font-inter), system-ui, sans-serif',
+              fontSize: '14px',
+              color: colors.primary,
+            }}
+          >
+            <LoadingSpinner />
+            Syncing your GitHub data and computing trust score…
           </div>
         )}
-      </div>
 
-      {/* Recent Reviews */}
-      <div className="card mb-8">
-        <h2 className="text-xl font-semibold mb-4">Recent Reviews</h2>
-        <ReviewsList reviews={reviews} />
-      </div>
+        {/* ── Row 1: Score + Breakdown ── */}
+        <div
+          className="fade-up fade-up-2"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '240px 1fr',
+            gap: '24px',
+            marginBottom: '24px',
+            alignItems: 'start',
+          }}
+        >
+          {/* Left column: score + staked */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <TrustScoreCard score={profile.overall_trust_score} />
 
-      {/* Query Log */}
-      <div className="card">
-        <h2 className="text-xl font-semibold mb-4">Profile Views</h2>
-        <QueryLog entries={queryLog} />
+            <GlassCard style={{ padding: '24px' }}>
+              <span style={sectionLabel}>Staked on You</span>
+              <div
+                style={{
+                  fontFamily: 'var(--font-fraunces), Georgia, serif',
+                  fontSize: '28px',
+                  fontWeight: 700,
+                  ...gradientText,
+                  marginBottom: '4px',
+                }}
+              >
+                {totalStaked.toLocaleString()} WLD
+              </div>
+              <div style={textMuted}>{stakerCount} staker{stakerCount !== 1 ? 's' : ''}</div>
+            </GlassCard>
+
+            <GlassCard style={{ padding: '24px' }}>
+              <span style={sectionLabel}>Balance</span>
+              <div
+                style={{
+                  fontFamily: 'var(--font-fraunces), Georgia, serif',
+                  fontSize: '28px',
+                  fontWeight: 700,
+                  ...gradientText,
+                  marginBottom: '4px',
+                }}
+              >
+                {(user?.wld_balance || 0).toLocaleString()} WLD
+              </div>
+              <div style={textMuted}>available</div>
+            </GlassCard>
+          </div>
+
+          {/* Right column: radar + skills */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <ScoreBreakdown components={profile.score_components} />
+
+            {/* Skills & Specializations */}
+            {(profile.computed_skills?.length > 0 || profile.specializations?.length > 0) && (
+              <GlassCard style={{ padding: '28px' }}>
+                {profile.specializations?.length > 0 && (
+                  <div style={{ marginBottom: profile.computed_skills?.length > 0 ? '20px' : 0 }}>
+                    <span style={sectionLabel}>Specializations</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {profile.specializations.map((s) => (
+                        <span
+                          key={s}
+                          style={{
+                            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            color: colors.primary,
+                            background: 'rgba(37,99,235,0.08)',
+                            border: '1px solid rgba(37,99,235,0.2)',
+                            borderRadius: '8px',
+                            padding: '4px 12px',
+                          }}
+                        >
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {profile.computed_skills?.length > 0 && (
+                  <div>
+                    {profile.specializations?.length > 0 && <div style={separator} />}
+                    <span style={sectionLabel}>Skills</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {profile.computed_skills.map((skill) => (
+                        <span
+                          key={skill}
+                          style={{
+                            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                            fontSize: '13px',
+                            color: colors.textSecondary,
+                            background: 'rgba(255,255,255,0.6)',
+                            border: '1px solid rgba(37,99,235,0.12)',
+                            borderRadius: '8px',
+                            padding: '4px 12px',
+                          }}
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </GlassCard>
+            )}
+
+            {/* GitHub stats if available */}
+            {githubData.public_repos != null && (
+              <GlassCard style={{ padding: '28px' }}>
+                <span style={sectionLabel}>GitHub Activity</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                  {[
+                    { label: 'Repos', value: githubData.public_repos },
+                    { label: 'Stars', value: githubData.total_stars ?? githubData.stargazers_count ?? '—' },
+                    { label: 'Followers', value: githubData.followers ?? '—' },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{ textAlign: 'center' }}>
+                      <div
+                        style={{
+                          fontFamily: 'var(--font-fraunces), Georgia, serif',
+                          fontSize: '24px',
+                          fontWeight: 700,
+                          ...gradientText,
+                          marginBottom: '4px',
+                        }}
+                      >
+                        {value}
+                      </div>
+                      <div style={textMuted}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
+            )}
+          </div>
+        </div>
+
+        {/* ── Evaluate My Fit ── */}
+        <GlassCard className="fade-up fade-up-3" style={{ padding: '40px', marginBottom: '24px' }}>
+          <span style={sectionLabel}>AI Fit Evaluation</span>
+          <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>
+            Evaluate My Fit
+          </h2>
+          <p style={{ ...textSecondary, marginBottom: '24px' }}>
+            Paste a job description to see how your profile matches the requirements.
+          </p>
+          <JobDescriptionInput onSubmit={handleEvaluateFit} isLoading={isEvaluating} />
+          {contextualScore && (
+            <div style={{ marginTop: '24px' }}>
+              <ContextualScoreCard
+                fitScore={contextualScore.fit_score}
+                breakdown={contextualScore.breakdown}
+              />
+            </div>
+          )}
+        </GlassCard>
+
+        {/* ── Reviews ── */}
+        <GlassCard className="fade-up fade-up-4" style={{ padding: '40px', marginBottom: '24px' }}>
+          <span style={sectionLabel}>Reviews</span>
+          <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '24px' }}>
+            Recent Reviews
+          </h2>
+          <ReviewsList reviews={reviews} />
+        </GlassCard>
+
+        <div style={{ height: '64px' }} />
       </div>
     </div>
   );

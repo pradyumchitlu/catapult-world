@@ -13,7 +13,7 @@ export default function ReviewsList({ reviews }: ReviewsListProps) {
 
   if (sortedReviews.length === 0) {
     return (
-      <div className="text-center py-8 text-worldcoin-gray-400">
+      <div style={{ textAlign: 'center', padding: '32px 0', color: '#94A3B8', fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '14px' }}>
         No reviews yet.
       </div>
     );
