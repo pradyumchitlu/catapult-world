@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Fraunces, Inter } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/Navbar';
+import { cn } from "@/lib/utils";
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -26,7 +27,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${inter.variable}`}>
+    <html lang="en" className={cn(fraunces.variable, inter.variable, "font-sans")}
+      style={{ '--font-sans': 'var(--font-inter), system-ui, sans-serif' } as React.CSSProperties}
+    >
       <body
         style={{
           background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)',

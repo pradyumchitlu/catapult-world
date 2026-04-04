@@ -1,6 +1,6 @@
 import Link from 'next/link';
+import { LiquidGlassCard } from '@/components/kokonutui/liquid-glass-card';
 import {
-  glassSection,
   gradientText,
   sectionLabel,
   separator,
@@ -42,14 +42,10 @@ export default function LandingPage() {
               Browse Workers
             </Link>
           </div>
-
         </div>
 
         {/* ── 2. Protocol Flow ──────────────────────────────────────── */}
-        <div
-          className="fade-up fade-up-2"
-          style={{ ...glassSection, marginBottom: '64px' }}
-        >
+        <LiquidGlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>How It Works</span>
 
           {[
@@ -107,13 +103,10 @@ export default function LandingPage() {
               {i < arr.length - 1 && <div style={separator} />}
             </div>
           ))}
-        </div>
+        </LiquidGlassCard>
 
         {/* ── 3. Capabilities ──────────────────────────────────────── */}
-        <div
-          className="fade-up fade-up-2"
-          style={{ ...glassSection, marginBottom: '64px' }}
-        >
+        <LiquidGlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>Capabilities</span>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -176,13 +169,10 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        </div>
+        </LiquidGlassCard>
 
         {/* ── 4. Integrity Pull-quote ────────────────────────────────── */}
-        <div
-          className="fade-up fade-up-3"
-          style={{ ...glassSection, marginBottom: '64px' }}
-        >
+        <LiquidGlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>Trust Integrity</span>
 
           <div style={{ position: 'relative', marginBottom: '32px' }}>
@@ -227,13 +217,10 @@ export default function LandingPage() {
             one staker counts fully, but each additional 100 WLD is worth
             progressively less. No single actor can inflate a score.
           </p>
-        </div>
+        </LiquidGlassCard>
 
         {/* ── 5. CTA ────────────────────────────────────────────────── */}
-        <div
-          className="fade-up fade-up-3"
-          style={{ ...glassSection, marginBottom: '64px' }}
-        >
+        <LiquidGlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>Get Started</span>
 
           <h2 style={{ ...headingMd, margin: '0 0 20px 0' }}>
@@ -267,10 +254,10 @@ export default function LandingPage() {
           >
             Verify Your Identity →
           </Link>
-        </div>
+        </LiquidGlassCard>
 
         {/* ── 6. Footer ─────────────────────────────────────────────── */}
-        <div style={{ ...glassSection, padding: '32px 48px' }}>
+        <LiquidGlassCard>
           <div
             style={{
               display: 'flex',
@@ -334,7 +321,7 @@ export default function LandingPage() {
 
             <span style={textMuted}>Powered by World ID</span>
           </div>
-        </div>
+        </LiquidGlassCard>
 
         <div style={{ height: '64px' }} />
       </div>
