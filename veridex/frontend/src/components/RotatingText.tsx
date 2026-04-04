@@ -28,7 +28,13 @@ export default function RotatingText({ words, interval = 2500, className }: Rota
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
-          style={{ display: 'inline-block' }}
+          style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
         >
           {words[index]}
         </motion.span>
