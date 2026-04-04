@@ -70,42 +70,12 @@ export default function VerifyPage() {
             Prove you&apos;re a unique human with World ID. This is the
             foundation of your trust profile — one person, one identity.
           </p>
-        <WorldIDButton
-          onSuccess={handleVerificationSuccess}
-          onError={handleVerificationError}
-        />
 
-        {error && (
-          <div className="mt-4 p-3 bg-veridex-error/20 border border-veridex-error rounded-lg text-veridex-error text-sm">
-            {error}
-          </div>
-        )}
-
-        <div className="mt-8 pt-6 border-t border-worldcoin-gray-700">
-          <h3 className="text-sm font-medium text-worldcoin-gray-400 mb-3">Why World ID?</h3>
-          <ul className="text-sm text-worldcoin-gray-500 space-y-2">
-            <li>✓ Proves you&apos;re human, not a bot</li>
-            <li>✓ One account per person</li>
-            <li>✓ Privacy-preserving verification</li>
-          </ul>
-        </div>
-
-        {/* ── Verification Card ──────────────────────────────────── */}
-        <GlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
-          <span style={sectionLabel}>Verification</span>
-
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 0' }}>
-            {isVerifying ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                <LoadingSpinner />
-                <p style={textSecondary}>Verifying...</p>
-              </div>
-            ) : (
-              <WorldIDButton
-                onSuccess={handleVerificationSuccess}
-                onError={handleVerificationError}
-              />
-            )}
+          <div className="fade-up fade-up-2" style={{ marginTop: '36px' }}>
+            <WorldIDButton
+              onSuccess={handleVerificationSuccess}
+              onError={handleVerificationError}
+            />
 
             {error && (
               <div
@@ -124,7 +94,7 @@ export default function VerifyPage() {
               </div>
             )}
           </div>
-        </GlassCard>
+        </div>
 
         {/* ── Why World ID ───────────────────────────────────────── */}
         <GlassCard className="fade-up fade-up-3">

@@ -61,9 +61,10 @@ export const headingLg: CSSProperties = {
   fontFamily: 'var(--font-fraunces), Georgia, serif',
   fontSize: '64px',
   fontWeight: 700,
-  lineHeight: '1.05',
+  lineHeight: '1.15',
   letterSpacing: '-0.02em',
   margin: 0,
+  paddingBottom: '4px',
   ...gradientText,
 };
 
