@@ -57,6 +57,7 @@ export default function LandingPage() {
             letterSpacing: '-0.03em',
             ...gradientText,
             paddingBottom: '8px',
+            paddingRight: '1.5vw',
           }}
         >
           Veridex
