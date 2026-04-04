@@ -2,6 +2,122 @@
 
 A decentralized trust platform where verified humans build portable reputation, stake WLD on each other's integrity, and spawn accountable AI agents.
 
+This document is the team’s single source of truth for what Veridex is, how the repo is laid out, how to run it, and who owns which workstreams.
+
+---
+
+## About Veridex (full project description)
+
+### One-liner
+
+**“What if your reputation was portable, stakeable, and worked for both you and your AI agents?”**
+
+Veridex is a protocol that turns fragmented online reputation into a single, verified trust identity — and lets people put economic weight behind vouching for each other.
+
+### Why this matters
+
+Judges and users care about **problem clarity**, **technical ambition**, and **“I haven’t seen that before.”** Veridex is aimed at all three.
+
+- **Problem clarity:** Trust online is broken. Every platform makes you start from zero. Bots and duplicate accounts undermine confidence. Hiring or collaborating often means trusting profiles that are easy to fake, with no portable history.
+- **Technical ambition:** World ID verification, a vouching system with real economic weight, LLM-powered contextual scoring, a developer API, and a polished frontend — delivered as one coherent system.
+- **Differentiator:** **Social staking** (vouching with consequences) and the **Guardian pattern** (your AI agent inherits and answers to your trust profile). That is infrastructure for how people and agents establish trust, not “yet another chatbot.”
+
+### The core problem (lead with stories, not stack)
+
+These are the human situations the product addresses:
+
+> You hire someone through a platform. They have great reviews. Work moves off-platform to save fees. Suddenly those reviews do not travel with them. You are trusting a stranger again.
+
+> You apply for a role. You have years of verified work, peer proof, and a strong public footprint on one channel. None of it transfers. You start from zero on every new system.
+
+> You need someone for something important. A friend says, “I know someone — they’re solid.” That word-of-mouth vouch is the strongest trust signal we have — but it rarely exists in a verifiable, portable form online.
+
+Veridex targets portable reputation, real vouching, and the same trust model for **humans and their AI agents**.
+
+### Architecture — what we are actually building
+
+#### Layer 1 — World ID verification (proof of personhood)
+
+Every user verifies through World ID: one real human, one identity, sharply reduced bots and duplicates. This is the foundation; scoring and staking assume a verified person.
+
+**Build:** World ID SDK integration; on success, create a Veridex identity. This is the entry point for demos and the first “this is a real person” moment.
+
+**Pitch line:** Before we score anyone, we answer the basics: is this a real person, not a bot or throwaway account? World ID gives cryptographic proof of personhood.
+
+#### Layer 2 — Reputation aggregation pipeline
+
+Pull verified signals from a user’s digital life and normalize them into one profile.
+
+**Sources that resonate in demos:**
+
+- **GitHub** — contributions, repos, activity (especially for technical roles).
+- **Professional history** — work history, tenure, structured evidence (e.g. LinkedIn-style fields or manual onboarding data).
+- **Peer endorsements** — references from other verified Veridex users (e.g. staked reviews).
+
+**Build:** A backend pipeline that ingests multiple sources, normalizes to a shared schema, and keeps the profile current. The hackathon goal is to show the *pattern*: many inputs → one living profile.
+
+**Pitch line:** Today reputation is scattered. Veridex aggregates it into one verified, portable profile.
+
+#### Layer 3 — LLM-powered contextual trust scoring
+
+Trust is not one-dimensional. A strong engineer might be a weak fit for another role; a reliable generalist might have thin evidence in a niche. The system produces **context-specific** assessments by reasoning over structured reputation data (e.g. Gemini), not a single static “credit score.”
+
+**Build:** A structured prompt pipeline: aggregated data + natural-language question → confidence-weighted assessment **with reasoning** (what mattered, where uncertainty is high).
+
+**Pitch line:** Traditional tools give star ratings. Veridex gives an assessment tailored to the exact question — with evidence cited from verified history.
+
+#### Layer 4 — Social staking (vouching with skin in the game)
+
+The strongest offline trust signal is a personal vouch. Veridex makes that digital and gives it **economic weight**: stake on someone you believe in; that stake is visible and consequential (returns or loss depending on design and whether you use testnet or simulated balances for the demo).
+
+**Why it matters:** Eases **cold start**, increases **accountability** (vouching is not free), and mirrors **how trust works in the real world** — now verifiable.
+
+**Pitch line:** Most systems are backward-looking (ratings, history). Social staking is also **forward-looking**: who is willing to bet on this person *now*?
+
+#### Layer 5 — Portable trust API
+
+Expose a clean **developer API** so other products can query trust for a user in a given context (aligned with endpoints like querying trust score and profile data — see API Reference below).
+
+**Example use cases (no in-app marketplace required):** hiring workflows, rental or access verification, community integrity checks, any product that needs “is this person real, credible, and who vouches for them?” in one integration.
+
+**Pitch line:** Veridex is not only a UI — it is **infrastructure** other systems can call instead of reinventing identity and reputation silos.
+
+*Out of scope for this plan:* building our own **marketplace** or a **“data rent”** / pay-per-query business model around third parties paying users for lookups. The API is still valuable as a trust and integration surface.
+
+#### Layer 6 — Guardian pattern (AI agent identity)
+
+Agents act on our behalf — scheduling, applying, negotiating — but it is hard to answer: **whose** agent is this, and who is accountable if it misbehaves?
+
+**Model:** A verified human can register agents bound to their Veridex identity. The agent inherits a **fractional** trust signal from the human. Third parties can see the link. Misbehavior can flow back to the human’s reputation (and staking design).
+
+**Pitch line:** In the agentic era, Veridex ties agent trust to a **real, verified human** — accountability by design.
+
+#### Layer 7 — Trust dashboard and proof explorer
+
+A polished Next.js experience: unified trust identity, contextual scores, vouch/stake relationships, agent registry, and activity worth showing on screen for demos.
+
+### Demo narrative (reference)
+
+Structure the live demo as a **story**; avoid showing features without a human reason.
+
+1. **“This person is real.”** — World ID → Veridex identity → empty dashboard.
+2. **“This person is credible.”** — Connect GitHub and professional evidence → pipeline fills the profile → ask a natural-language qualification question → LLM returns a reasoned answer.
+3. **“Other people bet on this person.”** — A colleague vouches with a stake → visible on the profile / graph → social trust signal jumps.
+4. **“Even the AI agent is accountable.”** — Spawn an agent linked to the human → inherited trust → show verification for a simple scenario (e.g. agent acting on the user’s behalf with traceable backing).
+5. **“Other systems can integrate.”** — A **mock external app** or script calls the Trust API and shows structured trust/context (no marketplace or micropayment storyline required).
+
+**Closing angle:** Every platform today builds its own trust silo. Veridex aims to make trust **portable**, **stakeable**, and **agent-aware** — trust infrastructure, not a single closed app.
+
+### What judges may ask (short answers)
+
+| Question | Direction |
+|----------|-----------|
+| **vs LinkedIn / background checks** | Self-reported vs verified signals; portability and real-time contextual reasoning; staking and agent binding are not generic profile features. |
+| **Gaming** | World ID limits sybils; structured data + LLM can surface inconsistencies; staking makes vouching costly for bad actors. |
+| **Why vouch for someone?** | Same as references today — belief and reciprocity — with explicit, visible stakes. |
+| **Is AI scoring a black box?** | Scores and answers should cite reasoning and evidence where the product exposes them. |
+| **Agent misbehavior** | Agent trust derives from the human; incentives align with monitoring and controlling agents. |
+
 ---
 
 ## Project Structure
