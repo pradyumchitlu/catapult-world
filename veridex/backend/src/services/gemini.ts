@@ -1,10 +1,21 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const MODEL = 'gemini-2.0-flash';
 
-const MODEL = 'claude-sonnet-4-20250514';
+/** Prefer GEMINI_API_KEY for all calls; otherwise chat vs scoring-specific keys. */
+function getGenAI(mode: 'chat' | 'scoring'): GoogleGenerativeAI {
+  const key =
+    process.env.GEMINI_API_KEY ||
+    (mode === 'chat'
+      ? process.env.GEMINI_CHATBOT_API_KEY
+      : process.env.GEMINI_SCORING_API_KEY);
+  if (!key) {
+    throw new Error(
+      'Set GEMINI_API_KEY, or GEMINI_CHATBOT_API_KEY (chat) / GEMINI_SCORING_API_KEY (scoring).'
+    );
+  }
+  return new GoogleGenerativeAI(key);
+}
 
 /**
  * Evaluate a worker based on their profile and answer client questions
@@ -42,26 +53,23 @@ ${workerData.reviews.map((r: any) => `- Rating: ${r.rating}/5, Stake: ${r.stake_
   Review: "${r.content || 'No written feedback'}"
   Reviewer: ${r.reviewer?.display_name || 'Anonymous'}`).join('\n')}`;
 
-  const messages: Anthropic.MessageParam[] = [
-    ...previousMessages.map((m) => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    })),
-    { role: 'user', content: clientQuestion },
-  ];
+  const model = getGenAI('chat').getGenerativeModel({
+    model: MODEL,
+    systemInstruction: systemPrompt,
+  });
+
+  const history = previousMessages.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
 
   try {
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages,
-    });
-
-    const textContent = response.content.find((c) => c.type === 'text');
-    return textContent?.text || 'Unable to generate response.';
+    const chat = model.startChat({ history });
+    const result = await chat.sendMessage(clientQuestion);
+    const text = result.response.text();
+    return text || 'Unable to generate response.';
   } catch (error) {
-    console.error('Anthropic API error:', error);
+    console.error('Gemini API error:', error);
     throw error;
   }
 }
@@ -85,17 +93,13 @@ Return a JSON object with:
 Be specific about technologies mentioned. Include both explicit and implied requirements.`;
 
   try {
-    const response = await anthropic.messages.create({
+    const model = getGenAI('scoring').getGenerativeModel({
       model: MODEL,
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: jobDescription }],
+      systemInstruction: systemPrompt,
     });
+    const result = await model.generateContent(jobDescription);
+    const text = result.response.text();
 
-    const textContent = response.content.find((c) => c.type === 'text');
-    const text = textContent?.text || '{}';
-
-    // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
@@ -167,15 +171,12 @@ Requirements to evaluate:
 Evaluate how well this worker matches these requirements.`;
 
   try {
-    const response = await anthropic.messages.create({
+    const model = getGenAI('scoring').getGenerativeModel({
       model: MODEL,
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: prompt }],
+      systemInstruction: systemPrompt,
     });
-
-    const textContent = response.content.find((c) => c.type === 'text');
-    const text = textContent?.text || '{}';
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {

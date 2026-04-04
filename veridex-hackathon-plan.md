@@ -71,7 +71,7 @@ This is the intelligence layer. Instead of a single "trust number," the system p
 
 **Key insight for judges:** Trust is not one-dimensional. A great software engineer might be a terrible project manager. A reliable freelancer might have no track record in the specific domain you need. Veridex doesn't give you a credit score — it gives you a *contextual* answer.
 
-**What to build:** A structured prompt pipeline (Claude API) that takes a user's aggregated reputation data + a natural-language query and returns a confidence-weighted trust assessment with reasoning.
+**What to build:** A structured prompt pipeline (Gemini API) that takes a user's aggregated reputation data + a natural-language query and returns a confidence-weighted trust assessment with reasoning.
 
 **Demo moment:** A judge or audience member types: *"Is this person qualified to lead a frontend project?"* The system returns a reasoned answer citing specific credentials, activity patterns, and peer endorsements — not just a number.
 
@@ -220,7 +220,7 @@ A mock job board hits the Veridex API: "Is Alice qualified for this role?" The r
 | Person | Owns | Key Deliverables |
 |---|---|---|
 | **Person 1 — Identity & Agents** | World ID integration + Guardian agent system | World ID verify flow, Veridex identity creation, agent spawning/registration, agent-to-human binding, inherited score logic |
-| **Person 2 — Reputation Engine** | Data pipeline + LLM trust scoring | GitHub API ingestion, professional history ingestion (LinkedIn or mock data), schema normalization, Claude API integration for contextual scoring, anomaly flagging |
+| **Person 2 — Reputation Engine** | Data pipeline + LLM trust scoring | GitHub API ingestion, professional history ingestion (LinkedIn or mock data), schema normalization, Gemini API integration for contextual scoring, anomaly flagging |
 | **Person 3 — Staking & API** | Social staking system + Trust API | Vouch/stake UI and logic (testnet or simulated), stake tracking and display, REST API for third-party queries, Data Rent fee logic, mock job board integration for demo |
 | **Person 4 — Frontend & Demo** | Dashboard + presentation polish | Next.js dashboard, trust graph visualization (D3.js or React Flow), vouch network display, agent registry UI, activity feed, demo script, slide deck |
 

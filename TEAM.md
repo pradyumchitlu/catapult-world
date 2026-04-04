@@ -72,7 +72,7 @@ veridex/
 │   │   │   ├── scoring.ts       # Trust score computation
 │   │   │   ├── contextual.ts    # Contextual fit scoring
 │   │   │   ├── agent.ts         # Agent identity logic
-│   │   │   └── anthropic.ts     # Claude API client
+│   │   │   └── gemini.ts        # Gemini API client
 │   │   │
 │   │   ├── middleware/
 │   │   │   └── auth.ts          # JWT verification
@@ -126,7 +126,10 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ```env
 SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-ANTHROPIC_API_KEY=your_anthropic_key
+GEMINI_API_KEY=your_gemini_api_key
+# Or split keys (used if GEMINI_API_KEY is unset):
+# GEMINI_SCORING_API_KEY=...
+# GEMINI_CHATBOT_API_KEY=...
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
 PORT=8000
@@ -289,13 +292,13 @@ frontend/
 ---
 
 ### Person 4: AI + Agents
-**Focus:** Claude integration, contextual scoring, agent system
+**Focus:** Gemini integration, contextual scoring, agent system
 
 **Files to work on:**
 ```
 backend/
 ├── src/services/
-│   ├── anthropic.ts                 # Claude API client
+│   ├── gemini.ts                 # Gemini API client
 │   ├── contextual.ts                # Fit scoring logic
 │   └── agent.ts                     # Agent spawning
 │
@@ -313,7 +316,7 @@ frontend/
 ```
 
 **Key tasks:**
-- [ ] Refine Claude prompts for worker evaluation
+- [ ] Refine Gemini prompts for worker evaluation
 - [ ] Implement job description parsing
 - [ ] Build contextual fit scoring (met/partial/missing)
 - [ ] Implement chat session management
@@ -327,7 +330,7 @@ frontend/
 - `GET /api/agent/list/:userId` - List user's agents
 - `GET /api/agent/:agentId` - Lookup agent (public)
 
-**Claude Prompts to refine:**
+**Gemini prompts to refine:**
 1. `evaluateWorker` - Answer questions about worker qualifications
 2. `parseJobRequirements` - Extract structured requirements from JD
 3. `generateContextualEvaluation` - Match worker to requirements

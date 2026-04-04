@@ -32,7 +32,7 @@ veridex/
 - Supabase account
 - World ID app credentials
 - GitHub OAuth app
-- Anthropic API key
+- Gemini API key
 
 ### Installation
 
@@ -59,7 +59,7 @@ veridex/
 ## Tech Stack
 
 - **Frontend:** Next.js 14+, TypeScript, Tailwind CSS, Recharts
-- **Backend:** Express, TypeScript, Supabase, Anthropic API
+- **Backend:** Express, TypeScript, Supabase, Gemini API
 - **Database:** Supabase (PostgreSQL)
 - **Auth:** World ID (MiniKit)
 

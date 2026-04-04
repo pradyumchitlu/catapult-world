@@ -155,10 +155,10 @@ Tasks organized by feature, prioritized for incremental development. Complete ea
 ---
 
 ## Phase 7: AI Chat & Contextual Scoring
-*Claude-powered worker evaluation*
+*Gemini-powered worker evaluation*
 
 ### Backend
-- [ ] **B7.1** Set up Anthropic client in `services/anthropic.ts`
+- [ ] **B7.1** Set up Gemini client in `services/gemini.ts`
 - [ ] **B7.2** Implement `evaluateWorker` - answer questions about worker
 - [ ] **B7.3** Implement `parseJobRequirements` - extract skills from JD
 - [ ] **B7.4** Implement `generateContextualEvaluation` - fit scoring
@@ -242,6 +242,6 @@ Frontend and backend can work in parallel on the same phase:
 
 - **Phase 1:** Backend does auth API while frontend builds UI with mocks
 - **Phase 4:** Backend does review API while frontend builds form UI
-- **Phase 7:** Backend does Claude integration while frontend builds chat UI
+- **Phase 7:** Backend does Gemini integration while frontend builds chat UI
 
 Use placeholder/mock data in frontend until backend endpoints are ready.

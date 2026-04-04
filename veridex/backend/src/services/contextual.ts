@@ -1,4 +1,4 @@
-import { parseJobRequirements, generateContextualEvaluation } from './anthropic';
+import { parseJobRequirements, generateContextualEvaluation } from './gemini';
 
 export interface ContextualScoreBreakdown {
   met: { requirement: string; evidence: string }[];

@@ -146,14 +146,14 @@ veridex/
 │       │   ├── contextual.ts                 # POST /api/contextual-score — generate contextual fit score
 │       │   │                                 #   accepts { worker_id, job_description }
 │       │   │                                 #   parses requirements, matches against worker profile,
-│       │   │                                 #   calls Anthropic API for nuanced evaluation,
+│       │   │                                 #   calls Gemini API for nuanced evaluation,
 │       │   │                                 #   returns { fit_score, breakdown: { met, partial, missing } }
 │       │   ├── agent.ts                      # POST /api/agent/spawn — create agent tied to user
 │       │   │                                 # GET /api/agent/list/:userId — list user's agents
 │       │   └── chat.ts                       # POST /api/chat — AI chatbot endpoint
 │       │                                     #   accepts { worker_id, message, session_id }
 │       │                                     #   loads worker profile + reviews from Supabase as context
-│       │                                     #   calls Anthropic API with worker data + client question
+│       │                                     #   calls Gemini API with worker data + client question
 │       │                                     #   returns AI response with evidence citations
 │       ├── services/
 │       │   ├── github.ts                     # GitHub API client
@@ -190,7 +190,7 @@ veridex/
 │       │   │                                 #   - computeContextualScore(workerProfile, jobDescription):
 │       │   │                                 #     { fit_score: number, breakdown: { met, partial, missing } }
 │       │   │                                 #   - Step 1: Parse job description into structured requirements
-│       │   │                                 #     (skills, experience level, domain) via Anthropic API
+│       │   │                                 #     (skills, experience level, domain) via Gemini API
 │       │   │                                 #   - Step 2: Algorithmic matching for hard skills
 │       │   │                                 #     (languages, frameworks from GitHub + review categories)
 │       │   │                                 #   - Step 3: LLM evaluation for subjective fit
@@ -202,7 +202,7 @@ veridex/
 │       │   │                                 #   - spawnAgent(userId, name): generate agent ID, derived score = 70% of parent
 │       │   │                                 #   - lookupAgent(agentId): return agent + parent profile
 │       │   │
-│       │   └── anthropic.ts                  # Anthropic API client
+│       │   └── gemini.ts                     # Gemini API client
 │       │                                     #   - evaluateWorker(workerProfile, reviews, clientQuestion): string
 │       │   │                                 #     System prompt: "You are a trust evaluation assistant for Veridex.
 │       │   │                                 #     You have access to a worker's verified data including GitHub activity,
@@ -478,8 +478,8 @@ GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
 GITHUB_CALLBACK_URL=http://localhost:3000/api/auth/github/callback
 
-# Anthropic (for AI chatbot + contextual scoring)
-ANTHROPIC_API_KEY=your_anthropic_api_key
+# Gemini (for AI chatbot + contextual scoring)
+GEMINI_API_KEY=your_gemini_api_key
 
 # Backend
 BACKEND_PORT=8000
@@ -503,7 +503,7 @@ FRONTEND_URL=http://localhost:3000
 - CORS configured to allow frontend origin
 - All routes prefixed with `/api`
 - Use `@supabase/supabase-js` with service role key for server-side operations
-- The chat and contextual scoring endpoints call the Anthropic API using `@anthropic-ai/sdk` with model `claude-sonnet-4-20250514`
+- The chat and contextual scoring endpoints call the Gemini API using `@google/generative-ai` with a Gemini model (e.g. `gemini-2.0-flash`)
 - GitHub service should use the GitHub REST API with `octokit`
 - Scoring service must implement the three integrity mechanisms:
   1. Trust-weighted reviews (impact scales with reviewer score + stake)
@@ -536,7 +536,7 @@ next, react, react-dom, typescript, tailwindcss, postcss, autoprefixer,
 **Backend:**
 ```
 express, cors, typescript, ts-node-dev, @supabase/supabase-js,
-@anthropic-ai/sdk, octokit, uuid, dotenv,
+@google/generative-ai, octokit, uuid, dotenv,
 @types/express, @types/cors, @types/uuid
 ```
 
@@ -547,4 +547,4 @@ After scaffolding, each teammate works in isolated directories:
 - **Person 1 (World ID + Auth):** `frontend/src/app/verify/`, `frontend/src/components/WorldIDButton.tsx`, `backend/src/routes/auth.ts`
 - **Person 2 (Backend + Scoring):** `backend/src/services/github.ts`, `backend/src/services/scoring.ts`, `backend/src/routes/reputation.ts`, `backend/src/routes/review.ts`, `backend/src/routes/stake.ts`
 - **Person 3 (Frontend):** `frontend/src/app/` (all pages), `frontend/src/components/` (all UI components)
-- **Person 4 (AI + Agents):** `backend/src/services/anthropic.ts`, `backend/src/services/contextual.ts`, `backend/src/routes/chat.ts`, `backend/src/routes/contextual.ts`, `backend/src/routes/agent.ts`, `frontend/src/app/agents/`
+- **Person 4 (AI + Agents):** `backend/src/services/gemini.ts`, `backend/src/services/contextual.ts`, `backend/src/routes/chat.ts`, `backend/src/routes/contextual.ts`, `backend/src/routes/agent.ts`, `frontend/src/app/agents/`

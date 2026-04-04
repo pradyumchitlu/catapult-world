@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import supabase from '../lib/supabase';
-import { evaluateWorker } from '../services/anthropic';
+import { evaluateWorker } from '../services/gemini';
 
 const router = Router();
 

@@ -36,7 +36,7 @@ Here's the complete updated feature set:
 20. Client-initiated contextual scoring — client pastes a job description or types requirements on a worker's profile. System generates a fit score (0–100) with a breakdown of requirements met, partially met, and missing, with evidence from the worker's actual data.
 21. Worker self-evaluation — workers paste job descriptions they're targeting on their own dashboard and get a fit score plus gap analysis ("you'd score 72 for this role — strong on React, no public D3 work").
 22. Browse with contextual filtering — on the browse page, clients can paste a job description at the top. Worker cards then show contextual fit scores alongside overall trust scores, ranked by fit.
-23. LLM-powered evaluation depth — contextual scoring uses the Anthropic API to go beyond keyword matching. "Worker has 8 React repos spanning 2 years with consistent contributions — strong experience" vs "1 React repo with 3 commits over 1 day — minimal."
+23. LLM-powered evaluation depth — contextual scoring uses the Gemini API to go beyond keyword matching. "Worker has 8 React repos spanning 2 years with consistent contributions — strong experience" vs "1 React repo with 3 commits over 1 day — minimal."
 
 **Worker Experience**
 
