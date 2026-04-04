@@ -31,7 +31,23 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
 
 // Auth
 export const verifyWorldId = (proof: any) =>
-  fetchApi('/api/auth/verify', { method: 'POST', body: JSON.stringify(proof) });
+  fetchApi<{ success: boolean; user: any; isNewUser: boolean; token: string }>(
+    '/api/auth/verify',
+    { method: 'POST', body: JSON.stringify(proof) }
+  );
+
+export const getMe = (token: string) =>
+  fetchApi<{ user: any }>('/api/auth/me', { token });
+
+export const updateProfile = (
+  data: { display_name: string; roles: string[]; profession_category: string },
+  token: string
+) =>
+  fetchApi<{ success: boolean; user: any }>('/api/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    token,
+  });
 
 // Reputation
 export const triggerIngestion = (userId: string, token: string) =>

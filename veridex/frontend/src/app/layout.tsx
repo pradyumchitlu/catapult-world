@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Fraunces, Inter } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/Navbar';
+import Providers from '@/components/Providers';
 import { cn } from "@/lib/utils";
 
 const fraunces = Fraunces({
@@ -42,8 +43,10 @@ export default function RootLayout({
           WebkitFontSmoothing: 'antialiased',
         }}
       >
-        <Navbar />
-        <main>{children}</main>
+        <Providers>
+          <Navbar />
+          <main>{children}</main>
+        </Providers>
       </body>
     </html>
   );

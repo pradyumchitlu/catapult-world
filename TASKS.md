@@ -178,24 +178,26 @@ Tasks organized by feature, prioritized for incremental development. Complete ea
 
 ---
 
-## Phase 8: Agents
-*Spawn accountable AI agents*
+## Phase 8: Agent Credentials
+*Register agents on-chain, verify for counterparties, enforce accountability*
 
 ### Backend
-- [ ] **B8.1** Implement `POST /api/agent/spawn`
-  - Generate agent ID
-  - Set derived score (70% of parent)
-- [ ] **B8.2** Implement `GET /api/agent/list/:userId`
-- [ ] **B8.3** Implement `GET /api/agent/:agentId` - public lookup
-- [ ] **B8.4** Update agent scores when parent score changes
+- [ ] **B8.1** Implement `POST /api/agent/spawn` (registration — mint / record Agent Credential)
+  - Accept agent identifier (signing key, endpoint, wallet, etc. as applicable)
+  - Store trust inheritance fraction, authorized domains, optional stake reference
+  - Bind credential to verified human (World ID) and effective trust
+- [ ] **B8.2** Implement `GET /api/agent/list/:userId` — list credentials for dashboard (hierarchy)
+- [ ] **B8.3** Implement `GET /api/agent/:agentId` — public verification response for third parties
+- [ ] **B8.4** Update effective agent trust when parent score changes
+- [ ] **B8.5** (Stretch) Dispute flow hooks — record dispute, apply score/ stake slashing when validated
 
 ### Frontend
-- [ ] **F8.1** Complete `agents/page.tsx` - list and create agents
+- [ ] **F8.1** Complete `agents/page.tsx` — list and register agents (dashboard hierarchy)
 - [ ] **F8.2** Wire up `AgentCard.tsx`
-- [ ] **F8.3** Add copy agent ID functionality
-- [ ] **F8.4** Complete `query-demo/page.tsx` - test external APIs
+- [ ] **F8.3** Add copy agent / credential identifier for integrators
+- [ ] **F8.4** Complete `query-demo/page.tsx` — test external verification API
 
-**Milestone:** Users can spawn agents and anyone can look up agent identity.
+**Milestone:** Humans can register Agent Credentials and counterparties can verify an agent via the public API.
 
 ---
 
@@ -231,7 +233,7 @@ Tasks organized by feature, prioritized for incremental development. Complete ea
 | 5 | Staking | B5.1-B5.4 | F5.1-F5.5 |
 | 6 | GitHub | B6.1-B6.4 | F6.1-F6.5 |
 | 7 | AI/Chat | B7.1-B7.7 | F7.1-F7.6 |
-| 8 | Agents | B8.1-B8.4 | F8.1-F8.4 |
+| 8 | Agent Credentials | B8.1-B8.5 | F8.1-F8.4 |
 | 9 | Polish | B9.1-B9.4 | F9.1-F9.6 |
 
 ---

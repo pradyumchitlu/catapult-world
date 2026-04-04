@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import supabase from '../lib/supabase';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'veridex-dev-secret';
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;
@@ -20,22 +23,20 @@ export const requireAuth = async (
 
     const token = authHeader.substring(7);
 
-    // TODO: Verify JWT token from Supabase
-    // For now, we'll use a simple approach of checking if the user exists
-    // In production, you would verify the JWT signature and expiration
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; worldIdHash: string };
 
-    // Placeholder: extract user ID from token
-    // const { data: { user }, error } = await supabase.auth.getUser(token);
-    // if (error || !user) {
-    //   return res.status(401).json({ error: 'Invalid token' });
-    // }
-    // req.userId = user.id;
-    // req.user = user;
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', decoded.userId)
+      .single();
 
-    // For development, accept any token and extract a mock user ID
-    // TODO: Replace with actual JWT verification
-    req.userId = 'mock-user-id';
-    req.user = { id: 'mock-user-id' };
+    if (error || !user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    req.userId = decoded.userId;
+    req.user = user;
 
     next();
   } catch (error) {
@@ -54,9 +55,19 @@ export const optionalAuth = async (
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      // TODO: Verify token and set user
-      req.userId = 'mock-user-id';
-      req.user = { id: 'mock-user-id' };
+
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; worldIdHash: string };
+
+      const { data: user } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', decoded.userId)
+        .single();
+
+      if (user) {
+        req.userId = decoded.userId;
+        req.user = user;
+      }
     }
 
     next();
