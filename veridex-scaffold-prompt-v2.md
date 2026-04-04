@@ -1,6 +1,6 @@
 # Veridex — Claude Code Scaffolding Prompt
 
-Scaffold a full monorepo for a hackathon project called **Veridex** — a decentralized trust platform where verified humans build portable reputation, stake WLD on each other's integrity, and spawn accountable AI agents. Powered by World ID proof-of-personhood.
+Scaffold a full monorepo for a hackathon project called **Veridex** — a decentralized trust platform where verified humans build portable reputation, stake WLD on each other's integrity, and register **Agent Credentials** that bind AI agents to verified human identity, trust inheritance, authorized domains, and optional stake. Powered by World ID proof-of-personhood.
 
 ## Project Overview
 
@@ -89,7 +89,7 @@ veridex/
 │       │   │                                 #   - explanation: "staking WLD on your review proves you
 │       │   │                                 #     stand behind it. Higher stakes = more impact on their score."
 │       │   ├── agents/
-│       │   │   └── page.tsx                  # agent management (spawn, view agents)
+│       │   │   └── page.tsx                  # agent management (register Agent Credentials, view hierarchy)
 │       │   └── query-demo/
 │       │       └── page.tsx                  # external query API demo page
 │       ├── components/
@@ -148,7 +148,7 @@ veridex/
 │       │   │                                 #   parses requirements, matches against worker profile,
 │       │   │                                 #   calls Gemini API for nuanced evaluation,
 │       │   │                                 #   returns { fit_score, breakdown: { met, partial, missing } }
-│       │   ├── agent.ts                      # POST /api/agent/spawn — create agent tied to user
+│       │   ├── agent.ts                      # POST /api/agent/spawn — register agent / Agent Credential (identifier, inheritance, domains, stake)
 │       │   │                                 # GET /api/agent/list/:userId — list user's agents
 │       │   └── chat.ts                       # POST /api/chat — AI chatbot endpoint
 │       │                                     #   accepts { worker_id, message, session_id }
@@ -198,9 +198,9 @@ veridex/
 │       │   │                                 #   - Returns evidence: "Worker has 8 React repos spanning
 │       │   │                                 #     2 years" vs "1 React repo with 3 commits — minimal"
 │       │   │
-│       │   ├── agent.ts                      # Agent identity logic
-│       │   │                                 #   - spawnAgent(userId, name): generate agent ID, derived score = 70% of parent
-│       │   │                                 #   - lookupAgent(agentId): return agent + parent profile
+│       │   ├── agent.ts                      # Agent Credential logic
+│       │   │                                 #   - registerAgent (e.g. spawnAgent in code): mint credential, derived effective trust from parent × inheritance
+│       │   │                                 #   - lookupAgent(agentId): verification payload for counterparties (human link, trust, domains, stake)
 │       │   │
 │       │   └── gemini.ts                     # Gemini API client
 │       │                                     #   - evaluateWorker(workerProfile, reviews, clientQuestion): string
@@ -306,12 +306,12 @@ CREATE TABLE contextual_scores (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Agents
+-- Agent Credentials (one row per registered agent)
 CREATE TABLE agents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parent_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  derived_score INTEGER DEFAULT 0,      -- 70% of parent's overall_trust_score
+  derived_score INTEGER DEFAULT 0,      -- effective trust ≈ inheritance_fraction × parent overall_trust_score (demo may use 0.7)
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
