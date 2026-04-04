@@ -73,6 +73,8 @@ Here's the complete updated feature set:
 
 40. Landing page — problem framing (fake identity, trapped reputation, unaccountable agents), solution overview, three CTAs for each user type, "how it works" section.
 
+41. Outside website - create another small scale website that queries Veridex for its purposes.
+
 ---
 
 That's **40 features**, up from 30. The 10 new ones are: profession categories (5), adaptive score weighting (10), trust-weighted reviews (12), mutual review detection (13), stake concentration penalty (14), GitHub quality signals (15), staked reviews system (16–19), contextual fit scoring (20–23), and worker self-evaluation (21).
