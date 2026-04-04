@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import TrustScoreCard from '@/components/TrustScoreCard';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
@@ -10,7 +10,7 @@ import ContextualScoreCard from '@/components/ContextualScoreCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { getReputation, getContextualScore } from '@/lib/api';
+import { getReputation, getContextualScore, triggerIngestion } from '@/lib/api';
 import {
   col,
   headingLg,
@@ -23,17 +23,64 @@ import {
   gradientText,
   colors,
 } from '@/lib/styles';
-import type { WorkerProfile, Review, ContextualScoreBreakdown } from '@/types';
+import type { WorkerProfile, Review, ContextualScoreBreakdown, ScoreComponents } from '@/types';
+
+const EMPTY_SCORE_COMPONENTS: ScoreComponents = {
+  developer_competence: 0,
+  collaboration: 0,
+  consistency: 0,
+  specialization_depth: 0,
+  activity_recency: 0,
+  peer_trust: 0,
+};
+
+function normalizeScoreComponents(
+  components: Partial<ScoreComponents> | null | undefined
+): ScoreComponents {
+  return {
+    ...EMPTY_SCORE_COMPONENTS,
+    ...(components || {}),
+  };
+}
+
+function shouldRecoverProfile(profile: WorkerProfile | null): boolean {
+  if (!profile) {
+    return false;
+  }
+
+  const githubData = (profile.github_data || {}) as Record<string, any>;
+  const hasGithubEvidence = Boolean(
+    profile.github_username || githubData.username || githubData.profile?.id
+  );
+
+  if (!hasGithubEvidence) {
+    return false;
+  }
+
+  const missingComponentData = Object.keys(profile.score_components || {}).length === 0;
+  const noDerivedSignals =
+    (profile.computed_skills?.length || 0) === 0 &&
+    (profile.specializations?.length || 0) === 0 &&
+    profile.years_experience == null;
+
+  return (
+    profile.ingestion_status === 'pending' ||
+    profile.ingestion_status === 'failed' ||
+    (profile.overall_trust_score === 0 && missingComponentData && noDerivedSignals)
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, token, isLoading: authLoading } = useAuth();
+  const recoveryTriggeredRef = useRef(false);
 
   const [profile, setProfile] = useState<WorkerProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [totalStaked, setTotalStaked] = useState(0);
   const [stakerCount, setStakerCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [contextualScore, setContextualScore] = useState<{
     fit_score: number;
     breakdown: ContextualScoreBreakdown;
@@ -48,38 +95,76 @@ export default function DashboardPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
+    recoveryTriggeredRef.current = false;
+    setSyncMessage(null);
+  }, [user?.id]);
+
+  useEffect(() => {
     if (!user) return;
 
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
 
     const fetchData = async () => {
       try {
         const data = await getReputation(user.id);
+        if (cancelled) return;
+
         setProfile(data.profile);
         setReviews(data.reviews || []);
         setTotalStaked(data.totalStaked || 0);
         setStakerCount(data.stakerCount || 0);
 
+        if (
+          token &&
+          data.profile &&
+          !recoveryTriggeredRef.current &&
+          shouldRecoverProfile(data.profile)
+        ) {
+          recoveryTriggeredRef.current = true;
+          setSyncMessage('Refreshing your GitHub data and recomputing your trust score…');
+
+          try {
+            await triggerIngestion(user.id, token);
+            if (!cancelled) {
+              pollTimer = setTimeout(fetchData, 1200);
+              return;
+            }
+          } catch (error) {
+            const message = error instanceof Error
+              ? error.message
+              : 'Failed to refresh GitHub analysis';
+            setSyncMessage(message);
+          }
+        }
+
         // Keep polling while ingestion is in progress
         if (data.profile?.ingestion_status === 'processing' || data.profile?.ingestion_status === 'pending') {
           pollTimer = setTimeout(fetchData, 3000);
+        } else if (data.profile?.ingestion_status === 'completed' && data.profile?.overall_trust_score > 0) {
+          setSyncMessage(null);
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchData();
-    return () => { if (pollTimer) clearTimeout(pollTimer); };
-  }, [user]);
+    return () => {
+      cancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
+  }, [user, token]);
 
   const handleEvaluateFit = async (jobDescription: string) => {
     if (!user) return;
     setIsEvaluating(true);
     try {
-      const result = await getContextualScore(user.id, jobDescription, token || undefined) as any;
+      const result = await getContextualScore(user.id, jobDescription, token || undefined);
       setContextualScore({
         fit_score: result.fit_score,
         breakdown: result.score_breakdown,
@@ -105,6 +190,65 @@ export default function DashboardPage() {
   }
 
   const githubData = profile.github_data as Record<string, any> || {};
+  const linkedinData = profile.linkedin_data as Record<string, any> || {};
+  const githubContributions = githubData.contributions as Record<string, any> || {};
+  const githubCollaboration = githubData.collaboration as Record<string, any> || {};
+  const scoreComponents = normalizeScoreComponents(profile.score_components);
+  const topLanguages = Array.isArray(githubData.languages) ? githubData.languages.slice(0, 6) : [];
+  const hasLinkedInVerification = Boolean(
+    linkedinData.sub ||
+    linkedinData.email ||
+    linkedinData.oauth_connected_at ||
+    linkedinData.verification?.provider === 'linkedin'
+  );
+  const scoreInsights = [
+    {
+      label: 'Dev Skills',
+      score: scoreComponents.developer_competence,
+      detail: `Languages: ${topLanguages.slice(0, 3).join(', ') || 'none yet'} · ${githubData.significant_repo_count ?? githubData.repos?.length ?? 0} notable repos · ${githubData.total_stars ?? 0} stars`,
+    },
+    {
+      label: 'Collaboration',
+      score: scoreComponents.collaboration,
+      detail: `${githubCollaboration.repos_contributed_to ?? 0} external repos · ${githubCollaboration.prs_merged_to_external_repos ?? 0} merged PRs · ${githubCollaboration.issues_opened_on_external_repos ?? 0} issues`,
+    },
+    {
+      label: 'Consistency',
+      score: scoreComponents.consistency,
+      detail: `${githubContributions.total_commits_last_year ?? 0} commits last year · ${githubContributions.active_months ?? 0} active months · ${githubContributions.longest_streak_days ?? 0}-day streak`,
+    },
+    {
+      label: 'Specialization',
+      score: scoreComponents.specialization_depth,
+      detail: profile.specializations?.length
+        ? profile.specializations.slice(0, 3).join(', ')
+        : 'Derived from your strongest GitHub languages and projects.',
+    },
+    {
+      label: 'Activity',
+      score: scoreComponents.activity_recency,
+      detail: `${githubContributions.commits_last_30_days ?? 0} commits / 30d · ${githubContributions.commits_last_90_days ?? 0} commits / 90d · recency ${githubContributions.recent_activity_score ?? 0}`,
+    },
+    {
+      label: 'Peer Trust',
+      score: scoreComponents.peer_trust,
+      detail: `${reviews.length} active reviews · ${totalStaked.toLocaleString()} WLD staked`,
+    },
+  ];
+  const githubEvidence = [
+    { label: 'Repos', value: githubData.public_repos ?? githubData.profile?.public_repos ?? '—' },
+    { label: 'Stars', value: githubData.total_stars ?? '—' },
+    { label: 'Followers', value: githubData.followers ?? githubData.profile?.followers ?? '—' },
+    { label: 'Commits / Year', value: githubContributions.total_commits_last_year ?? '—' },
+    { label: 'Active Months', value: githubContributions.active_months ?? '—' },
+    { label: 'External Repos', value: githubCollaboration.repos_contributed_to ?? '—' },
+  ];
+  const isSyncing = profile.ingestion_status === 'processing' || profile.ingestion_status === 'pending';
+  const profileName =
+    user?.display_name ||
+    (typeof githubData.name === 'string' && githubData.name.trim()) ||
+    (typeof linkedinData.name === 'string' && linkedinData.name.trim()) ||
+    (profile.github_username ? `@${profile.github_username}` : 'Your Profile');
 
   return (
     <div style={{ background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)', backgroundSize: '400% 400%', animation: 'aurora-shift 10s ease infinite', minHeight: '100vh' }}>
@@ -114,7 +258,7 @@ export default function DashboardPage() {
         <div className="fade-up fade-up-1" style={{ marginBottom: '48px' }}>
           <span style={sectionLabel}>Dashboard</span>
           <h1 style={{ ...headingLg, fontSize: '48px', margin: '0 0 12px 0' }}>
-            {user?.display_name || 'Your Profile'}
+            {profileName}
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
             {profile.github_username && (
@@ -140,6 +284,22 @@ export default function DashboardPage() {
                 {user.profession_category.replace('_', ' ')}
               </span>
             )}
+            {hasLinkedInVerification && (
+              <span
+                style={{
+                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: '#0A66C2',
+                  background: 'rgba(10,102,194,0.08)',
+                  border: '1px solid rgba(10,102,194,0.18)',
+                  borderRadius: '999px',
+                  padding: '4px 10px',
+                }}
+              >
+                LinkedIn verified
+              </span>
+            )}
             {profile.years_experience != null && (
               <span style={{ ...textSecondary, fontSize: '14px' }}>
                 {profile.years_experience}y experience
@@ -149,7 +309,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Ingestion banner ── */}
-        {(profile.ingestion_status === 'processing' || profile.ingestion_status === 'pending') && (
+        {(isSyncing || syncMessage) && (
           <div
             className="fade-up fade-up-2"
             style={{
@@ -166,8 +326,8 @@ export default function DashboardPage() {
               color: colors.primary,
             }}
           >
-            <LoadingSpinner />
-            Syncing your GitHub data and computing trust score…
+            {isSyncing ? <LoadingSpinner /> : <span style={{ fontSize: '18px' }}>↻</span>}
+            {syncMessage || 'Syncing your GitHub data and computing trust score…'}
           </div>
         )}
 
@@ -221,7 +381,41 @@ export default function DashboardPage() {
 
           {/* Right column: radar + skills */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <ScoreBreakdown components={profile.score_components} />
+            <ScoreBreakdown components={scoreComponents} />
+
+            <GlassCard style={{ padding: '28px' }}>
+              <span style={sectionLabel}>How It Was Calculated</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {scoreInsights.map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      borderRadius: '14px',
+                      border: '1px solid rgba(37,99,235,0.12)',
+                      background: 'rgba(255,255,255,0.55)',
+                      padding: '16px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                      <span style={{ ...headingSm, fontSize: '14px' }}>{item.label}</span>
+                      <span
+                        style={{
+                          fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          color: item.score >= 60 ? colors.primary : item.score >= 40 ? colors.warning : colors.textTertiary,
+                        }}
+                      >
+                        {item.score}
+                      </span>
+                    </div>
+                    <p style={{ ...textSecondary, fontSize: '13px', marginTop: '8px' }}>
+                      {item.detail}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
 
             {/* Skills & Specializations */}
             {(profile.computed_skills?.length > 0 || profile.specializations?.length > 0) && (
@@ -278,16 +472,33 @@ export default function DashboardPage() {
               </GlassCard>
             )}
 
-            {/* GitHub stats if available */}
-            {githubData.public_repos != null && (
+            {hasLinkedInVerification && (
               <GlassCard style={{ padding: '28px' }}>
-                <span style={sectionLabel}>GitHub Activity</span>
+                <span style={sectionLabel}>LinkedIn Verification</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ ...headingSm, fontSize: '16px' }}>
+                    {linkedinData.name || 'LinkedIn account connected'}
+                  </div>
+                  {linkedinData.email && (
+                    <div style={{ ...textSecondary, fontSize: '14px' }}>
+                      {linkedinData.email}
+                    </div>
+                  )}
+                  <p style={{ ...textSecondary, fontSize: '13px', margin: 0 }}>
+                    Ownership was verified through LinkedIn OpenID Connect. LinkedIn only gives us
+                    basic identity data here, so richer career history and skills still need manual
+                    evidence later.
+                  </p>
+                </div>
+              </GlassCard>
+            )}
+
+            {/* GitHub stats if available */}
+            {profile.github_username && (
+              <GlassCard style={{ padding: '28px' }}>
+                <span style={sectionLabel}>GitHub Evidence Used</span>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                  {[
-                    { label: 'Repos', value: githubData.public_repos },
-                    { label: 'Stars', value: githubData.total_stars ?? githubData.stargazers_count ?? '—' },
-                    { label: 'Followers', value: githubData.followers ?? '—' },
-                  ].map(({ label, value }) => (
+                  {githubEvidence.map(({ label, value }) => (
                     <div key={label} style={{ textAlign: 'center' }}>
                       <div
                         style={{
@@ -304,6 +515,32 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
+
+                {topLanguages.length > 0 && (
+                  <>
+                    <div style={separator} />
+                    <span style={sectionLabel}>Top Languages</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {topLanguages.map((language) => (
+                        <span
+                          key={language}
+                          style={{
+                            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            color: colors.primary,
+                            background: 'rgba(37,99,235,0.08)',
+                            border: '1px solid rgba(37,99,235,0.2)',
+                            borderRadius: '8px',
+                            padding: '4px 12px',
+                          }}
+                        >
+                          {language}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
               </GlassCard>
             )}
           </div>

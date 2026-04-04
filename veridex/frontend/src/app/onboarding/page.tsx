@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import GitHubConnectButton from '@/components/GitHubConnectButton';
+import LinkedInConnectButton from '@/components/LinkedInConnectButton';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +18,17 @@ import {
   gradientText,
   colors,
 } from '@/lib/styles';
+
+const ONBOARDING_DRAFT_KEY = 'veridex_onboarding_draft';
+
+interface OnboardingDraft {
+  displayName: string;
+  selectedRoles: string[];
+  professionCategory: string | null;
+  step: number;
+  githubConnected: boolean;
+  linkedinConnected: boolean;
+}
 
 const PROFESSION_CATEGORIES = [
   { id: 'software', label: 'Software Engineering', icon: '💻' },
@@ -34,6 +46,23 @@ const ROLES = [
 
 const STEPS = ['Profile', 'Profession', 'Connect'];
 
+function getDraftStep(
+  displayName: string,
+  selectedRoles: string[],
+  professionCategory: string | null,
+  fallbackStep = 1
+): number {
+  if (!displayName.trim() || selectedRoles.length === 0) {
+    return 1;
+  }
+
+  if (!professionCategory) {
+    return 2;
+  }
+
+  return Math.max(3, fallbackStep);
+}
+
 export default function OnboardingPage() {
   return (
     <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh' }}><LoadingSpinner /></div>}>
@@ -46,12 +75,18 @@ function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, token, isLoading: authLoading, updateUser } = useAuth();
+  const githubStatus = searchParams.get('github');
+  const linkedinStatus = searchParams.get('linkedin');
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>(['worker']);
   const [professionCategory, setProfessionCategory] = useState<string | null>(null);
   const [githubConnected, setGithubConnected] = useState(false);
+  const [linkedinConnected, setLinkedinConnected] = useState(false);
+  const [githubMessage, setGithubMessage] = useState<string | null>(null);
+  const [linkedinMessage, setLinkedinMessage] = useState<string | null>(null);
+  const [hasHydratedDraft, setHasHydratedDraft] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -60,12 +95,96 @@ function OnboardingContent() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    const githubStatus = searchParams.get('github');
+    if (!user || hasHydratedDraft) {
+      return;
+    }
+
+    let draft: Partial<OnboardingDraft> | null = null;
+    try {
+      const rawDraft = sessionStorage.getItem(ONBOARDING_DRAFT_KEY);
+      if (rawDraft) {
+        draft = JSON.parse(rawDraft) as Partial<OnboardingDraft>;
+      }
+    } catch (error) {
+      console.warn('Failed to restore onboarding draft:', error);
+    }
+
+    const nextDisplayName = typeof draft?.displayName === 'string'
+      ? draft.displayName
+      : (user.display_name || '');
+    const nextSelectedRoles = Array.isArray(draft?.selectedRoles) && draft.selectedRoles.length > 0
+      ? draft.selectedRoles
+      : (user.roles?.length ? user.roles : ['worker']);
+    const nextProfessionCategory = typeof draft?.professionCategory === 'string'
+      ? draft.professionCategory
+      : (user.profession_category || null);
+    const nextGithubConnected = Boolean(draft?.githubConnected) || githubStatus === 'connected';
+    const nextLinkedinConnected = Boolean(draft?.linkedinConnected) || linkedinStatus === 'connected';
+    const fallbackStep = typeof draft?.step === 'number' ? draft.step : 1;
+
+    setDisplayName(nextDisplayName);
+    setSelectedRoles(nextSelectedRoles);
+    setProfessionCategory(nextProfessionCategory);
+    setGithubConnected(nextGithubConnected);
+    setLinkedinConnected(nextLinkedinConnected);
+    setStep(getDraftStep(nextDisplayName, nextSelectedRoles, nextProfessionCategory, fallbackStep));
+    setHasHydratedDraft(true);
+  }, [user, githubStatus, linkedinStatus, hasHydratedDraft]);
+
+  useEffect(() => {
     if (githubStatus === 'connected') {
       setGithubConnected(true);
-      setStep(3);
+      setGithubMessage('GitHub connected. We will sync your repositories and calculate your trust score after setup.');
+    } else if (githubStatus === 'error') {
+      setGithubMessage('GitHub connection did not complete. You can try again anytime.');
     }
-  }, [searchParams]);
+  }, [githubStatus]);
+
+  useEffect(() => {
+    if (linkedinStatus === 'connected') {
+      setLinkedinConnected(true);
+      setLinkedinMessage('LinkedIn connected. We verified your account ownership and basic profile. Rich work history still needs manual evidence later.');
+    } else if (linkedinStatus === 'error') {
+      setLinkedinMessage('LinkedIn connection did not complete. You can try again anytime.');
+    }
+  }, [linkedinStatus]);
+
+  useEffect(() => {
+    if (!user || !hasHydratedDraft) {
+      return;
+    }
+
+    const draft: OnboardingDraft = {
+      displayName,
+      selectedRoles,
+      professionCategory,
+      step,
+      githubConnected,
+      linkedinConnected,
+    };
+
+    sessionStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(draft));
+  }, [
+    displayName,
+    selectedRoles,
+    professionCategory,
+    step,
+    githubConnected,
+    linkedinConnected,
+    user,
+    hasHydratedDraft,
+  ]);
+
+  useEffect(() => {
+    if (!professionCategory && step > 2) {
+      setStep(2);
+      return;
+    }
+
+    if ((!displayName.trim() || selectedRoles.length === 0) && step > 1) {
+      setStep(1);
+    }
+  }, [displayName, selectedRoles, professionCategory, step]);
 
   const toggleRole = (roleId: string) => {
     setSelectedRoles((prev) =>
@@ -86,8 +205,11 @@ function OnboardingContent() {
         token
       );
       updateUser(result.user);
-      // Fire ingestion so GitHub data is scored immediately (non-blocking)
-      triggerIngestion(result.user.id, token).catch(() => {});
+      sessionStorage.removeItem(ONBOARDING_DRAFT_KEY);
+      // OAuth callbacks already try to sync; this keeps onboarding self-healing.
+      if (githubConnected || linkedinConnected) {
+        triggerIngestion(result.user.id, token).catch(() => {});
+      }
       router.push('/dashboard');
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
@@ -363,26 +485,46 @@ function OnboardingContent() {
                   isConnected={githubConnected}
                 />
 
-                {/* LinkedIn — coming soon */}
-                <div
-                  style={{
-                    padding: '16px 18px',
-                    borderRadius: '12px',
-                    border: '1.5px solid rgba(37,99,235,0.1)',
-                    background: 'rgba(255,255,255,0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px',
-                    opacity: 0.5,
-                    cursor: 'not-allowed',
-                  }}
-                >
-                  <span style={{ fontSize: '20px' }}>💼</span>
-                  <div>
-                    <div style={{ ...headingSm, fontSize: '14px' }}>LinkedIn</div>
-                    <div style={{ ...textSecondary, fontSize: '12px' }}>Coming soon</div>
+                {githubMessage && (
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '12px',
+                      border: `1px solid ${githubStatus === 'error' ? 'rgba(244,63,94,0.24)' : 'rgba(37,99,235,0.16)'}`,
+                      background: githubStatus === 'error'
+                        ? 'rgba(244,63,94,0.06)'
+                        : 'rgba(37,99,235,0.05)',
+                      fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                      fontSize: '13px',
+                      color: githubStatus === 'error' ? colors.rose : colors.primary,
+                    }}
+                  >
+                    {githubMessage}
                   </div>
-                </div>
+                )}
+
+                <LinkedInConnectButton
+                  onConnect={() => setLinkedinConnected(true)}
+                  isConnected={linkedinConnected}
+                />
+
+                {linkedinMessage && (
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '12px',
+                      border: `1px solid ${linkedinStatus === 'error' ? 'rgba(244,63,94,0.24)' : 'rgba(10,102,194,0.22)'}`,
+                      background: linkedinStatus === 'error'
+                        ? 'rgba(244,63,94,0.06)'
+                        : 'rgba(10,102,194,0.05)',
+                      fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                      fontSize: '13px',
+                      color: linkedinStatus === 'error' ? colors.rose : '#0A66C2',
+                    }}
+                  >
+                    {linkedinMessage}
+                  </div>
+                )}
               </div>
 
               <div style={separator} />
@@ -397,7 +539,7 @@ function OnboardingContent() {
                 </button>
                 <button
                   onClick={handleComplete}
-                  disabled={isLoading}
+                  disabled={isLoading || !displayName.trim() || selectedRoles.length === 0 || !professionCategory}
                   className="btn-primary"
                   style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >

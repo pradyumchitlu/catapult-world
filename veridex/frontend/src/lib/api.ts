@@ -1,4 +1,40 @@
+import type { ContextualScore, Review, ScoreComponents, User, WorkerProfile } from '@/types';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+interface VerifyWorldIdResponse {
+  success: boolean;
+  user: User;
+  isNewUser: boolean;
+  token: string;
+}
+
+interface MeResponse {
+  user: User;
+}
+
+interface UpdateProfileResponse {
+  success: boolean;
+  user: User;
+}
+
+interface IngestionResponse {
+  success: boolean;
+  overall_trust_score: number;
+  score_components: ScoreComponents;
+  computed_skills: string[];
+  specializations: string[];
+  years_experience: number | null;
+  warning?: string | null;
+}
+
+interface ReputationResponse {
+  user: User;
+  profile: WorkerProfile | null;
+  reviews: Review[];
+  totalStaked: number;
+  stakerCount: number;
+}
 
 interface FetchOptions extends RequestInit {
   token?: string;
@@ -31,19 +67,19 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
 
 // Auth
 export const verifyWorldId = (proof: any) =>
-  fetchApi<{ success: boolean; user: any; isNewUser: boolean; token: string }>(
+  fetchApi<VerifyWorldIdResponse>(
     '/api/auth/verify',
     { method: 'POST', body: JSON.stringify(proof) }
   );
 
 export const getMe = (token: string) =>
-  fetchApi<{ user: any }>('/api/auth/me', { token });
+  fetchApi<MeResponse>('/api/auth/me', { token });
 
 export const updateProfile = (
   data: { display_name: string; roles: string[]; profession_category: string },
   token: string
 ) =>
-  fetchApi<{ success: boolean; user: any }>('/api/auth/profile', {
+  fetchApi<UpdateProfileResponse>('/api/auth/profile', {
     method: 'PUT',
     body: JSON.stringify(data),
     token,
@@ -51,14 +87,14 @@ export const updateProfile = (
 
 // Reputation
 export const triggerIngestion = (userId: string, token: string) =>
-  fetchApi('/api/reputation/ingest', {
+  fetchApi<IngestionResponse>('/api/reputation/ingest', {
     method: 'POST',
     body: JSON.stringify({ userId }),
     token,
   });
 
 export const getReputation = (userId: string) =>
-  fetchApi(`/api/reputation/${userId}`);
+  fetchApi<ReputationResponse>(`/api/reputation/${userId}`);
 
 // Trust Query
 export const getTrustScore = (veridexId: string) =>
@@ -105,7 +141,7 @@ export const getReviews = (workerId: string) =>
 
 // Contextual Score
 export const getContextualScore = (workerId: string, jobDescription: string, token?: string) =>
-  fetchApi('/api/contextual-score', {
+  fetchApi<ContextualScore>('/api/contextual-score', {
     method: 'POST',
     body: JSON.stringify({ worker_id: workerId, job_description: jobDescription }),
     token,
