@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LiquidGlassCard } from '@/components/kokonutui/liquid-glass-card';
+import GlassCard from '@/components/GlassCard';
 import {
   gradientText,
   sectionLabel,
@@ -45,7 +45,7 @@ export default function LandingPage() {
         </div>
 
         {/* ── 2. Protocol Flow ──────────────────────────────────────── */}
-        <LiquidGlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
+        <GlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>How It Works</span>
 
           {[
@@ -103,10 +103,10 @@ export default function LandingPage() {
               {i < arr.length - 1 && <div style={separator} />}
             </div>
           ))}
-        </LiquidGlassCard>
+        </GlassCard>
 
         {/* ── 3. Capabilities ──────────────────────────────────────── */}
-        <LiquidGlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
+        <GlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>Capabilities</span>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -169,10 +169,10 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        </LiquidGlassCard>
+        </GlassCard>
 
         {/* ── 4. Integrity Pull-quote ────────────────────────────────── */}
-        <LiquidGlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
+        <GlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>Trust Integrity</span>
 
           <div style={{ position: 'relative', marginBottom: '32px' }}>
@@ -217,10 +217,10 @@ export default function LandingPage() {
             one staker counts fully, but each additional 100 WLD is worth
             progressively less. No single actor can inflate a score.
           </p>
-        </LiquidGlassCard>
+        </GlassCard>
 
         {/* ── 5. CTA ────────────────────────────────────────────────── */}
-        <LiquidGlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
+        <GlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>Get Started</span>
 
           <h2 style={{ ...headingMd, margin: '0 0 20px 0' }}>
@@ -254,10 +254,10 @@ export default function LandingPage() {
           >
             Verify Your Identity →
           </Link>
-        </LiquidGlassCard>
+        </GlassCard>
 
         {/* ── 6. Footer ─────────────────────────────────────────────── */}
-        <LiquidGlassCard>
+        <GlassCard>
           <div
             style={{
               display: 'flex',
@@ -321,7 +321,7 @@ export default function LandingPage() {
 
             <span style={textMuted}>Powered by World ID</span>
           </div>
-        </LiquidGlassCard>
+        </GlassCard>
 
         <div style={{ height: '64px' }} />
       </div>

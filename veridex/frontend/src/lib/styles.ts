@@ -50,9 +50,9 @@ export const bodyText: CSSProperties = {
 };
 
 export const col: CSSProperties = {
-  maxWidth: '680px',
+  maxWidth: '1200px',
   margin: '0 auto',
-  padding: '64px 24px',
+  padding: '64px 48px',
 };
 
 // ── Typography ────��─────────────────────────────���───────────────────────────

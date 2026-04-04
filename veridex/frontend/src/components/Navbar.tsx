@@ -44,9 +44,9 @@ export default function Navbar() {
     >
       <div
         style={{
-          maxWidth: '680px',
+          maxWidth: '1200px',
           margin: '0 auto',
-          padding: '0 24px',
+          padding: '0 48px',
           height: '72px',
           display: 'flex',
           alignItems: 'center',
@@ -143,18 +143,8 @@ export default function Navbar() {
               </div>
             </div>
           ) : (
-            <Link
-              href="/verify"
-              style={{
-                fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                fontSize: '13px',
-                fontWeight: 500,
-                color: '#1D4ED8',
-                textDecoration: 'none',
-                transition: 'opacity 0.15s ease',
-              }}
-            >
-              Get Started →
+            <Link href="/verify" className="btn-primary" style={{ fontSize: '13px', padding: '8px 20px' }}>
+              Get Started
             </Link>
           )}
 
