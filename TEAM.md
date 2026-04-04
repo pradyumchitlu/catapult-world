@@ -202,6 +202,7 @@ backend/
 - [ ] Trigger score recomputation on new reviews
 
 **API Endpoints:**
+- `POST /api/reputation/evidence` - Save manual LinkedIn/project evidence and recompute score
 - `POST /api/reputation/ingest` - Fetch GitHub data, compute scores
 - `GET /api/reputation/:userId` - Get full profile
 - `POST /api/stake` - Stake WLD on worker
@@ -216,6 +217,24 @@ backend/
 4. `specialization_depth` - Language focus, topics
 5. `activity_recency` - Recent commits
 6. `peer_trust` - Weighted reviews
+
+**Person 2 Handoff Note (Apr 4):**
+- Base reputation scoring is now algorithmic in `veridex/backend/src/services/scoring.ts`; it does not use an LLM for `overall_trust_score`.
+- The scorer now uses 3 evidence buckets: GitHub data, manual professional evidence (`linkedin_data` + `other_platforms.projects`), and staked reviews.
+- `POST /api/reputation/evidence` is ready for frontend wiring. It accepts `userId` plus optional `github_username`, `linkedin_data`, `projects`, and `other_platforms`, then recomputes `computed_skills`, `specializations`, `years_experience`, and score fields.
+- `POST /api/reputation/ingest` now works even if GitHub is not connected yet, as long as manual evidence or reviews exist. If GitHub is connected later, re-run ingest to refresh repo/activity data.
+- Review creation now triggers the richer recomputation path, so manual evidence and GitHub evidence both affect the updated worker score.
+
+**Notes For Other People:**
+- `Person 1`: keep GitHub OAuth in your lane. After GitHub is connected, make sure the worker profile ends up with `github_username`, then call `POST /api/reputation/ingest` for that user.
+- `Person 3`: onboarding/profile forms can send manual evidence to `POST /api/reputation/evidence`. Easiest first payload is LinkedIn-style structured fields plus a `projects` array; no file upload/storage is required yet.
+- `Person 4`: contextual scoring already reads `computed_skills` from the worker profile, so it should automatically benefit from the richer manual evidence and recomputed specializations.
+
+**Files Modified By Person 2 So Far:**
+- `veridex/backend/src/routes/reputation.ts`
+- `veridex/backend/src/routes/review.ts`
+- `veridex/backend/src/services/scoring.ts`
+- `veridex/backend/src/services/reputationProfile.ts`
 
 ---
 

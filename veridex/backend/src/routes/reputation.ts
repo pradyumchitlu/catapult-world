@@ -3,8 +3,157 @@ import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import supabase from '../lib/supabase';
 import { fetchUserProfile, fetchContributionHistory, fetchCollaborationSignals } from '../services/github';
 import { computeOverallScore } from '../services/scoring';
+import {
+  ensureWorkerProfile,
+  mergeLinkedInData,
+  mergeOtherPlatforms,
+} from '../services/reputationProfile';
 
 const router = Router();
+
+function hasMeaningfulData(value: unknown): boolean {
+  if (!value) {
+    return false;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === 'string') {
+    return value.trim().length > 0;
+  }
+
+  if (typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>).some(hasMeaningfulData);
+  }
+
+  return true;
+}
+
+function normalizeGithubUsername(value: unknown): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+/**
+ * POST /api/reputation/evidence
+ * Save manual reputation evidence that the scoring engine can use immediately.
+ */
+router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const {
+      userId,
+      github_username,
+      linkedin_data,
+      projects,
+      other_platforms,
+    } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId' });
+    }
+
+    const nextGithubUsername = normalizeGithubUsername(github_username);
+    const hasPayload =
+      nextGithubUsername !== undefined ||
+      linkedin_data !== undefined ||
+      projects !== undefined ||
+      other_platforms !== undefined;
+
+    if (!hasPayload) {
+      return res.status(400).json({ error: 'No evidence payload provided' });
+    }
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const profile = await ensureWorkerProfile(userId);
+
+    const mergedLinkedInData = linkedin_data !== undefined
+      ? mergeLinkedInData(profile.linkedin_data, linkedin_data)
+      : (profile.linkedin_data || {});
+
+    const mergedOtherPlatforms = mergeOtherPlatforms(
+      profile.other_platforms,
+      {
+        ...(other_platforms || {}),
+        ...(projects !== undefined ? { projects } : {}),
+      }
+    );
+
+    const githubUsernameToStore = nextGithubUsername !== undefined
+      ? nextGithubUsername
+      : profile.github_username;
+
+    const { data: reviews } = await supabase
+      .from('reviews')
+      .select('*')
+      .eq('worker_id', userId)
+      .eq('status', 'active');
+
+    const scoreResult = await computeOverallScore(
+      {
+        githubData: profile.github_data,
+        linkedinData: mergedLinkedInData,
+        otherPlatforms: mergedOtherPlatforms,
+      },
+      reviews || []
+    );
+
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from('worker_profiles')
+      .update({
+        github_username: githubUsernameToStore,
+        linkedin_data: mergedLinkedInData,
+        other_platforms: mergedOtherPlatforms,
+        computed_skills: scoreResult.computed_skills,
+        specializations: scoreResult.specializations,
+        years_experience: scoreResult.years_experience,
+        overall_trust_score: scoreResult.overall,
+        score_components: scoreResult.components,
+        ingestion_status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', profile.id)
+      .select('*')
+      .single();
+
+    if (updateError || !updatedProfile) {
+      throw updateError || new Error('Failed to update worker profile');
+    }
+
+    return res.json({
+      success: true,
+      profile: updatedProfile,
+      warning: githubUsernameToStore && !hasMeaningfulData(profile.github_data)
+        ? 'GitHub username saved. Trigger /api/reputation/ingest after OAuth completes to sync repository data.'
+        : null,
+    });
+  } catch (error) {
+    console.error('Reputation evidence error:', error);
+    return res.status(500).json({ error: 'Failed to save reputation evidence' });
+  }
+});
 
 /**
  * POST /api/reputation/ingest
@@ -18,20 +167,7 @@ router.post('/ingest', requireAuth, async (req: AuthenticatedRequest, res: Respo
       return res.status(400).json({ error: 'Missing userId' });
     }
 
-    // Get worker profile
-    const { data: profile, error: profileError } = await supabase
-      .from('worker_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (profileError || !profile) {
-      return res.status(404).json({ error: 'Worker profile not found' });
-    }
-
-    if (!profile.github_username) {
-      return res.status(400).json({ error: 'No GitHub username connected' });
-    }
+    const profile = await ensureWorkerProfile(userId);
 
     // Update status to processing
     await supabase
@@ -40,19 +176,6 @@ router.post('/ingest', requireAuth, async (req: AuthenticatedRequest, res: Respo
       .eq('id', profile.id);
 
     try {
-      // Fetch GitHub data
-      const [userProfile, contributions, collaboration] = await Promise.all([
-        fetchUserProfile(profile.github_username),
-        fetchContributionHistory(profile.github_username),
-        fetchCollaborationSignals(profile.github_username),
-      ]);
-
-      const githubData = {
-        ...userProfile,
-        contributions,
-        collaboration,
-      };
-
       // Get reviews for this worker
       const { data: reviews } = await supabase
         .from('reviews')
@@ -60,9 +183,52 @@ router.post('/ingest', requireAuth, async (req: AuthenticatedRequest, res: Respo
         .eq('worker_id', userId)
         .eq('status', 'active');
 
+      const hasManualEvidence =
+        hasMeaningfulData(profile.linkedin_data) || hasMeaningfulData(profile.other_platforms);
+      const hasReviewEvidence = (reviews || []).length > 0;
+
+      let githubData = profile.github_data || {};
+      let warning: string | null = null;
+
+      if (profile.github_username) {
+        try {
+          const [userProfile, contributions, collaboration] = await Promise.all([
+            fetchUserProfile(profile.github_username),
+            fetchContributionHistory(profile.github_username),
+            fetchCollaborationSignals(profile.github_username),
+          ]);
+
+          githubData = {
+            ...userProfile,
+            contributions,
+            collaboration,
+          };
+        } catch (githubError) {
+          if (!hasMeaningfulData(githubData) && !hasManualEvidence && !hasReviewEvidence) {
+            throw githubError;
+          }
+
+          warning = 'GitHub refresh failed, but the score was recomputed from cached or manual evidence.';
+          console.error('GitHub refresh warning:', githubError);
+        }
+      } else if (!hasManualEvidence && !hasReviewEvidence) {
+        await supabase
+          .from('worker_profiles')
+          .update({ ingestion_status: 'failed' })
+          .eq('id', profile.id);
+
+        return res.status(400).json({
+          error: 'No reputation evidence found. Connect GitHub or upload LinkedIn/project data first.',
+        });
+      }
+
       // Compute scores
       const scoreResult = await computeOverallScore(
-        { githubData, linkedinData: profile.linkedin_data },
+        {
+          githubData,
+          linkedinData: profile.linkedin_data,
+          otherPlatforms: profile.other_platforms,
+        },
         reviews || []
       );
 
@@ -72,6 +238,8 @@ router.post('/ingest', requireAuth, async (req: AuthenticatedRequest, res: Respo
         .update({
           github_data: githubData,
           computed_skills: scoreResult.computed_skills,
+          specializations: scoreResult.specializations,
+          years_experience: scoreResult.years_experience,
           overall_trust_score: scoreResult.overall,
           score_components: scoreResult.components,
           ingestion_status: 'completed',
@@ -83,6 +251,10 @@ router.post('/ingest', requireAuth, async (req: AuthenticatedRequest, res: Respo
         success: true,
         overall_trust_score: scoreResult.overall,
         score_components: scoreResult.components,
+        computed_skills: scoreResult.computed_skills,
+        specializations: scoreResult.specializations,
+        years_experience: scoreResult.years_experience,
+        warning,
       });
     } catch (ingestionError) {
       // Mark as failed
