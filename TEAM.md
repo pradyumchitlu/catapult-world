@@ -1,6 +1,6 @@
 # Veridex Team Guide
 
-A decentralized trust platform where verified humans build portable reputation, stake WLD on each other's integrity, and spawn accountable AI agents.
+A decentralized trust platform where verified humans build portable reputation, stake WLD on each other's integrity, and register **Agent Credentials** that cryptographically bind AI agents to human identity, reputation, and stake.
 
 This document is the team’s single source of truth for what Veridex is, how the repo is laid out, how to run it, and who owns which workstreams.
 
@@ -180,7 +180,7 @@ veridex/
 │   │   │   ├── stake.ts         # Stake WLD on workers
 │   │   │   ├── review.ts        # Staked reviews
 │   │   │   ├── contextual.ts    # Contextual fit scoring
-│   │   │   ├── agent.ts         # Spawn/list agents
+│   │   │   ├── agent.ts         # Register/list agents (Agent Credential)
 │   │   │   └── chat.ts          # AI chatbot
 │   │   │
 │   │   ├── services/            # Business logic
@@ -205,6 +205,20 @@ veridex/
 ├── .env.example                 # Environment variables template
 └── README.md
 ```
+
+---
+
+## Agent Credential model (not “agent spawning”)
+
+Veridex treats agents as **registered credentials** tied to a verified human (World ID), not disposable “spawned” identities.
+
+**Registration.** A verified human says they want to register an agent. They supply an **agent identifier** — e.g. a public key the agent uses to sign actions, an API endpoint, a wallet address, or whatever surface the agent uses. Veridex mints an on-chain **Agent Credential** (token or registry entry) that links that identifier to the human’s World ID and trust score. The human sets **trust inheritance** (e.g. 0.7× of their score), **authorized domains** (DeFi, negotiation, content, etc.), and optionally **stake** locked as collateral for that agent’s behavior.
+
+**Verification.** Third parties query Veridex: “Is this agent legitimate?” The API returns whether the agent is bound to a verified human, effective trust, authorized domains, and stake backing the credential — cryptographic accountability the counterparty can rely on.
+
+**Accountability.** If the agent misbehaves, anyone can file a **dispute** against the credential. If the dispute is validated (governance as you define it — multisig, staking arbitration, etc.), the human’s trust score is penalized and **stake can be slashed**. Humans have skin in the game for every agent they deploy.
+
+**Hierarchy.** One human can register **multiple agents** with different trust multipliers and stakes (e.g. a high-stakes trading agent vs. a low-stakes email assistant), managed from the dashboard: activity, inheritance, disputes, and staking per agent.
 
 ---
 
@@ -408,7 +422,7 @@ frontend/
 ---
 
 ### Person 4: AI + Agents
-**Focus:** Gemini integration, contextual scoring, agent system
+**Focus:** Gemini integration, contextual scoring, Agent Credentials (registration, verification API, disputes/slashing narrative)
 
 **Files to work on:**
 ```
@@ -416,12 +430,12 @@ backend/
 ├── src/services/
 │   ├── gemini.ts                 # Gemini API client
 │   ├── contextual.ts                # Fit scoring logic
-│   └── agent.ts                     # Agent spawning
+│   └── agent.ts                     # Agent Credential logic
 │
 ├── src/routes/
 │   ├── chat.ts                      # AI chatbot endpoint
 │   ├── contextual.ts                # Contextual score endpoint
-│   └── agent.ts                     # Spawn/list agents
+│   └── agent.ts                     # Register/list agents (verification API)
 
 frontend/
 ├── src/app/agents/page.tsx          # Agent management UI
@@ -436,13 +450,13 @@ frontend/
 - [ ] Implement job description parsing
 - [ ] Build contextual fit scoring (met/partial/missing)
 - [ ] Implement chat session management
-- [ ] Agent spawning with 70% derived score
-- [ ] Agent lookup API for external services
+- [ ] Agent Credential registration (identifier, inheritance fraction, domains, optional stake)
+- [ ] Public agent lookup API for counterparties (verification flow)
 
 **API Endpoints:**
 - `POST /api/chat` - Send message, get AI response
 - `POST /api/contextual-score` - Get fit score for job desc
-- `POST /api/agent/spawn` - Create new agent
+- `POST /api/agent/spawn` - Register agent / mint Agent Credential (implementation name; not “spawn” in product copy)
 - `GET /api/agent/list/:userId` - List user's agents
 - `GET /api/agent/:agentId` - Lookup agent (public)
 
@@ -472,7 +486,7 @@ POST /api/stake/withdraw       # Withdraw stake
 POST /api/review               # Leave staked review
 POST /api/contextual-score     # Get contextual fit score
 POST /api/chat                 # AI chatbot message
-POST /api/agent/spawn          # Create agent
+POST /api/agent/spawn          # Register agent (Agent Credential)
 GET  /api/agent/list/:userId   # List user's agents
 GET  /api/stake/:userId        # Get user's stakes
 ```
@@ -487,7 +501,7 @@ GET  /api/stake/:userId        # Get user's stakes
 | `worker_profiles` | GitHub data, skills, trust scores |
 | `reviews` | Staked reviews with ratings |
 | `stakes` | WLD stakes on workers |
-| `agents` | AI agents tied to users |
+| `agents` | Agent Credentials (identifiers, inheritance, domains, stake refs) tied to users |
 | `contextual_scores` | Cached fit scores |
 | `chat_sessions` | Chat history |
 | `query_log` | Profile view tracking |

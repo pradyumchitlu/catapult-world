@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(rm /home/prady/code/catapult-world/veridex/frontend/src/components/LiquidGlassCard.tsx)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx next:*)",
+      "Bash(npm install:*)",
+      "WebFetch(domain:ui.aceternity.com)",
+      "Bash(npx shadcn@latest add \"https://ui.aceternity.com/r/typewriter-effect.json\")",
+      "Bash(npx shadcn@latest add \"@aceternity/typewriter-effect\")"
     ]
   }
 }

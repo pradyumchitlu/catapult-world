@@ -1,5 +1,9 @@
+'use client';
+
 import Link from 'next/link';
-import { LiquidGlassCard } from '@/components/kokonutui/liquid-glass-card';
+import { useState, useEffect } from 'react';
+import RotatingText from '@/components/RotatingText';
+import GlassCard from '@/components/GlassCard';
 import {
   gradientText,
   sectionLabel,
@@ -13,13 +17,75 @@ import {
 } from '@/lib/styles';
 
 export default function LandingPage() {
+  const [splashOpacity, setSplashOpacity] = useState(1);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const fade = 1 - Math.min(window.scrollY / (window.innerHeight * 0.5), 1);
+      setSplashOpacity(fade);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <div style={{ minHeight: '100vh' }}>
-      <div style={col}>
+      <div style={{ ...col, maxWidth: '860px', paddingTop: '0' }}>
+        {/* ── 0. Splash ────────────────────────────────────────────── */}
+        <div
+          style={{
+            height: '100vh',
+            marginTop: '-72px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'sticky',
+            top: 0,
+            zIndex: 0,
+            opacity: splashOpacity,
+            transition: 'opacity 0.05s linear',
+          }}
+        >
+          <h1
+            className="fade-up"
+            style={{
+              fontFamily: 'var(--font-fraunces), Georgia, serif',
+              fontStyle: 'italic',
+              fontSize: 'clamp(72px, 12vw, 140px)',
+              fontWeight: 700,
+              letterSpacing: '-0.03em',
+              ...gradientText,
+              paddingBottom: '8px',
+            }}
+          >
+            Veridex
+          </h1>
+        </div>
+
         {/* ── 1. Hero ─────────────────────────────────────────────── */}
-        <div className="fade-up fade-up-1" style={{ marginBottom: '64px' }}>
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            paddingTop: '64px',
+            paddingBottom: '64px',
+            background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)',
+            backgroundSize: '400% 400%',
+            animation: 'aurora-shift 10s ease infinite',
+          }}
+        >
           <h1 style={{ ...headingLg, margin: '0 0 28px 0' }}>
-            Trust, <em style={{ fontStyle: 'italic' }}>staked.</em>
+            Trust,{' '}
+            <em style={{ fontStyle: 'italic' }}>
+              <RotatingText
+                words={['staked.', 'verified.', 'portable.', 'earned.']}
+                interval={2500}
+              />
+            </em>
           </h1>
 
           <p
@@ -36,7 +102,7 @@ export default function LandingPage() {
           {/* Buttons */}
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <Link href="/verify" className="btn-primary">
-              Verify Your Identity
+              Get Started
             </Link>
             <Link href="/browse" className="btn-secondary">
               Browse Workers
@@ -45,7 +111,7 @@ export default function LandingPage() {
         </div>
 
         {/* ── 2. Protocol Flow ──────────────────────────────────────── */}
-        <LiquidGlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
+        <GlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>How It Works</span>
 
           {[
@@ -103,10 +169,10 @@ export default function LandingPage() {
               {i < arr.length - 1 && <div style={separator} />}
             </div>
           ))}
-        </LiquidGlassCard>
+        </GlassCard>
 
         {/* ── 3. Capabilities ──────────────────────────────────────── */}
-        <LiquidGlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
+        <GlassCard className="fade-up fade-up-2" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>Capabilities</span>
 
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -169,10 +235,10 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        </LiquidGlassCard>
+        </GlassCard>
 
         {/* ── 4. Integrity Pull-quote ────────────────────────────────── */}
-        <LiquidGlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
+        <GlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>Trust Integrity</span>
 
           <div style={{ position: 'relative', marginBottom: '32px' }}>
@@ -217,10 +283,10 @@ export default function LandingPage() {
             one staker counts fully, but each additional 100 WLD is worth
             progressively less. No single actor can inflate a score.
           </p>
-        </LiquidGlassCard>
+        </GlassCard>
 
         {/* ── 5. CTA ────────────────────────────────────────────────── */}
-        <LiquidGlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
+        <GlassCard className="fade-up fade-up-3" style={{ marginBottom: '64px' }}>
           <span style={sectionLabel}>Get Started</span>
 
           <h2 style={{ ...headingMd, margin: '0 0 20px 0' }}>
@@ -254,10 +320,10 @@ export default function LandingPage() {
           >
             Verify Your Identity →
           </Link>
-        </LiquidGlassCard>
+        </GlassCard>
 
         {/* ── 6. Footer ─────────────────────────────────────────────── */}
-        <LiquidGlassCard>
+        <GlassCard>
           <div
             style={{
               display: 'flex',
@@ -321,7 +387,7 @@ export default function LandingPage() {
 
             <span style={textMuted}>Powered by World ID</span>
           </div>
-        </LiquidGlassCard>
+        </GlassCard>
 
         <div style={{ height: '64px' }} />
       </div>

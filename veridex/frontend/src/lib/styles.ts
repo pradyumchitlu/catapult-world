@@ -50,9 +50,9 @@ export const bodyText: CSSProperties = {
 };
 
 export const col: CSSProperties = {
-  maxWidth: '680px',
+  maxWidth: '1200px',
   margin: '0 auto',
-  padding: '64px 24px',
+  padding: '64px 48px',
 };
 
 // ── Typography ────��─────────────────────────────���───────────────────────────
@@ -61,9 +61,10 @@ export const headingLg: CSSProperties = {
   fontFamily: 'var(--font-fraunces), Georgia, serif',
   fontSize: '64px',
   fontWeight: 700,
-  lineHeight: '1.05',
+  lineHeight: '1.15',
   letterSpacing: '-0.02em',
   margin: 0,
+  paddingBottom: '4px',
   ...gradientText,
 };
 

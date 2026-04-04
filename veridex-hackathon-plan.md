@@ -18,7 +18,7 @@ Hackathon judges evaluate three things: **problem clarity**, **technical ambitio
 
 - **Problem clarity:** Trust online is broken. Every platform makes you start from zero. Bots are everywhere. There's no way to carry your reputation across services. Hiring someone — whether a freelancer, a contractor, or even a babysitter — requires blind faith in profiles that anyone can fake.
 - **Technical ambition:** World ID integration, a vouching system with real economic weight, LLM-powered contextual scoring, a developer API, and a polished frontend — in one weekend.
-- **"Never seen that before" factor:** Social staking (vouching with real consequences) and the Guardian pattern (your AI agent inherits your trust score). Judges in 2026 are drowning in "we built a chatbot" projects. This is infrastructure for how people and agents build trust.
+- **"Never seen that before" factor:** Social staking (vouching with real consequences) and **Agent Credentials** (on-chain linkage from agent identifier → verified human → trust, domains, and stake). Judges in 2026 are drowning in "we built a chatbot" projects. This is infrastructure for how people and agents build trust.
 
 ---
 
@@ -125,7 +125,7 @@ Expose a developer API where any service can query a user's trust score for a sp
 
 ---
 
-### Layer 6 — The Guardian Pattern (AI Agent Identity)
+### Layer 6 — Agent Credentials (AI agent identity & accountability)
 
 This is the forward-looking vision that makes judges lean forward.
 
@@ -133,20 +133,22 @@ This is the forward-looking vision that makes judges lean forward.
 
 AI agents are acting on our behalf — scheduling, negotiating, applying for things, managing tasks. But there's no way to verify: *whose* agent is this? Is it trustworthy? If it screws up, who's accountable?
 
-**The concept:**
-- A verified human can spawn verified AI agents bound to their Veridex identity
-- The agent inherits a fractional trust score from the human
-- Anyone interacting with the agent can verify it's backed by a real, reputable person
-- If the agent misbehaves, the human's trust score takes a hit
+**Registration.** A verified human (World ID) registers an agent by providing an **agent identifier** — public signing key, API endpoint, wallet address, or whatever surface the agent uses. Veridex mints an on-chain **Agent Credential**: it cryptographically links that identifier to the human’s World ID and trust score. The human sets **trust inheritance** (e.g. 0.7× of their score), **authorized domains** (DeFi, negotiation, content, etc.), and optionally **stake** locked as collateral.
+
+**Verification.** When the agent shows up (trade, negotiation, etc.), the counterparty queries Veridex: "Is this agent legitimate?" The API returns binding to a verified human, effective trust, domains, and stake — proof a real human with real reputation is accountable.
+
+**Accountability loop.** Disputes against the credential can be validated through your governance (multisig, staking arbitration, etc.); validated disputes hit the human’s trust score and can **slash** staked collateral — skin in the game for every deployed agent.
+
+**Agent hierarchy.** One human registers multiple agents with different inheritance and stake (e.g. high-stakes trading agent vs. low-stakes assistant), managed from the dashboard.
 
 **Real-world scenarios:**
-- Your AI agent applies for freelance jobs on your behalf. The client can verify the agent is tied to a real person with a strong track record.
-- Your agent negotiates a contract. The counterparty can see the human reputation backing it.
-- A company deploys customer-facing agents. Each agent is verifiably linked to the company's trust profile.
+- Your AI agent applies for freelance jobs on your behalf. The client verifies the credential: real person, real score, authorized scope.
+- Your agent negotiates a contract. The counterparty sees stake and reputation backing the agent.
+- A company deploys customer-facing agents. Each credential is verifiably linked to the org’s trust profile.
 
-**What to build:** A registration flow where a verified user can "spawn" an agent identity linked to their World ID. Display the agent on the dashboard with an inherited trust score and a visible link to the parent human. For the demo, show a simple scenario: "My agent submitted a job application. Here's the proof that this agent is backed by my verified identity and reputation."
+**What to build:** Registration UI + dashboard rows per agent (identifier, inheritance, domains, stake); public lookup for the verification story. Demo line: "My agent acted on my behalf — here's cryptographic proof it's bound to my verified identity and reputation, with stake on the line."
 
-**How to present it:** "We're in the agentic era. AI agents are doing business on our behalf. But right now, there's zero accountability. Veridex is the first system where an AI agent's trust is derived from — and bound to — a real human's reputation. If your agent acts badly, *you* feel it."
+**How to present it:** "We're in the agentic era. Veridex doesn't 'spawn' faceless bots — it issues **Agent Credentials** so counterparties can verify humans are accountable, with disputes and slashing when agents go rogue."
 
 ---
 
@@ -158,7 +160,7 @@ A polished Next.js frontend where users see their full trust identity visualized
 - Trust graph — nodes for each credential, edges for vouches, agent nodes connected to their human
 - Contextual scores — see how your trust varies by domain (engineering, management, reliability, etc.)
 - Vouch network — who's staking on you, who you're staking on, and the economic weight of each
-- Agent registry — your spawned agents and their inherited scores
+- Agent registry — your registered Agent Credentials, inheritance, domains, stake, and disputes
 - Activity feed — real-time events (new credential verified, vouch received, API query earned you $0.50)
 
 **What to build:** A visually impressive dashboard. The trust graph is the hero element. This is what's on-screen during the entire demo, so it needs to look great.
@@ -191,7 +193,7 @@ Alice connects her GitHub and work history. The reputation pipeline pulls and ve
 Alice is new to the platform — her data-driven score is decent but thin. Her former colleague Bob vouches for her, staking money on her profile. A new edge appears on her trust graph. Her social trust score jumps. "Bob is putting real money behind Alice. That's a signal algorithms can't generate."
 
 **Act 4 — "Even her AI agent is accountable."**
-Alice spawns an AI agent and registers it to her Veridex identity. The agent appears on her trust graph, inheriting a fractional score. "This agent can now act on Alice's behalf — apply for jobs, negotiate terms — and anyone it interacts with can verify it's backed by a real, reputable human."
+Alice registers an AI agent: she provides an agent identifier, sets inheritance and domains, and optional stake. Veridex mints an Agent Credential on her trust graph. "This agent can act on Alice's behalf — and anyone it interacts with can verify it's backed by a real, reputable human, with stake and reputation on the line."
 
 **Act 5 — "Any platform can ask."**
 A mock job board hits the Veridex API: "Is Alice qualified for this role?" The response comes back with her trust score, key credentials, vouch data, and the agent verification. Alice earns a micro-fee for the query. "That's the future of hiring. One API call. No background checks. No blind trust."
@@ -219,7 +221,7 @@ A mock job board hits the Veridex API: "Is Alice qualified for this role?" The r
 
 | Person | Owns | Key Deliverables |
 |---|---|---|
-| **Person 1 — Identity & Agents** | World ID integration + Guardian agent system | World ID verify flow, Veridex identity creation, agent spawning/registration, agent-to-human binding, inherited score logic |
+| **Person 1 — Identity & Agents** | World ID integration + Agent Credential system | World ID verify flow, Veridex identity creation, agent registration (identifier → credential), human binding, inheritance + domains + stake model |
 | **Person 2 — Reputation Engine** | Data pipeline + LLM trust scoring | GitHub API ingestion, professional history ingestion (LinkedIn or mock data), schema normalization, Gemini API integration for contextual scoring, anomaly flagging |
 | **Person 3 — Staking & API** | Social staking system + Trust API | Vouch/stake UI and logic (testnet or simulated), stake tracking and display, REST API for third-party queries, Data Rent fee logic, mock job board integration for demo |
 | **Person 4 — Frontend & Demo** | Dashboard + presentation polish | Next.js dashboard, trust graph visualization (D3.js or React Flow), vouch network display, agent registry UI, activity feed, demo script, slide deck |
@@ -251,7 +253,7 @@ Same reason people give references today — they believe in someone and want to
 No. Every score comes with reasoning. The LLM explains *why* — which credentials mattered, what peer signals contributed, where confidence is low. Full transparency by design.
 
 **"How do you handle AI agent misbehavior?"**
-The agent's score is derived from the human. Misbehavior degrades the human's score and can trigger slashing of vouches. You have a direct financial incentive to control your agents. Accountability by design.
+The Agent Credential ties the agent to the human. Validated disputes can reduce the human's trust score and slash stake locked for that agent. You have a direct financial and reputational incentive to control your agents. Accountability by design.
 
 **"What's the business model?"**
 Data Rent. Third parties pay to query trust scores. Users keep 90%, Veridex takes 10%. The more trusted you are, the more your reputation is worth. We align incentives — the platform makes money when users build genuine trust.
@@ -270,7 +272,7 @@ Judges remember narratives, not architectures. The progression is:
 1. **"This person is real."** (World ID)
 2. **"This person is credible."** (Reputation + AI scoring)
 3. **"Other people bet on this person."** (Social staking)
-4. **"Even their AI agent is accountable."** (Guardian pattern)
+4. **"Even their AI agent is accountable."** (Agent Credentials)
 5. **"Any platform can ask."** (Trust API)
 
 That escalation — from identity to credibility to economic trust to agentic trust to universal access — is the story. Tell it cleanly, demo it visually, and land the closing line.

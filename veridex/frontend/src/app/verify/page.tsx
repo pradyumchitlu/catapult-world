@@ -4,6 +4,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import WorldIDButton from '@/components/WorldIDButton';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import GlassCard from '@/components/GlassCard';
+import {
+  col,
+  headingLg,
+  headingSm,
+  sectionLabel,
+  separator,
+  textSecondary,
+  gradientText,
+} from '@/lib/styles';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function VerifyPage() {
@@ -42,32 +52,107 @@ export default function VerifyPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh]">
-      <div className="card max-w-md w-full text-center">
-        <h1 className="text-3xl font-bold mb-4">Verify Your Identity</h1>
-        <p className="text-worldcoin-gray-400 mb-8">
-          Prove you&apos;re a unique human with World ID. This is the foundation of your trust profile.
-        </p>
+    <div style={{ minHeight: '100vh' }}>
+      <div style={col}>
+        {/* ── Hero ─────────────────────────────────────────────── */}
+        <div className="fade-up fade-up-1" style={{ marginBottom: '64px' }}>
+          <h1 style={{ ...headingLg, margin: '0 0 28px 0' }}>
+            Verify your <em style={{ fontStyle: 'italic' }}>identity.</em>
+          </h1>
 
-        <WorldIDButton
-          onSuccess={handleVerificationSuccess}
-          onError={handleVerificationError}
-        />
+          <p
+            style={{
+              ...textSecondary,
+              maxWidth: '560px',
+              margin: '0',
+            }}
+          >
+            Prove you&apos;re a unique human with World ID. This is the
+            foundation of your trust profile — one person, one identity.
+          </p>
 
-        {error && (
-          <div className="mt-4 p-3 bg-veridex-error/20 border border-veridex-error rounded-lg text-veridex-error text-sm">
-            {error}
+          <div className="fade-up fade-up-2" style={{ marginTop: '36px' }}>
+            <WorldIDButton
+              onSuccess={handleVerificationSuccess}
+              onError={handleVerificationError}
+            />
+
+            {error && (
+              <div
+                style={{
+                  marginTop: '24px',
+                  padding: '12px 20px',
+                  backgroundColor: 'rgba(244, 63, 94, 0.08)',
+                  border: '1px solid rgba(244, 63, 94, 0.2)',
+                  borderRadius: '12px',
+                  color: '#F43F5E',
+                  fontSize: '14px',
+                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                }}
+              >
+                {error}
+              </div>
+            )}
           </div>
-        )}
-
-        <div className="mt-8 pt-6 border-t border-worldcoin-gray-700">
-          <h3 className="text-sm font-medium text-worldcoin-gray-400 mb-3">Why World ID?</h3>
-          <ul className="text-sm text-worldcoin-gray-500 space-y-2">
-            <li>✓ Proves you&apos;re human, not a bot</li>
-            <li>✓ One account per person</li>
-            <li>✓ Privacy-preserving verification</li>
-          </ul>
         </div>
+
+        {/* ── Why World ID ───────────────────────────────────────── */}
+        <GlassCard className="fade-up fade-up-3">
+          <span style={sectionLabel}>Why World ID</span>
+
+          {[
+            {
+              num: '01',
+              title: 'Human Verification',
+              body: 'Cryptographic proof that you\'re a real person — not a bot, not a duplicate account.',
+            },
+            {
+              num: '02',
+              title: 'One Person, One Identity',
+              body: 'Sybil-resistant by design. Each human gets exactly one Veridex profile, preventing reputation gaming.',
+            },
+            {
+              num: '03',
+              title: 'Privacy Preserving',
+              body: 'Zero-knowledge proofs verify your humanity without exposing personal data. Your identity stays yours.',
+            },
+          ].map((item, i, arr) => (
+            <div key={item.num}>
+              <div style={{ padding: i === 0 ? '0 0 28px 0' : '28px 0' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '36px',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <span
+                    style={{
+                      ...gradientText,
+                      fontFamily: 'var(--font-fraunces), Georgia, serif',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      letterSpacing: '0.04em',
+                      lineHeight: '1.75',
+                      minWidth: '24px',
+                    }}
+                  >
+                    {item.num}
+                  </span>
+                  <div>
+                    <p style={{ ...headingSm, margin: '0 0 10px 0' }}>
+                      {item.title}
+                    </p>
+                    <p style={textSecondary}>{item.body}</p>
+                  </div>
+                </div>
+              </div>
+              {i < arr.length - 1 && <div style={separator} />}
+            </div>
+          ))}
+        </GlassCard>
+
+        <div style={{ height: '64px' }} />
       </div>
     </div>
   );

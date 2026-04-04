@@ -53,7 +53,7 @@ export default function WorldIDButton({ onSuccess, onError }: WorldIDButtonProps
       <button
         onClick={handleMockVerify}
         disabled={isLoading}
-        className="w-full py-4 px-6 bg-black border-2 border-white rounded-xl font-semibold text-lg flex items-center justify-center gap-3 hover:bg-worldcoin-gray-900 transition-colors disabled:opacity-50"
+        className="btn-primary py-4 px-6 rounded-xl text-lg flex items-center justify-center gap-3 disabled:opacity-50"
       >
         {isLoading ? (
           <>
@@ -105,7 +105,7 @@ export default function WorldIDButton({ onSuccess, onError }: WorldIDButtonProps
       <button
         onClick={handleOpen}
         disabled={isLoading}
-        className="w-full py-4 px-6 bg-black border-2 border-white rounded-xl font-semibold text-lg flex items-center justify-center gap-3 hover:bg-worldcoin-gray-900 transition-colors disabled:opacity-50"
+        className="btn-primary py-4 px-6 rounded-xl text-lg flex items-center justify-center gap-3 disabled:opacity-50"
       >
         {isLoading ? (
           <>

@@ -57,32 +57,34 @@ Here's the complete updated feature set:
 32. AI chatbot on worker profiles — natural language interface grounded in the worker's verified data and reviews. First message: "Describe what you're looking for." First response: contextual fit score with evidence. Then conversational follow-ups.
 33. Chat session history — clients can revisit past evaluation conversations.
 
-**Agent Identity**
+**Agent Credentials**
 
-34. Agent spawning — workers generate a named AI agent tied to their World ID and reputation.
-35. Derived trust score — agents inherit 70% of their parent's overall trust score.
-36. Agent lookup — anyone can query an agent's ID and see the backing human's trust profile and verification status.
+34. **Registration** — verified humans register an agent by providing an agent identifier (signing key, API endpoint, wallet address, etc.). Veridex mints an on-chain Agent Credential linking that identifier to the human’s World ID and trust score, with configurable trust inheritance, authorized domains, and optional stake as collateral.
+35. **Verification** — third parties query Veridex to confirm an agent is legitimate: bound to a verified human, effective trust, authorized domains, and stake backing (the counterparty-facing API).
+36. **Accountability loop** — disputes against an agent’s credential can penalize the human’s trust score and slash staked collateral when validated by the chosen governance mechanism.
+37. **Agent hierarchy** — one human manages multiple agents with different inheritance multipliers and stakes from the dashboard (activity, disputes, positions per agent).
+38. Agent lookup — `GET /api/agent/:agentId` exposes credential summary for integrators (implementation may evolve with on-chain registry).
 
 **External API / Composability**
 
-37. Trust query API — `GET /api/trust/:veridexId` returns a worker's trust score, verification status, score components, and review summary.
-38. Agent query API — `GET /api/agent/:agentId` returns the agent's derived score and link to parent human.
-39. Query demo page — simulated third-party app that calls the API and displays results, proving composability.
+39. Trust query API — `GET /api/trust/:veridexId` returns a worker's trust score, verification status, score components, and review summary.
+40. Agent query API — `GET /api/agent/:agentId` returns Agent Credential summary (human link, effective trust, domains, stake where applicable).
+41. Query demo page — simulated third-party app that calls the API and displays results, proving composability.
 
 **Landing / Marketing**
 
-40. Landing page — problem framing (fake identity, trapped reputation, unaccountable agents), solution overview, three CTAs for each user type, "how it works" section.
+42. Landing page — problem framing (fake identity, trapped reputation, unaccountable agents), solution overview, three CTAs for each user type, "how it works" section.
 
-41. Outside website - create another small scale website that queries Veridex for its purposes.
+43. Outside website — create another small-scale website that queries Veridex for its purposes.
 
 ---
 
-That's **40 features**, up from 30. The 10 new ones are: profession categories (5), adaptive score weighting (10), trust-weighted reviews (12), mutual review detection (13), stake concentration penalty (14), GitHub quality signals (15), staked reviews system (16–19), contextual fit scoring (20–23), and worker self-evaluation (21).
+That's **43 features**. Agent Credentials expand the agent story with registration, verification, accountability, and hierarchy (34–38).
 
 **Updated priority tiers for the hackathon:**
 
-**Must-have for demo** (14 features): 1, 2, 6, 9, 10, 16, 17, 20, 24, 27, 31, 32, 37, 40 — these tell the complete story in the video.
+**Must-have for demo** (14 features): 1, 2, 6, 9, 10, 16, 17, 20, 24, 27, 31, 32, 39, 42 — these tell the complete story in the video.
 
-**Strong-to-have** (13 features): 4, 5, 8, 11, 12, 13, 14, 21, 28, 29, 30, 34, 35 — these make it feel like a real platform.
+**Strong-to-have** (15 features): 4, 5, 8, 11, 12, 13, 14, 21, 28, 29, 30, 34, 35, 36 — these make it feel like a real platform.
 
-**Nice-to-have** (13 features): 3, 7, 15, 18, 19, 22, 23, 25, 26, 33, 36, 38, 39 — cut these first if time is tight.
+**Nice-to-have** (14 features): 3, 7, 15, 18, 19, 22, 23, 25, 26, 33, 37, 38, 40, 41 — cut these first if time is tight.
