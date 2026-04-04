@@ -30,48 +30,50 @@ export default function LandingPage() {
 
   return (
     <div style={{ minHeight: '100vh' }}>
-      <div style={{ ...col, maxWidth: '860px', paddingTop: '0' }}>
-        {/* ── 0. Splash ────────────────────────────────────────────── */}
-        <div
+      {/* ── 0. Splash (fixed behind everything) ───────────────── */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 0,
+          opacity: splashOpacity,
+          transition: 'opacity 0.05s linear',
+          pointerEvents: 'none',
+        }}
+      >
+        <h1
+          className="fade-up"
           style={{
-            height: '100vh',
-            marginTop: '-72px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'sticky',
-            top: 0,
-            zIndex: 0,
-            opacity: splashOpacity,
-            transition: 'opacity 0.05s linear',
+            fontFamily: 'var(--font-fraunces), Georgia, serif',
+            fontStyle: 'italic',
+            fontSize: 'clamp(72px, 12vw, 140px)',
+            fontWeight: 700,
+            letterSpacing: '-0.03em',
+            ...gradientText,
+            paddingBottom: '8px',
+            paddingRight: '1.5vw',
           }}
         >
-          <h1
-            className="fade-up"
-            style={{
-              fontFamily: 'var(--font-fraunces), Georgia, serif',
-              fontStyle: 'italic',
-              fontSize: 'clamp(72px, 12vw, 140px)',
-              fontWeight: 700,
-              letterSpacing: '-0.03em',
-              ...gradientText,
-              paddingBottom: '8px',
-            }}
-          >
-            Veridex
-          </h1>
-        </div>
+          Veridex
+        </h1>
+      </div>
 
+      {/* Spacer so content starts below the splash */}
+      <div style={{ height: '100vh' }} />
+
+      <div style={{ ...col, maxWidth: '860px', paddingTop: '0' }}>
         {/* ── 1. Hero ─────────────────────────────────────────────── */}
         <div
           style={{
             position: 'relative',
             zIndex: 1,
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            paddingTop: '64px',
+            paddingTop: '80px',
             paddingBottom: '64px',
             background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)',
             backgroundSize: '400% 400%',
@@ -99,15 +101,9 @@ export default function LandingPage() {
             and every agent has real skin in the game.
           </p>
 
-          {/* Buttons */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <Link href="/verify" className="btn-primary">
-              Get Started
-            </Link>
-            <Link href="/browse" className="btn-secondary">
-              Browse Workers
-            </Link>
-          </div>
+          <Link href="/verify" className="btn-primary">
+            Get Started
+          </Link>
         </div>
 
         {/* ── 2. Protocol Flow ──────────────────────────────────────── */}

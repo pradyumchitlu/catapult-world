@@ -5,10 +5,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const allNavLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/browse', label: 'Browse' },
+const navLinks = [
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/browse', label: 'Browse' },
   { href: '/staker', label: 'Vouches' },
   { href: '/agents', label: 'Agents' },
 ];
@@ -27,7 +26,7 @@ export default function Navbar() {
       return;
     }
 
-    const onScroll = () => setVisible(window.scrollY > 100);
+    const onScroll = () => setVisible(window.scrollY > 300);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -38,10 +37,8 @@ export default function Navbar() {
     router.push('/');
   };
 
-  // Filter links based on auth state
-  const navLinks = user
-    ? allNavLinks
-    : allNavLinks.filter((l) => ['/', '/browse'].includes(l.href));
+  // Only show nav links when authenticated
+  const visibleLinks = user ? navLinks : [];
 
   return (
     <nav
@@ -93,7 +90,7 @@ export default function Navbar() {
 
         {/* Center nav links (desktop) */}
         <nav className="hidden md:flex" style={{ alignItems: 'center', gap: '0' }}>
-          {navLinks.map((link, i) => {
+          {visibleLinks.map((link, i) => {
             const isActive = pathname === link.href;
             return (
               <span key={link.href} style={{ display: 'flex', alignItems: 'center' }}>
@@ -220,7 +217,7 @@ export default function Navbar() {
             borderTop: '1px solid rgba(37,99,235,0.08)',
           }}
         >
-          {navLinks.map((link) => {
+          {visibleLinks.map((link) => {
             const isActive = pathname === link.href;
             return (
               <Link
