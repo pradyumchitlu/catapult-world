@@ -3,6 +3,18 @@
 import { useState, useEffect } from 'react';
 import AgentCard from '@/components/AgentCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import GlassCard from '@/components/GlassCard';
+import {
+  col,
+  headingLg,
+  headingSm,
+  sectionLabel,
+  separator,
+  textSecondary,
+  textMuted,
+  gradientText,
+  colors,
+} from '@/lib/styles';
 import type { Agent, User, WorkerProfile } from '@/types';
 
 interface AgentWithParent extends Agent {
@@ -26,7 +38,7 @@ export default function AgentsPage() {
             id: 'agent-1',
             parent_user_id: 'current-user',
             name: 'My Code Assistant',
-            derived_score: 59, // 70% of parent's 85
+            derived_score: 59,
             created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
             parent: {
               id: 'current-user',
@@ -81,9 +93,7 @@ export default function AgentsPage() {
 
     try {
       // TODO: Call spawn agent API
-      // const agent = await spawnAgent(newAgentName, token);
-      // setAgents([...agents, agent]);
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Placeholder
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       setNewAgentName('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create agent');
@@ -94,68 +104,113 @@ export default function AgentsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2">AI Agents</h1>
-      <p className="text-worldcoin-gray-400 mb-8">
-        Spawn accountable AI agents tied to your identity. Each agent inherits 70% of your trust score.
-      </p>
-
-      {/* Create Agent */}
-      <div className="card mb-8">
-        <h2 className="text-xl font-semibold mb-4">Spawn New Agent</h2>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            placeholder="Agent name..."
-            value={newAgentName}
-            onChange={(e) => setNewAgentName(e.target.value)}
-            className="input flex-1"
-          />
-          <button
-            onClick={handleCreateAgent}
-            disabled={isCreating || !newAgentName.trim()}
-            className="btn-primary disabled:opacity-50"
-          >
-            {isCreating ? <LoadingSpinner /> : 'Spawn Agent'}
-          </button>
-        </div>
-        {error && (
-          <div className="mt-3 text-sm text-veridex-error">{error}</div>
-        )}
-      </div>
-
-      {/* Agent List */}
-      <div className="card">
-        <h2 className="text-xl font-semibold mb-4">Your Agents</h2>
-        {agents.length === 0 ? (
-          <p className="text-worldcoin-gray-400 text-center py-8">
-            You haven&apos;t created any agents yet.
+    <div style={{ minHeight: '100vh' }}>
+      <div style={col}>
+        {/* ── Header ── */}
+        <div className="fade-up fade-up-1" style={{ marginBottom: '48px' }}>
+          <h1 style={{ ...headingLg, fontSize: '48px', margin: '0 0 12px 0' }}>
+            AI Agents
+          </h1>
+          <p style={textSecondary}>
+            Spawn accountable AI agents tied to your identity. Each agent inherits 70% of your trust score.
           </p>
-        ) : (
-          <div className="space-y-4">
-            {agents.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
 
-      {/* Info Section */}
-      <div className="mt-6 card bg-veridex-primary/10 border-veridex-primary/30">
-        <h3 className="font-semibold mb-2">How Agent Identity Works</h3>
-        <ul className="text-sm text-worldcoin-gray-300 space-y-2">
-          <li>• Agents are cryptographically tied to your Veridex identity</li>
-          <li>• Anyone can look up an agent&apos;s parent human</li>
-          <li>• Agent trust score = 70% of your score (derived trust)</li>
-          <li>• Your reputation is on the line for your agent&apos;s behavior</li>
-        </ul>
+        {/* ── Create Agent ── */}
+        <GlassCard className="fade-up fade-up-2" style={{ marginBottom: '32px' }}>
+          <span style={sectionLabel}>Spawn New Agent</span>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <input
+              type="text"
+              placeholder="Agent name..."
+              value={newAgentName}
+              onChange={(e) => setNewAgentName(e.target.value)}
+              className="input"
+              style={{ flex: 1 }}
+            />
+            <button
+              onClick={handleCreateAgent}
+              disabled={isCreating || !newAgentName.trim()}
+              className="btn-primary"
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {isCreating ? <LoadingSpinner /> : 'Spawn Agent'}
+            </button>
+          </div>
+          {error && (
+            <div
+              style={{
+                marginTop: '12px',
+                padding: '10px 16px',
+                backgroundColor: 'rgba(244, 63, 94, 0.08)',
+                border: '1px solid rgba(244, 63, 94, 0.2)',
+                borderRadius: '10px',
+                color: '#F43F5E',
+                fontSize: '14px',
+                fontFamily: 'var(--font-inter), system-ui, sans-serif',
+              }}
+            >
+              {error}
+            </div>
+          )}
+        </GlassCard>
+
+        {/* ── Agent List ── */}
+        <GlassCard className="fade-up fade-up-3" style={{ marginBottom: '32px' }}>
+          <span style={sectionLabel}>Your Agents</span>
+          {agents.length === 0 ? (
+            <p style={{ ...textSecondary, textAlign: 'center', padding: '48px 0' }}>
+              You haven&apos;t created any agents yet.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {agents.map((agent) => (
+                <AgentCard key={agent.id} agent={agent} />
+              ))}
+            </div>
+          )}
+        </GlassCard>
+
+        {/* ── How Agent Identity Works ── */}
+        <GlassCard className="fade-up fade-up-4">
+          <span style={sectionLabel}>How Agent Identity Works</span>
+
+          {[
+            { num: '01', text: 'Agents are cryptographically tied to your Veridex identity' },
+            { num: '02', text: 'Anyone can look up an agent\'s parent human' },
+            { num: '03', text: 'Agent trust score = 70% of your score (derived trust)' },
+            { num: '04', text: 'Your reputation is on the line for your agent\'s behavior' },
+          ].map((item, i, arr) => (
+            <div key={item.num}>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', padding: i === 0 ? '0 0 20px 0' : '20px 0' }}>
+                <span
+                  style={{
+                    ...gradientText,
+                    fontFamily: 'var(--font-fraunces), Georgia, serif',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    lineHeight: '1.6',
+                    minWidth: '24px',
+                  }}
+                >
+                  {item.num}
+                </span>
+                <p style={{ ...textSecondary, fontSize: '15px' }}>{item.text}</p>
+              </div>
+              {i < arr.length - 1 && <div style={separator} />}
+            </div>
+          ))}
+        </GlassCard>
+
+        <div style={{ height: '64px' }} />
       </div>
     </div>
   );

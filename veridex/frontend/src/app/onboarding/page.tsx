@@ -219,7 +219,7 @@ function OnboardingContent() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)', backgroundSize: '400% 400%', animation: 'aurora-shift 10s ease infinite' }}>
+    <div style={{ minHeight: '100vh' }}>
       <div style={{ ...col, maxWidth: '560px', paddingTop: '80px', paddingBottom: '80px' }}>
 
         {/* Header */}

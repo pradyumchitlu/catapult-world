@@ -251,7 +251,7 @@ export default function DashboardPage() {
     (profile.github_username ? `@${profile.github_username}` : 'Your Profile');
 
   return (
-    <div style={{ background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)', backgroundSize: '400% 400%', animation: 'aurora-shift 10s ease infinite', minHeight: '100vh' }}>
+    <div style={{ minHeight: '100vh' }}>
       <div style={{ ...col, maxWidth: '1100px' }}>
 
         {/* ── Header ── */}
