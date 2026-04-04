@@ -100,15 +100,9 @@ export default function LandingPage() {
             and every agent has real skin in the game.
           </p>
 
-          {/* Buttons */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <Link href="/verify" className="btn-primary">
-              Get Started
-            </Link>
-            <Link href="/browse" className="btn-secondary">
-              Browse Workers
-            </Link>
-          </div>
+          <Link href="/verify" className="btn-primary">
+            Get Started
+          </Link>
         </div>
 
         {/* ── 2. Protocol Flow ──────────────────────────────────────── */}
