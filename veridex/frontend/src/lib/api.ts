@@ -334,11 +334,21 @@ export const getContextualScore = (workerId: string, jobDescription: string, tok
     token,
   });
 
-// Agents
-export const spawnAgent = (name: string, token: string) =>
+// Agents (Agent Credential registration)
+export const spawnAgent = (
+  params: {
+    name: string;
+    identifier?: string;
+    identifier_type?: string;
+    inheritance_fraction?: number;
+    authorized_domains?: string[];
+    stake_amount?: number;
+  },
+  token: string
+) =>
   fetchApi('/api/agent/spawn', {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(params),
     token,
   });
 

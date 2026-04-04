@@ -12,7 +12,7 @@ import ContractCard from '@/components/ContractCard';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { getReputation, getWorkerContracts, submitContract, triggerIngestion } from '@/lib/api';
+import { getReputation, getWorkerContracts, submitContract, triggerIngestion, getContextualScore } from '@/lib/api';
 import {
   col,
   headingLg,
@@ -25,7 +25,7 @@ import {
   gradientText,
   colors,
 } from '@/lib/styles';
-import type { Contract, Review, ScoreComponents, WorkerProfile } from '@/types';
+import type { Contract, Review, QueryLogEntry, ContextualScoreBreakdown, ScoreComponents, WorkerProfile } from '@/types';
 
 const EMPTY_SCORE_COMPONENTS: ScoreComponents = {
   identity_assurance: 0,
@@ -100,6 +100,8 @@ export default function DashboardPage() {
   const [isRerunningPipeline, setIsRerunningPipeline] = useState(false);
   const [workerContracts, setWorkerContracts] = useState<Contract[]>([]);
   const [contractActionLoading, setContractActionLoading] = useState<string | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [contextualScore, setContextualScore] = useState<{ fit_score: number; breakdown: ContextualScoreBreakdown } | null>(null);
 
   const applyReputationSnapshot = (data: {
     profile: WorkerProfile | null;
@@ -188,6 +190,26 @@ export default function DashboardPage() {
       setContractActionLoading(null);
     }
   };
+
+  const handleEvaluateFit = async (jobDescription: string) => {
+    if (!user || !profile) return;
+    setIsEvaluating(true);
+    try {
+      const result = await getContextualScore(user.id, jobDescription, token || undefined) as {
+        fit_score: number;
+        breakdown: ContextualScoreBreakdown;
+      };
+      setContextualScore({
+        fit_score: result.fit_score,
+        breakdown: result.breakdown,
+      });
+    } catch (error) {
+      console.error('Failed to evaluate fit:', error);
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
+
 
   const handleRerunPipeline = async () => {
     if (!user || !token || isRerunningPipeline) return;

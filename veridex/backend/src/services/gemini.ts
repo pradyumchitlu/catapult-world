@@ -236,21 +236,28 @@ export async function evaluateWorker(
   clientQuestion: string,
   previousMessages: { role: string; content: string }[] = []
 ): Promise<string> {
-  const systemPrompt = `You are a trust evaluation assistant for Veridex, a decentralized reputation platform.
+  const systemPrompt = `You are a trust evaluation assistant for Veridex, a decentralized reputation platform where verified humans build portable reputation.
 
 You have access to a worker's verified data including:
 - GitHub activity (repositories, languages, contribution patterns)
 - Peer reviews (with stake amounts indicating reviewer confidence)
 - Trust scores and component breakdowns
+- Skills, specializations, and experience duration
 
 Your role is to help clients evaluate workers by answering questions about their qualifications.
 
-IMPORTANT GUIDELINES:
-1. Be specific - cite actual repos, skills, review quotes, and stats
-2. If the data doesn't support a claim, say so honestly
-3. Consider review stake amounts as a signal of review credibility (higher stakes = more confidence)
-4. Balance positive and negative signals fairly
-5. Never make claims that aren't supported by the provided data
+GUIDELINES:
+1. **Use markdown** for readability — bold key findings, use bullet lists for evidence, code formatting for tech terms.
+2. **Be specific** — cite actual repo names, language stats, review quotes, and exact numbers.
+3. **Handle missing data honestly** — if no GitHub data exists for a topic, say "No verified data available for this area" rather than speculating.
+4. **Trust score interpretation:**
+   - 80–100: Highly trusted — strong track record across multiple evidence sources
+   - 60–79: Moderately trusted — solid in some areas, gaps in others
+   - 40–59: Developing — limited evidence or mixed signals
+   - Below 40: Early stage — minimal verified data available
+5. **Review credibility** — higher stake amounts signal greater reviewer confidence. A 500 WLD review carries more weight than a 10 WLD review. Mention this when discussing reviews.
+6. **Balance positive and negative signals** fairly. Never make claims unsupported by the data.
+7. **Score components** — when relevant, explain which dimensions (developer_competence, collaboration, consistency, specialization_depth, activity_recency, peer_trust) are strongest/weakest.
 
 Worker Profile:
 ${JSON.stringify(workerData.profile, null, 2)}
@@ -297,7 +304,13 @@ Return a JSON object with:
   "other_requirements": ["requirement1", "requirement2"]
 }
 
-Be specific about technologies mentioned. Include both explicit and implied requirements.`;
+GUIDELINES:
+1. **Normalize technology names** — "React.js", "ReactJS", "React JS" all become "React". "Node.js" becomes "Node.js". "Golang" becomes "Go". "k8s" becomes "Kubernetes".
+2. **Be specific about technologies** — don't generalize "web development" if specific frameworks are mentioned.
+3. **Handle informal descriptions** — even short or casual job posts should yield meaningful requirements. Extract implied skills (e.g. "build a website" implies HTML, CSS, JavaScript at minimum).
+4. **Include both explicit and implied requirements** — if a role says "lead a team", infer "leadership" and "communication" as soft skills.
+5. **Handle non-technical roles** — for non-software roles, focus on domain expertise, soft skills, and certifications.
+6. If the input is very vague or minimal, do your best and include "experience_level": "mid" as default.`;
 
   try {
     const model = getGenAI('scoring').getGenerativeModel({
@@ -344,7 +357,7 @@ export async function generateContextualEvaluation(
   partial: { requirement: string; evidence: string; gap: string }[];
   missing: { requirement: string }[];
 }> {
-  const systemPrompt = `You are evaluating a worker's fit for a role based on their profile and the job requirements.
+  const systemPrompt = `You are evaluating a worker's fit for a role based on their verified Veridex profile and the parsed job requirements.
 
 Analyze the match and return a JSON object with:
 {
@@ -352,30 +365,33 @@ Analyze the match and return a JSON object with:
     { "requirement": "requirement text", "evidence": "specific evidence from profile" }
   ],
   "partial": [
-    { "requirement": "requirement text", "evidence": "what they have", "gap": "what's missing" }
+    { "requirement": "requirement text", "evidence": "what they have", "gap": "actionable description of what's missing or weak" }
   ],
   "missing": [
     { "requirement": "requirement text" }
   ]
 }
 
-Focus on:
-- Soft skills and experience level matches
-- Domain expertise
-- Other non-technical requirements
-
-Be specific about evidence. Reference actual data from the profile.`;
+GUIDELINES:
+1. **Evaluate ALL requirement types** — technical skills, experience level, domain expertise, soft skills, and other requirements. Don't limit to just soft skills.
+2. **Be conservative** — only mark as "met" if there is strong, direct evidence in the profile. Prefer "partial" for ambiguous or indirect matches.
+3. **Provide actionable gap descriptions** in the "partial" category — explain specifically what the worker would need to demonstrate or improve, not just "insufficient evidence".
+4. **Reference actual data** — cite repo names, language stats, years of experience, review content, or skill lists from the profile.
+5. **Consider evidence freshness** — recent activity and reviews carry more weight than older data.
+6. **Don't hallucinate evidence** — if the profile doesn't mention something, it goes in "missing", not "partial" with vague evidence.`;
 
   const prompt = `Worker Profile:
 ${JSON.stringify(workerProfile, null, 2)}
 
 Requirements to evaluate:
+- Required skills: ${requirements.required_skills?.join(', ') || 'none specified'}
+- Preferred skills: ${requirements.preferred_skills?.join(', ') || 'none specified'}
 - Experience level: ${requirements.experience_level || 'not specified'}
 - Domain: ${requirements.domain || 'general'}
 - Soft skills: ${requirements.soft_skills?.join(', ') || 'none specified'}
 - Other requirements: ${requirements.other_requirements?.join(', ') || 'none'}
 
-Evaluate how well this worker matches these requirements.`;
+Evaluate how well this worker matches ALL of these requirements. Categorize each into met, partial, or missing.`;
 
   try {
     const model = getGenAI('scoring').getGenerativeModel({
