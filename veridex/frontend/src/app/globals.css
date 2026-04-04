@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 23, 23, 23;
+  --background-end-rgb: 23, 23, 23;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #262626;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #525252;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #737373;
+}
+
+/* Card styles */
+@layer components {
+  .card {
+    @apply bg-worldcoin-gray-800 rounded-xl border border-worldcoin-gray-700 p-6;
+  }
+
+  .btn-primary {
+    @apply bg-veridex-primary hover:bg-veridex-primary/90 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-worldcoin-gray-700 hover:bg-worldcoin-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+  }
+
+  .input {
+    @apply bg-worldcoin-gray-800 border border-worldcoin-gray-600 rounded-lg px-4 py-2 text-white placeholder-worldcoin-gray-400 focus:outline-none focus:ring-2 focus:ring-veridex-primary;
+  }
+}
