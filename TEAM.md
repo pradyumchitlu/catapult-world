@@ -352,22 +352,33 @@ backend/
 6. `peer_trust` - Weighted reviews
 
 **Person 2 Handoff Note (Apr 4):**
-- Base reputation scoring is now algorithmic in `veridex/backend/src/services/scoring.ts`; it does not use an LLM for `overall_trust_score`.
+- Base reputation scoring is still algorithmic in `veridex/backend/src/services/scoring.ts`; it does not use an LLM for `overall_trust_score`.
 - The scorer now uses 3 evidence buckets: GitHub data, manual professional evidence (`linkedin_data` + `other_platforms.projects`), and staked reviews.
+- `veridex/backend/src/services/reputationIngestion.ts` is now the shared sync path for reputation updates. Both `POST /api/reputation/ingest` and the GitHub OAuth callback use it, so GitHub connect and manual re-ingest now hit the same scoring pipeline.
+- `veridex/backend/src/services/github.ts` was upgraded from the weak public-events heuristic to stronger public GitHub signals:
+  - per-repo language aggregation
+  - authored commit sampling across recent public repos
+  - GitHub search for external PR / issue collaboration
+- This materially improves `consistency`, `activity_recency`, and `computed_skills` quality for real users. Example dry-run on `pradyumchitlu` moved the score from `29` to `45` with the stronger GitHub signals.
+- GitHub OAuth is now least-privilege: `GET /api/auth/github` only requests `read:user`, and the callback no longer persists GitHub access tokens in `worker_profiles.github_data`.
 - `POST /api/reputation/evidence` is ready for frontend wiring. It accepts `userId` plus optional `github_username`, `linkedin_data`, `projects`, and `other_platforms`, then recomputes `computed_skills`, `specializations`, `years_experience`, and score fields.
-- `POST /api/reputation/ingest` now works even if GitHub is not connected yet, as long as manual evidence or reviews exist. If GitHub is connected later, re-run ingest to refresh repo/activity data.
-- Review creation now triggers the richer recomputation path, so manual evidence and GitHub evidence both affect the updated worker score.
+- `POST /api/reputation/ingest` still works even if GitHub is not connected yet, as long as manual evidence or reviews exist.
+- Review creation still triggers score recomputation, so manual evidence, GitHub evidence, and reviews all affect the updated worker score.
 
 **Notes For Other People:**
-- `Person 1`: keep GitHub OAuth in your lane. After GitHub is connected, make sure the worker profile ends up with `github_username`, then call `POST /api/reputation/ingest` for that user.
-- `Person 3`: onboarding/profile forms can send manual evidence to `POST /api/reputation/evidence`. Easiest first payload is LinkedIn-style structured fields plus a `projects` array; no file upload/storage is required yet.
-- `Person 4`: contextual scoring already reads `computed_skills` from the worker profile, so it should automatically benefit from the richer manual evidence and recomputed specializations.
+- `Person 1`: preserve the current GitHub OAuth contract. Do not reintroduce broad repo scopes or store GitHub access tokens. The callback already auto-syncs the worker reputation through `syncWorkerReputation(...)`, so a successful GitHub connect should update `github_username`, `github_data`, score fields, and skills without a separate frontend ingest call.
+- `Person 3`: a successful GitHub connect should now update the worker profile automatically after the OAuth redirect. For non-GitHub/manual profile building, send structured data to `POST /api/reputation/evidence`. No GitHub private repo permission is needed for the current product.
+- `Person 4`: contextual scoring and agent logic can rely more heavily on `worker_profiles.computed_skills`, `specializations`, `years_experience`, and `github_data.{languages, contributions, collaboration}` because those fields are now populated from better GitHub-derived signals.
 
 **Files Modified By Person 2 So Far:**
-- `veridex/backend/src/routes/reputation.ts`
-- `veridex/backend/src/routes/review.ts`
-- `veridex/backend/src/services/scoring.ts`
-- `veridex/backend/src/services/reputationProfile.ts`
+- `veridex/backend/src/routes/auth.ts` - GitHub OAuth now uses least privilege and auto-syncs the reputation layer
+- `veridex/backend/src/routes/reputation.ts` - shared ingest path for GitHub/manual evidence
+- `veridex/backend/src/routes/review.ts` - recomputes worker score after reviews
+- `veridex/backend/src/services/github.ts` - stronger public GitHub signal extraction
+- `veridex/backend/src/services/scoring.ts` - adaptive reputation scoring engine
+- `veridex/backend/src/services/reputationIngestion.ts` - shared GitHub/manual sync pipeline
+- `veridex/backend/src/services/reputationProfile.ts` - worker profile ensure/merge helpers
+- `veridex/backend/src/routes/query.ts` and `veridex/backend/src/services/contextual.ts` - minor TypeScript/build fixes
 
 ---
 

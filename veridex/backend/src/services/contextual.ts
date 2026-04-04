@@ -90,11 +90,11 @@ function matchHardSkills(
     missing: [],
   };
 
-  const workerSkills = new Set(
+  const workerSkills = new Set<string>(
     (profile.computed_skills || []).map((s: string) => s.toLowerCase())
   );
 
-  const githubLanguages = new Set(
+  const githubLanguages = new Set<string>(
     (profile.github_data?.languages || []).map((l: string) => l.toLowerCase())
   );
 

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { signRequest } from '@worldcoin/idkit-server';
 import supabase from '../lib/supabase';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { syncWorkerReputation } from '../services/reputationIngestion';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'veridex-dev-secret';
@@ -239,11 +240,27 @@ router.put('/profile', requireAuth, async (req: AuthenticatedRequest, res: Respo
 router.get('/github', (req: Request, res: Response) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
   const redirectUri = process.env.GITHUB_CALLBACK_URL || 'http://localhost:8000/api/auth/github/callback';
-  const scope = 'read:user repo';
+  const scope = 'read:user';
+  const userToken = req.query.token as string | undefined;
 
-  // Pass the user's JWT in the state param so we know who to associate GitHub with
-  const userToken = req.query.token as string || '';
-  const state = Buffer.from(JSON.stringify({ token: userToken })).toString('base64');
+  if (!clientId) {
+    return res.status(500).json({ error: 'Missing GitHub OAuth configuration' });
+  }
+
+  if (!userToken) {
+    return res.status(400).json({ error: 'Missing auth token' });
+  }
+
+  let userId: string;
+  try {
+    const decoded = jwt.verify(userToken, JWT_SECRET) as { userId: string };
+    userId = decoded.userId;
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid auth token' });
+  }
+
+  // Sign a short-lived state token so GitHub never sees the user's app JWT.
+  const state = jwt.sign({ userId, provider: 'github' }, JWT_SECRET, { expiresIn: '10m' });
 
   const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`;
 
@@ -257,23 +274,27 @@ router.get('/github', (req: Request, res: Response) => {
 router.get('/github/callback', async (req: Request, res: Response) => {
   try {
     const { code, state } = req.query;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
     if (!code) {
-      return res.redirect(`${process.env.FRONTEND_URL}/onboarding?github=error&reason=missing_code`);
+      return res.redirect(`${frontendUrl}/onboarding?github=error&reason=missing_code`);
     }
 
-    // Decode state to get user's JWT
+    // Decode the short-lived signed state token to get the Veridex user.
     let userId: string | null = null;
-    if (state) {
+    if (typeof state === 'string') {
       try {
-        const stateData = JSON.parse(Buffer.from(state as string, 'base64').toString());
-        if (stateData.token) {
-          const decoded = jwt.verify(stateData.token, JWT_SECRET) as { userId: string };
-          userId = decoded.userId;
+        const stateData = jwt.verify(state, JWT_SECRET) as { userId?: string; provider?: string };
+        if (stateData.provider === 'github' && stateData.userId) {
+          userId = stateData.userId;
         }
       } catch (e) {
         console.error('Failed to decode OAuth state:', e);
       }
+    }
+
+    if (!userId) {
+      return res.redirect(`${frontendUrl}/onboarding?github=error&reason=missing_state`);
     }
 
     // Exchange code for access token
@@ -294,7 +315,7 @@ router.get('/github/callback', async (req: Request, res: Response) => {
 
     if (tokenData.error || !tokenData.access_token) {
       console.error('GitHub token exchange failed:', tokenData);
-      return res.redirect(`${process.env.FRONTEND_URL}/onboarding?github=error&reason=token_exchange`);
+      return res.redirect(`${frontendUrl}/onboarding?github=error&reason=token_exchange`);
     }
 
     // Fetch GitHub user info
@@ -307,62 +328,44 @@ router.get('/github/callback', async (req: Request, res: Response) => {
 
     const githubUser = (await userRes.json()) as Record<string, any>;
 
-    // Store GitHub data in worker_profiles
-    if (userId) {
-      // Ensure worker_profiles row exists
-      const { data: existingProfile } = await supabase
-        .from('worker_profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
-
-      if (existingProfile) {
-        await supabase
-          .from('worker_profiles')
-          .update({
-            github_username: githubUser.login,
-            github_data: {
-              access_token: tokenData.access_token,
-              username: githubUser.login,
-              profile: {
-                id: githubUser.id,
-                name: githubUser.name,
-                avatar_url: githubUser.avatar_url,
-                bio: githubUser.bio,
-                public_repos: githubUser.public_repos,
-                followers: githubUser.followers,
-                created_at: githubUser.created_at,
-              },
-            },
-          })
-          .eq('user_id', userId);
-      } else {
-        await supabase
-          .from('worker_profiles')
-          .insert({
-            user_id: userId,
-            github_username: githubUser.login,
-            github_data: {
-              access_token: tokenData.access_token,
-              username: githubUser.login,
-              profile: {
-                id: githubUser.id,
-                name: githubUser.name,
-                avatar_url: githubUser.avatar_url,
-                bio: githubUser.bio,
-                public_repos: githubUser.public_repos,
-                followers: githubUser.followers,
-                created_at: githubUser.created_at,
-              },
-            },
-          });
-      }
+    if (!githubUser.login) {
+      console.error('GitHub user fetch failed:', githubUser);
+      return res.redirect(`${frontendUrl}/onboarding?github=error&reason=user_fetch`);
     }
 
-    res.redirect(`${process.env.FRONTEND_URL}/onboarding?github=connected`);
+    const { warning } = await syncWorkerReputation(userId, {
+      presetGithubUsername: githubUser.login as string,
+      presetGithubData: {
+        username: githubUser.login,
+        name: githubUser.name ?? null,
+        bio: githubUser.bio ?? null,
+        public_repos: githubUser.public_repos ?? 0,
+        followers: githubUser.followers ?? 0,
+        following: githubUser.following ?? 0,
+        created_at: githubUser.created_at ?? '',
+        oauth_connected_at: new Date().toISOString(),
+        profile: {
+          id: githubUser.id,
+          name: githubUser.name ?? null,
+          avatar_url: githubUser.avatar_url ?? null,
+          bio: githubUser.bio ?? null,
+          public_repos: githubUser.public_repos ?? 0,
+          followers: githubUser.followers ?? 0,
+          created_at: githubUser.created_at ?? '',
+        },
+      },
+      githubAccessToken: tokenData.access_token,
+    });
+
+    if (warning) {
+      console.warn('GitHub OAuth sync warning:', warning);
+    }
+
+    res.redirect(`${frontendUrl}/onboarding?github=connected`);
   } catch (error) {
     console.error('GitHub callback error:', error);
-    res.redirect(`${process.env.FRONTEND_URL}/onboarding?github=error`);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    res.redirect(`${frontendUrl}/onboarding?github=error`);
   }
 });
 

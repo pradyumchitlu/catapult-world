@@ -1,13 +1,13 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import supabase from '../lib/supabase';
-import { fetchUserProfile, fetchContributionHistory, fetchCollaborationSignals } from '../services/github';
 import { computeOverallScore } from '../services/scoring';
 import {
   ensureWorkerProfile,
   mergeLinkedInData,
   mergeOtherPlatforms,
 } from '../services/reputationProfile';
+import { syncWorkerReputation } from '../services/reputationIngestion';
 
 const router = Router();
 
@@ -167,107 +167,22 @@ router.post('/ingest', requireAuth, async (req: AuthenticatedRequest, res: Respo
       return res.status(400).json({ error: 'Missing userId' });
     }
 
-    const profile = await ensureWorkerProfile(userId);
+    const { scoreResult, warning } = await syncWorkerReputation(userId);
 
-    // Update status to processing
-    await supabase
-      .from('worker_profiles')
-      .update({ ingestion_status: 'processing' })
-      .eq('id', profile.id);
-
-    try {
-      // Get reviews for this worker
-      const { data: reviews } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('worker_id', userId)
-        .eq('status', 'active');
-
-      const hasManualEvidence =
-        hasMeaningfulData(profile.linkedin_data) || hasMeaningfulData(profile.other_platforms);
-      const hasReviewEvidence = (reviews || []).length > 0;
-
-      let githubData = profile.github_data || {};
-      let warning: string | null = null;
-
-      if (profile.github_username) {
-        try {
-          const [userProfile, contributions, collaboration] = await Promise.all([
-            fetchUserProfile(profile.github_username),
-            fetchContributionHistory(profile.github_username),
-            fetchCollaborationSignals(profile.github_username),
-          ]);
-
-          githubData = {
-            ...userProfile,
-            contributions,
-            collaboration,
-          };
-        } catch (githubError) {
-          if (!hasMeaningfulData(githubData) && !hasManualEvidence && !hasReviewEvidence) {
-            throw githubError;
-          }
-
-          warning = 'GitHub refresh failed, but the score was recomputed from cached or manual evidence.';
-          console.error('GitHub refresh warning:', githubError);
-        }
-      } else if (!hasManualEvidence && !hasReviewEvidence) {
-        await supabase
-          .from('worker_profiles')
-          .update({ ingestion_status: 'failed' })
-          .eq('id', profile.id);
-
-        return res.status(400).json({
-          error: 'No reputation evidence found. Connect GitHub or upload LinkedIn/project data first.',
-        });
-      }
-
-      // Compute scores
-      const scoreResult = await computeOverallScore(
-        {
-          githubData,
-          linkedinData: profile.linkedin_data,
-          otherPlatforms: profile.other_platforms,
-        },
-        reviews || []
-      );
-
-      // Update profile with new data and scores
-      await supabase
-        .from('worker_profiles')
-        .update({
-          github_data: githubData,
-          computed_skills: scoreResult.computed_skills,
-          specializations: scoreResult.specializations,
-          years_experience: scoreResult.years_experience,
-          overall_trust_score: scoreResult.overall,
-          score_components: scoreResult.components,
-          ingestion_status: 'completed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', profile.id);
-
-      return res.json({
-        success: true,
-        overall_trust_score: scoreResult.overall,
-        score_components: scoreResult.components,
-        computed_skills: scoreResult.computed_skills,
-        specializations: scoreResult.specializations,
-        years_experience: scoreResult.years_experience,
-        warning,
-      });
-    } catch (ingestionError) {
-      // Mark as failed
-      await supabase
-        .from('worker_profiles')
-        .update({ ingestion_status: 'failed' })
-        .eq('id', profile.id);
-
-      throw ingestionError;
-    }
+    return res.json({
+      success: true,
+      overall_trust_score: scoreResult.overall,
+      score_components: scoreResult.components,
+      computed_skills: scoreResult.computed_skills,
+      specializations: scoreResult.specializations,
+      years_experience: scoreResult.years_experience,
+      warning,
+    });
   } catch (error) {
     console.error('Reputation ingest error:', error);
-    return res.status(500).json({ error: 'Ingestion failed' });
+    const message = error instanceof Error ? error.message : 'Ingestion failed';
+    const statusCode = /No reputation evidence found/i.test(message) ? 400 : 500;
+    return res.status(statusCode).json({ error: message });
   }
 });
 
