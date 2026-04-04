@@ -1,10 +1,21 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Fraunces, Inter } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import Providers from '@/components/Providers';
+import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ['latin'] });
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-fraunces',
+  weight: ['400', '700'],
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  weight: ['400', '500', '600'],
+});
 
 export const metadata: Metadata = {
   title: 'Veridex - Decentralized Trust Platform',
@@ -17,13 +28,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-worldcoin-gray-900 text-white min-h-screen`}>
+    <html lang="en" className={cn(fraunces.variable, inter.variable, "font-sans")}
+      style={{ '--font-sans': 'var(--font-inter), system-ui, sans-serif' } as React.CSSProperties}
+    >
+      <body
+        style={{
+          background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)',
+          backgroundSize: '400% 400%',
+          animation: 'aurora-shift 10s ease infinite',
+          minHeight: '100vh',
+          color: '#1E293B',
+          paddingTop: '72px',
+          fontFamily: 'var(--font-inter), system-ui, sans-serif',
+          WebkitFontSmoothing: 'antialiased',
+        }}
+      >
         <Providers>
           <Navbar />
-          <main className="container mx-auto px-4 py-8">
-            {children}
-          </main>
+          <main>{children}</main>
         </Providers>
       </body>
     </html>

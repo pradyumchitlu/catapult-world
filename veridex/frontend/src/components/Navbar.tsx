@@ -1,11 +1,20 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 
+const allNavLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/browse', label: 'Browse' },
+  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/staker', label: 'Vouches' },
+  { href: '/agents', label: 'Agents' },
+];
+
 export default function Navbar() {
+  const pathname = usePathname();
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
@@ -15,99 +24,166 @@ export default function Navbar() {
     router.push('/');
   };
 
-  const navLinks = [
-    { href: '/browse', label: 'Browse Workers' },
-    ...(user?.roles.includes('worker') ? [{ href: '/dashboard', label: 'Dashboard' }] : []),
-    ...(user?.roles.includes('staker') ? [{ href: '/staker', label: 'Portfolio' }] : []),
-    ...(user ? [{ href: '/agents', label: 'Agents' }] : []),
-  ];
+  const navLinks = user
+    ? allNavLinks
+    : allNavLinks.filter((l) => ['/', '/browse'].includes(l.href));
 
   return (
-    <nav className="bg-worldcoin-gray-800 border-b border-worldcoin-gray-700">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-veridex-primary to-veridex-secondary rounded-lg flex items-center justify-center font-bold text-white">
-              V
-            </div>
-            <span className="text-xl font-bold">Veridex</span>
-          </Link>
+    <nav
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255,255,255,0.7)',
+        boxShadow: '0 1px 0 rgba(37,99,235,0.06)',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '680px',
+          margin: '0 auto',
+          padding: '0 24px',
+          height: '72px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <Link
+          href="/"
+          style={{
+            textDecoration: 'none',
+            fontFamily: 'var(--font-fraunces), Georgia, serif',
+            fontStyle: 'italic',
+            fontSize: '20px',
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Veridex
+        </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-worldcoin-gray-300 hover:text-white transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-
-          {/* User Section */}
-          <div className="flex items-center gap-4">
-            {user ? (
-              <>
-                {/* WLD Balance Badge */}
-                <div className="hidden sm:flex items-center gap-1 px-3 py-1 bg-worldcoin-gray-700 rounded-full text-sm">
-                  <span className="text-veridex-primary font-medium">{user.wld_balance.toLocaleString()}</span>
-                  <span className="text-worldcoin-gray-400">WLD</span>
-                </div>
-                {/* User Display */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-veridex-primary rounded-full flex items-center justify-center text-sm font-medium">
-                    {user.display_name?.[0]?.toUpperCase() || '?'}
-                  </div>
-                  <span className="hidden sm:inline text-sm">{user.display_name}</span>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm text-worldcoin-gray-400 hover:text-white transition-colors"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <Link href="/verify" className="btn-primary text-sm">
-                Get Started
-              </Link>
-            )}
-
-            {/* Mobile Menu Toggle */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 text-worldcoin-gray-400 hover:text-white"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {isMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        <nav className="hidden md:flex" style={{ alignItems: 'center', gap: '0' }}>
+          {navLinks.map((link, i) => {
+            const isActive = pathname === link.href;
+            return (
+              <span key={link.href} style={{ display: 'flex', alignItems: 'center' }}>
+                {i > 0 && (
+                  <span style={{ color: 'rgba(37,99,235,0.2)', fontSize: '14px', margin: '0 6px' }}>
+                    ·
+                  </span>
                 )}
-              </svg>
-            </button>
-          </div>
-        </div>
+                <Link
+                  href={link.href}
+                  style={{
+                    fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: isActive ? 500 : 400,
+                    color: isActive ? '#2563EB' : '#64748B',
+                    textDecoration: 'none',
+                    borderBottom: isActive ? '1.5px solid #2563EB' : '1.5px solid transparent',
+                    paddingBottom: '1px',
+                    transition: 'color 0.15s ease, border-color 0.15s ease',
+                  }}
+                >
+                  {link.label}
+                </Link>
+              </span>
+            );
+          })}
+        </nav>
 
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-worldcoin-gray-700">
-            {navLinks.map((link) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', fontWeight: 500, color: '#2563EB' }}>
+                {user.wld_balance.toLocaleString()} WLD
+              </span>
+              <div
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                }}
+              >
+                {user.display_name?.[0]?.toUpperCase() || '?'}
+              </div>
+              <button
+                onClick={handleLogout}
+                style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: '#94A3B8', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/verify"
+              style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', fontWeight: 500, color: '#1D4ED8', textDecoration: 'none' }}
+            >
+              Get Started →
+            </Link>
+          )}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#64748B' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {isMenuOpen ? <path d="M6 18L18 6M6 6l12 12" /> : <path d="M4 6h16M4 12h16M4 18h16" />}
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {isMenuOpen && (
+        <div className="md:hidden" style={{ padding: '12px 24px 16px', borderTop: '1px solid rgba(37,99,235,0.08)' }}>
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            return (
               <Link
                 key={link.href}
                 href={link.href}
-                className="block py-2 text-worldcoin-gray-300 hover:text-white"
                 onClick={() => setIsMenuOpen(false)}
+                style={{
+                  display: 'block',
+                  padding: '8px 0',
+                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: isActive ? 500 : 400,
+                  color: isActive ? '#2563EB' : '#64748B',
+                  textDecoration: 'none',
+                }}
               >
                 {link.label}
               </Link>
-            ))}
-          </div>
-        )}
-      </div>
+            );
+          })}
+          {user && (
+            <button
+              onClick={handleLogout}
+              style={{ display: 'block', padding: '8px 0', fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '14px', color: '#94A3B8', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              Logout
+            </button>
+          )}
+        </div>
+      )}
     </nav>
   );
 }
