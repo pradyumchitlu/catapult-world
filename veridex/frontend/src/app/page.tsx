@@ -1,87 +1,342 @@
-'use client';
-
 import Link from 'next/link';
+import {
+  glassSection,
+  gradientText,
+  sectionLabel,
+  separator,
+  col,
+  headingLg,
+  headingMd,
+  headingSm,
+  textMuted,
+  textSecondary,
+} from '@/lib/styles';
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh]">
-      {/* Hero Section */}
-      <div className="text-center max-w-4xl mx-auto">
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-veridex-primary to-veridex-secondary bg-clip-text text-transparent">
-          Veridex
-        </h1>
-        <p className="text-xl md:text-2xl text-worldcoin-gray-300 mb-8">
-          Decentralized trust for verified humans. Build portable reputation, stake WLD on integrity, spawn accountable AI agents.
-        </p>
+    <div style={{ minHeight: '100vh' }}>
+      <div style={col}>
+        {/* ── 1. Hero ─────────────────────────────────────────────── */}
+        <div className="fade-up fade-up-1" style={{ marginBottom: '64px' }}>
+          <h1 style={{ ...headingLg, margin: '0 0 28px 0' }}>
+            Trust, <em style={{ fontStyle: 'italic' }}>staked.</em>
+          </h1>
 
-        {/* Problem Statement */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="card">
-            <div className="text-3xl mb-3">🤖</div>
-            <h3 className="text-lg font-semibold mb-2">Identity is Fake</h3>
-            <p className="text-worldcoin-gray-400 text-sm">
-              Bots and sybils poison every platform. World ID fixes this.
-            </p>
+          <p
+            style={{
+              ...textSecondary,
+              maxWidth: '560px',
+              margin: '0 0 36px 0',
+            }}
+          >
+            A World ID-powered reputation layer where every review, every score,
+            and every agent has real skin in the game.
+          </p>
+
+          {/* Buttons */}
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <Link href="/verify" className="btn-primary">
+              Verify Your Identity
+            </Link>
+            <Link href="/browse" className="btn-secondary">
+              Browse Workers
+            </Link>
           </div>
-          <div className="card">
-            <div className="text-3xl mb-3">🔒</div>
-            <h3 className="text-lg font-semibold mb-2">Reputation is Trapped</h3>
-            <p className="text-worldcoin-gray-400 text-sm">
-              You rebuild credibility from zero on every new service. We make it portable.
-            </p>
-          </div>
-          <div className="card">
-            <div className="text-3xl mb-3">🤷</div>
-            <h3 className="text-lg font-semibold mb-2">AI is Unaccountable</h3>
-            <p className="text-worldcoin-gray-400 text-sm">
-              No one knows who&apos;s behind the bot. Agent identity changes that.
-            </p>
+
+        </div>
+
+        {/* ── 2. Protocol Flow ──────────────────────────────────────── */}
+        <div
+          className="fade-up fade-up-2"
+          style={{ ...glassSection, marginBottom: '64px' }}
+        >
+          <span style={sectionLabel}>How It Works</span>
+
+          {[
+            {
+              num: '01',
+              title: 'Verify',
+              body: 'Prove you\'re human with World ID proof-of-personhood. Connect GitHub, add professional credentials, or build reputation purely through peer reviews.',
+            },
+            {
+              num: '02',
+              title: 'Score',
+              body: 'An auditable algorithm computes your trust score from verified signals — developer activity, peer reviews, and staking data. Six components, weighted by what\'s available.',
+            },
+            {
+              num: '03',
+              title: 'Stake',
+              body: 'People who believe in you stake WLD on your reputation. Staking creates skin-in-the-game — higher stakes mean more impact on your trust score. Three integrity mechanisms prevent gaming.',
+            },
+            {
+              num: '04',
+              title: 'Evaluate',
+              body: 'Clients evaluate workers through an AI chatbot grounded in real data. Paste a job description and get a contextual fit score with evidence — not guesswork.',
+            },
+          ].map((step, i, arr) => (
+            <div key={step.num}>
+              <div style={{ padding: i === 0 ? '0 0 32px 0' : '32px 0' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '36px',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <span
+                    style={{
+                      ...gradientText,
+                      fontFamily: 'var(--font-fraunces), Georgia, serif',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      letterSpacing: '0.04em',
+                      lineHeight: '1.75',
+                      minWidth: '24px',
+                    }}
+                  >
+                    {step.num}
+                  </span>
+                  <div>
+                    <p style={{ ...headingSm, margin: '0 0 10px 0' }}>
+                      {step.title}
+                    </p>
+                    <p style={textSecondary}>{step.body}</p>
+                  </div>
+                </div>
+              </div>
+              {i < arr.length - 1 && <div style={separator} />}
+            </div>
+          ))}
+        </div>
+
+        {/* ── 3. Capabilities ──────────────────────────────────────── */}
+        <div
+          className="fade-up fade-up-2"
+          style={{ ...glassSection, marginBottom: '64px' }}
+        >
+          <span style={sectionLabel}>Capabilities</span>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {[
+              {
+                title: 'Portable Identity',
+                body: 'Your trust score travels with you. No more starting from zero on every new platform, marketplace, or collaboration.',
+              },
+              {
+                title: 'Staked Reviews',
+                body: 'Reviewers back their feedback with WLD. Higher stakes mean more impact on your score — and more accountability.',
+              },
+              {
+                title: 'Social Staking',
+                body: 'Anyone can stake WLD on workers they believe in. Your network\'s conviction becomes economic signal.',
+              },
+              {
+                title: 'AI Evaluation',
+                body: 'Clients chat with an AI grounded in real data — repos, reviews, scores. No hallucinated credentials.',
+              },
+              {
+                title: 'Agent Delegation',
+                body: 'Spawn AI agents that inherit 70% of your trust score. Full accountability — anyone can trace agent to human.',
+              },
+              {
+                title: 'Open Protocol',
+                body: 'External APIs let any platform query trust scores and agent identities. Build on top of the trust layer.',
+              },
+            ].map((feature, i, arr) => (
+              <div key={feature.title}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '32px',
+                    padding: i === 0 ? '0 0 28px 0' : '28px 0',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <p
+                    style={{
+                      ...headingSm,
+                      fontSize: '15px',
+                      minWidth: '180px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {feature.title}
+                  </p>
+                  <p
+                    style={{
+                      ...textSecondary,
+                      fontSize: '15px',
+                      lineHeight: '1.6',
+                    }}
+                  >
+                    {feature.body}
+                  </p>
+                </div>
+                {i < arr.length - 1 && <div style={separator} />}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/verify" className="btn-primary text-lg px-8 py-3">
-            Verify with World ID
+        {/* ── 4. Integrity Pull-quote ────────────────────────────────── */}
+        <div
+          className="fade-up fade-up-3"
+          style={{ ...glassSection, marginBottom: '64px' }}
+        >
+          <span style={sectionLabel}>Trust Integrity</span>
+
+          <div style={{ position: 'relative', marginBottom: '32px' }}>
+            <span
+              style={{
+                ...gradientText,
+                fontFamily: 'var(--font-fraunces), Georgia, serif',
+                fontSize: '120px',
+                fontWeight: 700,
+                lineHeight: '0.7',
+                display: 'block',
+                marginBottom: '-16px',
+                opacity: 0.35,
+              }}
+            >
+              &ldquo;
+            </span>
+            <blockquote
+              style={{
+                fontFamily: 'var(--font-fraunces), Georgia, serif',
+                fontSize: '28px',
+                fontWeight: 400,
+                fontStyle: 'italic',
+                lineHeight: '1.35',
+                letterSpacing: '-0.01em',
+                color: '#1E293B',
+                margin: 0,
+              }}
+            >
+              Trust that can&apos;t be gamed is trust worth building on.
+            </blockquote>
+          </div>
+
+          <p style={{ ...textSecondary, margin: '0 0 20px 0' }}>
+            Three integrity mechanisms prevent manipulation. Reviews are weighted
+            by reviewer credibility and stake amount — a low-trust reviewer with a
+            tiny stake barely moves the needle. Mutual reviews are automatically
+            detected and flagged.
+          </p>
+          <p style={textSecondary}>
+            Stake concentration has diminishing returns — the first 100 WLD from
+            one staker counts fully, but each additional 100 WLD is worth
+            progressively less. No single actor can inflate a score.
+          </p>
+        </div>
+
+        {/* ── 5. CTA ────────────────────────────────────────────────── */}
+        <div
+          className="fade-up fade-up-3"
+          style={{ ...glassSection, marginBottom: '64px' }}
+        >
+          <span style={sectionLabel}>Get Started</span>
+
+          <h2 style={{ ...headingMd, margin: '0 0 20px 0' }}>
+            Build your portable trust profile today.
+          </h2>
+
+          <p
+            style={{
+              ...textSecondary,
+              maxWidth: '480px',
+              margin: '0 0 32px 0',
+            }}
+          >
+            Verify with World ID, connect your credentials, and start building
+            reputation that belongs to you. Every verified user starts with 1,000
+            WLD.
+          </p>
+
+          <Link
+            href="/verify"
+            style={{
+              fontFamily: 'var(--font-inter), system-ui, sans-serif',
+              fontSize: '16px',
+              fontWeight: 500,
+              color: '#2563EB',
+              textDecoration: 'none',
+              borderBottom: '1.5px solid rgba(37,99,235,0.4)',
+              paddingBottom: '2px',
+              transition: 'border-color 0.15s ease',
+            }}
+          >
+            Verify Your Identity →
           </Link>
-          <Link href="/browse" className="btn-secondary text-lg px-8 py-3">
-            Browse Workers
-          </Link>
         </div>
-      </div>
 
-      {/* Features Section */}
-      <div className="mt-24 w-full max-w-6xl">
-        <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-veridex-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-veridex-primary">1</span>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Verify</h3>
-            <p className="text-worldcoin-gray-400">
-              Prove you&apos;re human with World ID. Connect GitHub or other platforms.
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-veridex-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-veridex-primary">2</span>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Build Trust</h3>
-            <p className="text-worldcoin-gray-400">
-              Get staked reviews from clients. Your trust score grows organically.
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-veridex-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-veridex-primary">3</span>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Get Hired</h3>
-            <p className="text-worldcoin-gray-400">
-              Clients evaluate you via AI chatbot grounded in real data. No more fake resumes.
-            </p>
+        {/* ── 6. Footer ─────────────────────────────────────────────── */}
+        <div style={{ ...glassSection, padding: '32px 48px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '16px',
+            }}
+          >
+            <span
+              style={{
+                ...gradientText,
+                fontFamily: 'var(--font-fraunces), Georgia, serif',
+                fontStyle: 'italic',
+                fontSize: '17px',
+                fontWeight: 700,
+              }}
+            >
+              Veridex
+            </span>
+
+            <nav
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0',
+                flexWrap: 'wrap',
+              }}
+            >
+              {['Protocol', 'Browse', 'Dashboard', 'API', 'Agents'].map(
+                (item, i) => (
+                  <span
+                    key={item}
+                    style={{ display: 'flex', alignItems: 'center' }}
+                  >
+                    {i > 0 && (
+                      <span
+                        style={{
+                          color: 'rgba(37,99,235,0.2)',
+                          margin: '0 10px',
+                        }}
+                      >
+                        ·
+                      </span>
+                    )}
+                    <a
+                      href="#"
+                      style={{
+                        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                        fontSize: '13px',
+                        color: '#64748B',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {item}
+                    </a>
+                  </span>
+                )
+              )}
+            </nav>
+
+            <span style={textMuted}>Powered by World ID</span>
           </div>
         </div>
+
+        <div style={{ height: '64px' }} />
       </div>
     </div>
   );

@@ -44,8 +44,8 @@ export default function ScoreBreakdown({ components }: ScoreBreakdownProps) {
             <Radar
               name="Score"
               dataKey="value"
-              stroke="#8B5CF6"
-              fill="#8B5CF6"
+              stroke="#2563EB"
+              fill="#2563EB"
               fillOpacity={0.3}
             />
           </RadarChart>

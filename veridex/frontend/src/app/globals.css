@@ -2,55 +2,179 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 23, 23, 23;
-  --background-end-rgb: 23, 23, 23;
+/* ── Animations ──────────────────────────────────────────────────── */
+
+@keyframes aurora-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 4px 24px rgba(37,99,235,0.1), inset 0 1px 0 rgba(255,255,255,0.9); }
+  50% { box-shadow: 0 8px 40px rgba(37,99,235,0.2), inset 0 1px 0 rgba(255,255,255,0.9); }
 }
 
-::-webkit-scrollbar-track {
-  background: #262626;
+.fade-up { animation: fade-up 0.5s ease forwards; opacity: 0; }
+.fade-up-1 { animation-delay: 0.1s; }
+.fade-up-2 { animation-delay: 0.2s; }
+.fade-up-3 { animation-delay: 0.25s; }
+.fade-up-4 { animation-delay: 0.35s; }
+.fade-up-5 { animation-delay: 0.45s; }
+.glow-pulse { animation: glow-pulse 4s ease infinite; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-thumb { background: rgba(37,99,235,0.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(37,99,235,0.4); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, .fade-up, .glow-pulse { animation: none !important; transition: none !important; }
 }
 
-::-webkit-scrollbar-thumb {
-  background: #525252;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #737373;
-}
+/* ── Design-11 Glass Morphism Theme ──────────────────────────────── */
 
 /* Card styles */
 @layer components {
+  .glass-card {
+    background-color: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 4px 24px rgba(37, 99, 235, 0.07),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    padding: 48px;
+  }
+
+  .glass-card-compact {
+    background-color: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 4px 24px rgba(37, 99, 235, 0.07),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    padding: 32px;
+  }
+
+  /* Keep .card as alias for components that use it */
   .card {
-    @apply bg-worldcoin-gray-800 rounded-xl border border-worldcoin-gray-700 p-6;
+    background-color: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 4px 24px rgba(37, 99, 235, 0.07),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    padding: 32px;
+  }
+
+  .section-label {
+    font-family: var(--font-inter), system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #1d4ed8;
+    margin-bottom: 24px;
+    display: block;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .separator {
+    border: none;
+    border-top: 1px solid rgba(37, 99, 235, 0.12);
+    margin: 28px 0;
   }
 
   .btn-primary {
-    @apply bg-veridex-primary hover:bg-veridex-primary/90 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    display: inline-block;
+    font-family: var(--font-inter), system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    text-decoration: none;
+    background-color: #2563eb;
+    border-radius: 12px;
+    padding: 13px 28px;
+    transition: opacity 0.2s ease;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .btn-secondary {
-    @apply bg-worldcoin-gray-700 hover:bg-worldcoin-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    display: inline-block;
+    font-family: var(--font-inter), system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    color: #2563eb;
+    text-decoration: none;
+    background-color: rgba(255, 255, 255, 0.7);
+    border: 1.5px solid rgba(37, 99, 235, 0.35);
+    border-radius: 12px;
+    padding: 12px 28px;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+  }
+
+  .btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+  }
+
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .input {
-    @apply bg-worldcoin-gray-800 border border-worldcoin-gray-600 rounded-lg px-4 py-2 text-white placeholder-worldcoin-gray-400 focus:outline-none focus:ring-2 focus:ring-veridex-primary;
+    font-family: var(--font-inter), system-ui, sans-serif;
+    font-size: 15px;
+    color: #1e293b;
+    background-color: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    border-radius: 8px;
+    padding: 10px 16px;
+    outline: none;
+    transition: border-color 0.15s ease;
+    width: 100%;
+  }
+
+  .input::placeholder {
+    color: #94a3b8;
+  }
+
+  .input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+
+  /* Warning/danger card variant */
+  .card-danger {
+    background-color: rgba(244, 63, 94, 0.06);
+    border: 1px solid rgba(244, 63, 94, 0.15);
+    border-radius: 20px;
+    padding: 32px;
   }
 }

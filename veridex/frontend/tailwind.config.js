@@ -7,34 +7,55 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        serif: ['var(--font-fraunces)', 'Georgia', 'serif'],
+        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+      },
       colors: {
-        // Worldcoin brand colors
+        blue: {
+          DEFAULT: '#2563EB',
+          50: '#EFF6FF',
+          100: '#DBEAFE',
+          400: '#60A5FA',
+          500: '#3B82F6',
+          600: '#2563EB',
+          700: '#1D4ED8',
+          800: '#1E40AF',
+        },
+        accent: '#1D4ED8',
+        slate: {
+          primary: '#1E293B',
+          secondary: '#475569',
+          tertiary: '#64748B',
+          muted: '#94A3B8',
+        },
+        success: '#10B981',
+        cyan: '#0EA5E9',
+        rose: '#F43F5E',
+        warning: '#F59E0B',
+        // Aliases for components still using old class names
+        veridex: {
+          primary: '#2563EB',
+          secondary: '#0EA5E9',
+          success: '#10B981',
+          warning: '#F59E0B',
+          error: '#F43F5E',
+        },
         worldcoin: {
-          black: '#000000',
-          white: '#FFFFFF',
           gray: {
             100: '#F5F5F5',
             200: '#E5E5E5',
             300: '#D4D4D4',
-            400: '#A3A3A3',
-            500: '#737373',
-            600: '#525252',
-            700: '#404040',
-            800: '#262626',
-            900: '#171717',
+            400: '#94A3B8',
+            500: '#64748B',
+            600: '#475569',
+            700: '#334155',
+            800: '#1E293B',
+            900: '#0F172A',
           },
-        },
-        // Veridex accent colors
-        veridex: {
-          primary: '#8B5CF6', // Purple
-          secondary: '#06B6D4', // Cyan
-          success: '#10B981',
-          warning: '#F59E0B',
-          error: '#EF4444',
         },
       },
     },
   },
   plugins: [],
-  darkMode: 'class',
 };
