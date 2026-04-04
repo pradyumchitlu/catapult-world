@@ -33,7 +33,7 @@ export default function RootLayout({
     >
       <body
         style={{
-          background: 'linear-gradient(-45deg, #ffffff, #eff6ff, #f5f3ff, #faf5ff)',
+          background: 'linear-gradient(-45deg, #EFF6FF, #DBEAFE, #BFDBFE, #DBEAFE)',
           backgroundSize: '400% 400%',
           animation: 'aurora-shift 10s ease infinite',
           minHeight: '100vh',
