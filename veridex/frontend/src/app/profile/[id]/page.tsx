@@ -174,8 +174,7 @@ export default function ProfilePage() {
             ))}
           </div>
           <div style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: '#94A3B8', marginTop: '16px' }}>
-            {profile.github_data.totalCommits?.toLocaleString()} total commits ·
-            Languages: {profile.github_data.languages?.join(', ')}
+            {profile.github_data.contributions?.total_commits_last_year?.toLocaleString()} commits last year
           </div>
         </div>
       )}

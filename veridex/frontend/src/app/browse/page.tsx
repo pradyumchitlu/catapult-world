@@ -6,6 +6,7 @@ import JobDescriptionInput from '@/components/JobDescriptionInput';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
 import { browseWorkers } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   col,
   headingLg,
@@ -34,6 +35,7 @@ const PROFESSION_FILTERS = [
 ];
 
 export default function BrowsePage() {
+  const { user } = useAuth();
   const [workers, setWorkers] = useState<WorkerWithUser[]>([]);
   const [filteredWorkers, setFilteredWorkers] = useState<WorkerWithUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,6 +44,7 @@ export default function BrowsePage() {
   const [scoreRange, setScoreRange] = useState<[number, number]>([0, 100]);
   const [jobDescription, setJobDescription] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const isEmployer = user?.roles?.includes('client');
 
   useEffect(() => {
     const fetchWorkers = async () => {
@@ -190,17 +193,19 @@ export default function BrowsePage() {
             </div>
           </div>
 
-          {/* Evaluate for Role */}
-          <div style={{ borderTop: '1px solid rgba(37,99,235,0.12)', paddingTop: '20px' }}>
-            <label style={{ ...headingSm, fontSize: '13px', display: 'block', marginBottom: '8px' }}>
-              Evaluate for a Role (Optional)
-            </label>
-            <JobDescriptionInput
-              onSubmit={handleEvaluateAll}
-              isLoading={isEvaluating}
-              placeholder="Paste a job description to see contextual fit scores..."
-            />
-          </div>
+          {/* Evaluate for Role — employers only */}
+          {isEmployer && (
+            <div style={{ borderTop: '1px solid rgba(37,99,235,0.12)', paddingTop: '20px' }}>
+              <label style={{ ...headingSm, fontSize: '13px', display: 'block', marginBottom: '8px' }}>
+                Evaluate for a Role (Optional)
+              </label>
+              <JobDescriptionInput
+                onSubmit={handleEvaluateAll}
+                isLoading={isEvaluating}
+                placeholder="Paste a job description to see contextual fit scores..."
+              />
+            </div>
+          )}
         </GlassCard>
 
         {/* ── Results ── */}
