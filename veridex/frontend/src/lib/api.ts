@@ -9,6 +9,7 @@ import type {
   OAuthAuthorizeValidationResponse,
   Review,
   ScoreComponents,
+  ContractSettlementPlan,
   User,
   WorkerProfile,
 } from '@/types';
@@ -530,8 +531,23 @@ export const activateContract = (contractId: string, token: string) =>
 export const submitContract = (contractId: string, token: string) =>
   fetchApi(`/api/contract/${contractId}/submit`, { method: 'PUT', token });
 
-export const completeContract = (contractId: string, token: string) =>
-  fetchApi(`/api/contract/${contractId}/complete`, { method: 'PUT', token });
+export const getContractSettlement = (contractId: string, token: string) =>
+  fetchApi<{ settlement: ContractSettlementPlan }>(`/api/contract/${contractId}/settlement`, { token });
+
+export const completeContract = (
+  contractId: string,
+  data: {
+    user_op_hash: string;
+    transaction_hash?: string;
+    from_wallet_address: string;
+  },
+  token: string
+) =>
+  fetchApi(`/api/contract/${contractId}/complete`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    token,
+  });
 
 export const closeContract = (contractId: string, token: string) =>
   fetchApi(`/api/contract/${contractId}/close`, { method: 'PUT', token });

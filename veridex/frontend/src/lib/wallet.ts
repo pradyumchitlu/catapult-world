@@ -32,7 +32,7 @@ function getTargetChain() {
 
 function getInjectedEthereum() {
   if (typeof window === 'undefined' || !window.ethereum) {
-    throw new Error('No EVM wallet was detected. Install a wallet like World App browser wallet or MetaMask.');
+    throw new Error('No compatible World Chain wallet was detected. Open Veridex inside World App or use an injected EVM wallet.');
   }
 
   if (typeof window.ethereum.request !== 'function') {

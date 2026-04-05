@@ -101,7 +101,7 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
         setStakingStatus('Checking wallet balance and gas...');
         await ensureCanSendETH(platformAddress, amount.toString());
 
-        setStakingStatus('Confirm the transaction in MetaMask...');
+        setStakingStatus('Confirm the transaction in your wallet...');
         const txResult = await sendETHToAddress(platformAddress, amount.toString());
         txHash = txResult.txHash;
       }

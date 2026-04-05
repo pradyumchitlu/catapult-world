@@ -3,19 +3,28 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useUserOperationReceipt } from '@worldcoin/minikit-react';
 import ContractCard from '@/components/ContractCard';
 import CreateContractModal from '@/components/CreateContractModal';
 import ContractReviewForm from '@/components/ContractReviewForm';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMiniApp } from '@/contexts/MiniAppContext';
 import {
   getEmployerContracts,
   activateContract,
   completeContract,
   closeContract,
   createContractReview,
+  getContractSettlement,
 } from '@/lib/api';
+import {
+  createWorldChainPublicClient,
+  getWorldAppApiBaseUrl,
+  linkWorldWalletWithMiniKit,
+  sendMiniKitEthTransfers,
+} from '@/lib/minikit';
 import {
   col,
   headingLg,
@@ -27,6 +36,8 @@ import {
   colors,
 } from '@/lib/styles';
 import type { Contract, ContractStatus } from '@/types';
+
+const worldChainClient = createWorldChainPublicClient();
 
 const STATUS_TABS: { id: ContractStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -40,11 +51,18 @@ const STATUS_TABS: { id: ContractStatus | 'all'; label: string }[] = [
 export default function EmployerPage() {
   const router = useRouter();
   const { user, token, isLoading: authLoading, updateUser } = useAuth();
+  const { isInWorldApp, isMiniKitReady } = useMiniApp();
+  const { poll: pollUserOperation, isLoading: isPollingUserOperation } = useUserOperationReceipt({
+    client: worldChainClient,
+    apiBaseUrl: getWorldAppApiBaseUrl(),
+  });
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ContractStatus | 'all'>('all');
   const [reviewingContract, setReviewingContract] = useState<Contract | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Auth guard
   useEffect(() => {
@@ -74,6 +92,8 @@ export default function EmployerPage() {
   const handleActivate = async (id: string) => {
     if (!token) return;
     setActionLoading(id);
+    setActionError(null);
+    setActionMessage(null);
     try {
       await activateContract(id, token);
       await fetchContracts();
@@ -87,11 +107,62 @@ export default function EmployerPage() {
   const handleComplete = async (id: string) => {
     if (!token) return;
     setActionLoading(id);
+    setActionError(null);
     try {
-      await completeContract(id, token);
+      setActionMessage('Preparing the payout plan...');
+      const { settlement } = await getContractSettlement(id, token);
+
+      if (!isInWorldApp || !isMiniKitReady) {
+        throw new Error('Open Veridex inside World App to approve and pay this contract from your World wallet.');
+      }
+
+      let activeUser = user;
+      if (!activeUser?.wallet_address || activeUser.wallet_verification_method !== 'world_app_wallet_auth') {
+        setActionMessage('Linking your World wallet...');
+        const walletResult = await linkWorldWalletWithMiniKit(token);
+        activeUser = walletResult.user;
+        updateUser(walletResult.user);
+      }
+
+      if (!activeUser?.wallet_address) {
+        throw new Error('Link a World wallet before approving payouts.');
+      }
+
+      setActionMessage(`Requesting a ${settlement.total_amount.toLocaleString()} ETH payout in World App...`);
+      const txResult = await sendMiniKitEthTransfers(
+        settlement.transfers.map((transfer) => ({
+          to: transfer.wallet_address,
+          amountEth: transfer.amount.toString(),
+        }))
+      );
+
+      if (txResult.executedWith === 'fallback') {
+        throw new Error('World App did not execute the payout request.');
+      }
+
+      if (txResult.data.from.toLowerCase() !== activeUser.wallet_address.toLowerCase()) {
+        throw new Error('World App used a different wallet than the one linked to this Veridex account.');
+      }
+
+      setActionMessage('Waiting for the payout to confirm on World Chain...');
+      const { transactionHash } = await pollUserOperation(txResult.data.userOpHash);
+
+      setActionMessage('Finalizing the payout in Veridex...');
+      await completeContract(
+        id,
+        {
+          user_op_hash: txResult.data.userOpHash,
+          transaction_hash: transactionHash,
+          from_wallet_address: txResult.data.from,
+        },
+        token
+      );
+
+      setActionMessage('Contract payout confirmed and recorded.');
       await fetchContracts();
     } catch (error) {
       console.error('Complete failed:', error);
+      setActionError(error instanceof Error ? error.message : 'Complete failed');
     } finally {
       setActionLoading(null);
     }
@@ -100,6 +171,7 @@ export default function EmployerPage() {
   const handleClose = async (id: string) => {
     if (!token) return;
     setActionLoading(id);
+    setActionError(null);
     try {
       await closeContract(id, token);
       await fetchContracts();
@@ -113,6 +185,7 @@ export default function EmployerPage() {
   const handleReviewSubmit = async (data: { rating: number; content: string; job_category: string }) => {
     if (!token || !reviewingContract) return;
     setActionLoading(reviewingContract.id);
+    setActionError(null);
     try {
       await createContractReview(reviewingContract.id, data.rating, data.content, data.job_category, token);
       setReviewingContract(null);
@@ -150,9 +223,25 @@ export default function EmployerPage() {
             Employer Dashboard
           </h1>
           <p style={textSecondary}>
-            Manage contracts, complete payments, and review workers.
+            Manage contracts, approve payouts in World App, and review workers.
           </p>
         </div>
+
+        {(actionMessage || actionError) && (
+          <GlassCard style={{ padding: '18px 20px', marginBottom: '24px' }}>
+            {actionMessage && (
+              <div style={{ ...textSecondary, marginBottom: actionError ? '8px' : 0 }}>
+                {actionMessage}
+                {isPollingUserOperation ? ' This can take a few seconds while World Chain confirms the payout.' : ''}
+              </div>
+            )}
+            {actionError && (
+              <div style={{ color: colors.rose, fontSize: '14px', lineHeight: '1.6' }}>
+                {actionError}
+              </div>
+            )}
+          </GlassCard>
+        )}
 
         {/* ── Summary Cards ── */}
         <div

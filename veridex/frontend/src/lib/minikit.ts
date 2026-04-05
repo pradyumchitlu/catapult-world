@@ -6,7 +6,7 @@ import type {
   MiniAppWalletAuthSuccessPayload,
   SendTransactionResult,
 } from '@worldcoin/minikit-js/commands';
-import { createPublicClient, http, parseEther, toHex } from 'viem';
+import { createPublicClient, encodeFunctionData, http, parseEther, toHex } from 'viem';
 import { worldchain, worldchainSepolia } from 'viem/chains';
 import {
   loginWithWorldWallet,
@@ -29,6 +29,21 @@ const WORLDCHAIN_RPC_URL =
     : 'https://worldchain-mainnet.g.alchemy.com/public');
 
 const WORLD_APP_API_BASE_URL = process.env.NEXT_PUBLIC_WORLD_APP_API_BASE_URL || undefined;
+const DEFAULT_WORLDCHAIN_ETH_FORWARDER_ADDRESS = '0x087d5449a126e4e439495fcBc62A853eB3257936';
+const ETH_FORWARDER_ABI = [
+  {
+    name: 'pay',
+    type: 'function',
+    stateMutability: 'payable',
+    inputs: [
+      {
+        name: 'to',
+        type: 'address',
+      },
+    ],
+    outputs: [],
+  },
+] as const;
 
 export function getMiniAppId() {
   return MINI_APP_ID;
@@ -40,6 +55,25 @@ export function getWorldAppApiBaseUrl() {
 
 export function getWorldChain() {
   return CHAIN_ENV === 'testnet' ? worldchainSepolia : worldchain;
+}
+
+export function getWorldChainEthForwarderAddress() {
+  const configured =
+    process.env.NEXT_PUBLIC_WORLDCHAIN_ETH_FORWARDER_ADDRESS ||
+    process.env.NEXT_PUBLIC_WORLDCHAIN_FORWARDER_ADDRESS ||
+    '';
+
+  if (configured) {
+    return configured;
+  }
+
+  if (CHAIN_ENV === 'testnet') {
+    throw new Error(
+      'NEXT_PUBLIC_WORLDCHAIN_ETH_FORWARDER_ADDRESS must be set for World Chain Sepolia MiniKit ETH transfers.'
+    );
+  }
+
+  return DEFAULT_WORLDCHAIN_ETH_FORWARDER_ADDRESS;
 }
 
 export function createWorldChainPublicClient() {
@@ -118,13 +152,47 @@ export async function sendMiniKitStakeTransaction(
     throw new Error('Open Veridex inside World App to stake with your World wallet.');
   }
 
+  const forwarderAddress = getWorldChainEthForwarderAddress();
+
   return MiniKit.sendTransaction({
     chainId: getWorldChain().id,
     transactions: [
       {
-        to: recipient,
+        to: forwarderAddress,
+        data: encodeFunctionData({
+          abi: ETH_FORWARDER_ABI,
+          functionName: 'pay',
+          args: [recipient as `0x${string}`],
+        }),
         value: toHex(parseEther(amountEth)),
       },
     ],
+  });
+}
+
+export async function sendMiniKitEthTransfers(
+  transfers: Array<{ to: string; amountEth: string }>
+): Promise<CommandResultByVia<SendTransactionResult>> {
+  if (!MiniKit.isInstalled()) {
+    throw new Error('Open Veridex inside World App to complete payouts with your World wallet.');
+  }
+
+  if (transfers.length === 0) {
+    throw new Error('No payout transfers were prepared for this contract.');
+  }
+
+  const forwarderAddress = getWorldChainEthForwarderAddress();
+
+  return MiniKit.sendTransaction({
+    chainId: getWorldChain().id,
+    transactions: transfers.map((transfer) => ({
+      to: forwarderAddress,
+      data: encodeFunctionData({
+        abi: ETH_FORWARDER_ABI,
+        functionName: 'pay',
+        args: [transfer.to as `0x${string}`],
+      }),
+      value: toHex(parseEther(transfer.amountEth)),
+    })),
   });
 }
