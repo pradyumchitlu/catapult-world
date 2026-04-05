@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import WorldIDButton from '@/components/WorldIDButton';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -22,25 +22,45 @@ export default function VerifyPage() {
   const { user, isLoading, login } = useAuth();
   const { isInWorldApp, isMiniKitReady } = useMiniApp();
   const [error, setError] = useState<string | null>(null);
-  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const redirectTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!isLoading && user && !pendingRedirect) {
-      router.push('/dashboard');
+    if (!isLoading && user && !isRedirecting) {
+      router.replace('/dashboard');
     }
-  }, [user, isLoading, router, pendingRedirect]);
+  }, [user, isLoading, router, isRedirecting]);
 
   useEffect(() => {
-    if (pendingRedirect) {
-      router.push(pendingRedirect);
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const navigateAfterVerification = (destination: string) => {
+    setIsRedirecting(true);
+    router.replace(destination);
+    router.refresh();
+
+    if (typeof window !== 'undefined') {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+
+      redirectTimeoutRef.current = window.setTimeout(() => {
+        if (window.location.pathname === '/verify') {
+          window.location.replace(destination);
+        }
+      }, 1200);
     }
-  }, [pendingRedirect, router]);
+  };
 
   const handleVerificationSuccess = (result: { user: any; isNewUser: boolean; token: string }) => {
     setError(null);
-    const destination = result.isNewUser ? '/onboarding' : '/dashboard';
-    setPendingRedirect(destination);
     login(result.token, result.user);
+    navigateAfterVerification(result.isNewUser ? '/onboarding' : '/dashboard');
   };
 
   const handleVerificationError = (message: string) => {
@@ -80,9 +100,11 @@ export default function VerifyPage() {
                 margin: '0',
               }}
             >
-              {isInWorldApp && isMiniKitReady
-                ? 'Continue with your World wallet inside World App, then use Wallet Auth and MiniKit transactions for staking.'
-                : 'Prove you&apos;re a unique human with World ID. This is the foundation of your trust profile - one person, one identity.'}
+              {isRedirecting
+                ? 'Verification succeeded. Taking you into Veridex now.'
+                : isInWorldApp && isMiniKitReady
+                  ? 'Continue with your World wallet inside World App, then use Wallet Auth and MiniKit transactions for staking.'
+                  : 'Prove you&apos;re a unique human with World ID. This is the foundation of your trust profile - one person, one identity.'}
             </p>
 
             {error && (

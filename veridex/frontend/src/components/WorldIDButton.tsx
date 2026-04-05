@@ -31,6 +31,7 @@ export default function WorldIDButton({ onSuccess, onError, className, children 
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const { isInWorldApp, isMiniKitReady, isDetectingMiniApp } = useMiniApp();
+  const [rpContext, setRpContext] = useState<any>(null);
 
   // Dev mode: mock verification without World ID
   if (IS_DEV_MOCK) {
@@ -135,9 +136,6 @@ export default function WorldIDButton({ onSuccess, onError, className, children 
     );
   }
 
-  // Production mode: IDKit widget
-  const [rpContext, setRpContext] = useState<any>(null);
-
   const handleOpen = async () => {
     try {
       // Fetch a fresh signed rp_context from backend each time widget opens
@@ -153,6 +151,7 @@ export default function WorldIDButton({ onSuccess, onError, className, children 
   const handleIDKitVerify = async (result: IDKitResult) => {
     setIsLoading(true);
     try {
+      setIsOpen(false);
       // Send the full IDKit result — it already contains the correct nonce, action, and responses
       const apiResult = await verifyWorldId(result);
       onSuccess(apiResult);

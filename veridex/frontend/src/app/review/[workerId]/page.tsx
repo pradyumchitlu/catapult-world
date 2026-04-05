@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ReviewForm from '@/components/ReviewForm';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
+import { createReview, getReputation } from '@/lib/api';
 import type { User } from '@/types';
 
 export default function ReviewPage() {
   const params = useParams();
   const router = useRouter();
   const workerId = params.workerId as string;
+  const { user, token, isLoading: authLoading } = useAuth();
 
   const [worker, setWorker] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,25 +20,22 @@ export default function ReviewPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: Fetch worker info
+    if (!authLoading && !user) {
+      router.push('/verify');
+      return;
+    }
+  }, [authLoading, router, user]);
+
+  useEffect(() => {
+    if (!workerId) return;
+
     const fetchWorker = async () => {
       try {
-        // Placeholder
-        setWorker({
-          id: workerId,
-          world_id_hash: 'hash1',
-          display_name: 'Alice Developer',
-          roles: ['worker'],
-          profession_category: 'software',
-          wallet_address: null,
-          wallet_verified_at: null,
-          wallet_verification_method: null,
-          wallet_last_balance_sync_at: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
+        const result = await getReputation(workerId);
+        setWorker(result.user || null);
       } catch (error) {
         console.error('Failed to fetch worker:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load worker');
       } finally {
         setIsLoading(false);
       }
@@ -50,13 +50,16 @@ export default function ReviewPage() {
     jobCategory: string;
     stakeAmount: number;
   }) => {
+    if (!token) {
+      setError('Sign in before leaving a review.');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // TODO: Call review API
-      // await createReview(workerId, data.rating, data.content, data.jobCategory, data.stakeAmount, token);
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Placeholder
+      await createReview(workerId, data.rating, data.content, data.jobCategory, data.stakeAmount, token);
       router.push(`/profile/${workerId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit review');
@@ -65,7 +68,7 @@ export default function ReviewPage() {
     }
   };
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <LoadingSpinner />
