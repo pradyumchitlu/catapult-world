@@ -187,9 +187,19 @@ function OnboardingContent() {
   }, [displayName, selectedRoles, professionCategory, step]);
 
   const toggleRole = (roleId: string) => {
-    setSelectedRoles((prev) =>
-      prev.includes(roleId) ? prev.filter((r) => r !== roleId) : [...prev, roleId]
-    );
+    setSelectedRoles((prev) => {
+      if (prev.includes(roleId)) {
+        return prev.filter((r) => r !== roleId);
+      }
+      // Worker and client are mutually exclusive
+      if (roleId === 'worker') {
+        return [...prev.filter((r) => r !== 'client'), roleId];
+      }
+      if (roleId === 'client') {
+        return [...prev.filter((r) => r !== 'worker'), roleId];
+      }
+      return [...prev, roleId];
+    });
   };
 
   const handleComplete = async () => {

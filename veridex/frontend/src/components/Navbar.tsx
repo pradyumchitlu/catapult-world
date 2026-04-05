@@ -5,11 +5,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const navLinks = [
+const workerLinks = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/browse', label: 'Browse' },
   { href: '/staker', label: 'Vouches' },
   { href: '/agents', label: 'Agents' },
+];
+
+const employerLinks = [
+  { href: '/employer', label: 'Dashboard' },
+  { href: '/browse', label: 'Browse' },
+  { href: '/staker', label: 'Vouches' },
 ];
 
 export default function Navbar() {
@@ -37,8 +43,9 @@ export default function Navbar() {
     router.push('/');
   };
 
-  // Only show nav links when authenticated
-  const visibleLinks = user ? navLinks : [];
+  // Show role-appropriate links
+  const isEmployer = user?.roles?.includes('client');
+  const visibleLinks = user ? (isEmployer ? employerLinks : workerLinks) : [];
 
   return (
     <nav

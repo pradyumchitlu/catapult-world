@@ -183,15 +183,36 @@ export default function StakerPage() {
         {/* ── How Staking Works ── */}
         <GlassCard className="fade-up fade-up-4">
           <span style={sectionLabel}>How Staking Works</span>
-
-          {[
-            { num: '01', text: 'Stake WLD on workers you believe will perform well' },
-            { num: '02', text: 'Earn returns when their trust score improves' },
-            { num: '03', text: 'Lose stake if their reputation declines' },
-            { num: '04', text: 'Withdraw anytime (subject to 7-day lock period)' },
-          ].map((item, i, arr) => (
-            <div key={item.num}>
-              <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', padding: i === 0 ? '0 0 20px 0' : '20px 0' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '32px',
+            }}
+          >
+            {[
+              {
+                num: '01',
+                title: 'Stake',
+                body: 'Stake WLD on workers you believe will perform well. Your conviction becomes an economic signal of trust.',
+              },
+              {
+                num: '02',
+                title: 'Earn',
+                body: 'Earn returns when the workers you staked on see their trust score improve over time.',
+              },
+              {
+                num: '03',
+                title: 'Risk',
+                body: 'If a worker\'s reputation declines, your stake is at risk. Skin in the game keeps everyone honest.',
+              },
+              {
+                num: '04',
+                title: 'Withdraw',
+                body: 'Withdraw your stake anytime after the 7-day lock period. Returns are calculated at withdrawal.',
+              },
+            ].map((step) => (
+              <div key={step.num}>
                 <span
                   style={{
                     ...gradientText,
@@ -199,17 +220,17 @@ export default function StakerPage() {
                     fontSize: '13px',
                     fontWeight: 700,
                     letterSpacing: '0.04em',
-                    lineHeight: '1.6',
-                    minWidth: '24px',
+                    display: 'block',
+                    marginBottom: '10px',
                   }}
                 >
-                  {item.num}
+                  {step.num}
                 </span>
-                <p style={{ ...textSecondary, fontSize: '15px' }}>{item.text}</p>
+                <p style={{ ...headingSm, margin: '0 0 8px 0' }}>{step.title}</p>
+                <p style={{ ...textSecondary, fontSize: '14px', lineHeight: '1.65' }}>{step.body}</p>
               </div>
-              {i < arr.length - 1 && <div style={separator} />}
-            </div>
-          ))}
+            ))}
+          </div>
         </GlassCard>
 
         <div style={{ height: '64px' }} />

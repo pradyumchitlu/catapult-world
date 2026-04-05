@@ -158,6 +158,54 @@ export const spawnAgent = (name: string, token: string) =>
 export const listAgents = (userId: string, token: string) =>
   fetchApi(`/api/agent/list/${userId}`, { token });
 
+// Contracts
+export const estimateBuyIn = (workerId: string, salary: number, token: string) =>
+  fetchApi<{ salary: number; stakerReward: number; platformFee: number; totalBuyIn: number; totalStakedOnWorker: number; stakerRewardRate: number }>(
+    `/api/contract/estimate?worker_id=${workerId}&salary=${salary}`,
+    { token }
+  );
+
+export const createContract = (
+  data: { worker_id: string; title: string; description: string; payment_amount: number; duration_days: number },
+  token: string
+) =>
+  fetchApi('/api/contract', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    token,
+  });
+
+export const activateContract = (contractId: string, token: string) =>
+  fetchApi(`/api/contract/${contractId}/activate`, { method: 'PUT', token });
+
+export const completeContract = (contractId: string, token: string) =>
+  fetchApi(`/api/contract/${contractId}/complete`, { method: 'PUT', token });
+
+export const closeContract = (contractId: string, token: string) =>
+  fetchApi(`/api/contract/${contractId}/close`, { method: 'PUT', token });
+
+export const getEmployerContracts = (token: string) =>
+  fetchApi<{ contracts: any[] }>('/api/contract/employer', { token });
+
+export const getWorkerContracts = (token: string) =>
+  fetchApi<{ contracts: any[] }>('/api/contract/worker', { token });
+
+export const getContractDetail = (contractId: string, token: string) =>
+  fetchApi<{ contract: any; payments: any[]; review: any }>(`/api/contract/${contractId}`, { token });
+
+export const createContractReview = (
+  contractId: string,
+  rating: number,
+  content: string,
+  jobCategory: string,
+  token: string
+) =>
+  fetchApi('/api/review', {
+    method: 'POST',
+    body: JSON.stringify({ contract_id: contractId, rating, content, job_category: jobCategory, stake_amount: 0 }),
+    token,
+  });
+
 // Chat
 export const sendChatMessage = (workerId: string, message: string, sessionId: string | null, token: string) =>
   fetchApi('/api/chat', {

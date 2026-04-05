@@ -85,6 +85,7 @@ export default function ProfilePage() {
               reviewer_trust_score_at_time: 72,
               is_flagged: false,
               flag_reason: null,
+              contract_id: null,
               status: 'active',
               created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
               reviewer: {

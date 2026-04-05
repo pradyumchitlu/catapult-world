@@ -54,7 +54,7 @@ Pull verified signals from a user’s digital life and normalize them into one p
 - **Professional history** — work history, tenure, structured evidence (e.g. LinkedIn-style fields or manual onboarding data).
 - **Peer endorsements** — references from other verified Veridex users (e.g. staked reviews).
 
-**Build:** A backend pipeline that ingests multiple sources, normalizes to a shared schema, and keeps the profile current. The hackathon goal is to show the *pattern*: many inputs → one living profile.
+**Build:** A backend pipeline that ingests multiple sources, normalizes to a shared schema, and keeps the profile current. The hackathon goal is to show the _pattern_: many inputs → one living profile.
 
 **Pitch line:** Today reputation is scattered. Veridex aggregates it into one verified, portable profile.
 
@@ -72,7 +72,7 @@ The strongest offline trust signal is a personal vouch. Veridex makes that digit
 
 **Why it matters:** Eases **cold start**, increases **accountability** (vouching is not free), and mirrors **how trust works in the real world** — now verifiable.
 
-**Pitch line:** Most systems are backward-looking (ratings, history). Social staking is also **forward-looking**: who is willing to bet on this person *now*?
+**Pitch line:** Most systems are backward-looking (ratings, history). Social staking is also **forward-looking**: who is willing to bet on this person _now_?
 
 #### Layer 5 — Portable trust API
 
@@ -82,7 +82,7 @@ Expose a clean **developer API** so other products can query trust for a user in
 
 **Pitch line:** Veridex is not only a UI — it is **infrastructure** other systems can call instead of reinventing identity and reputation silos.
 
-*Out of scope for this plan:* building our own **marketplace** or a **“data rent”** / pay-per-query business model around third parties paying users for lookups. The API is still valuable as a trust and integration surface.
+_Out of scope for this plan:_ building our own **marketplace** or a **“data rent”** / pay-per-query business model around third parties paying users for lookups. The API is still valuable as a trust and integration surface.
 
 #### Layer 6 — Guardian pattern (AI agent identity)
 
@@ -110,13 +110,13 @@ Structure the live demo as a **story**; avoid showing features without a human r
 
 ### What judges may ask (short answers)
 
-| Question | Direction |
-|----------|-----------|
+| Question                            | Direction                                                                                                                                      |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | **vs LinkedIn / background checks** | Self-reported vs verified signals; portability and real-time contextual reasoning; staking and agent binding are not generic profile features. |
-| **Gaming** | World ID limits sybils; structured data + LLM can surface inconsistencies; staking makes vouching costly for bad actors. |
-| **Why vouch for someone?** | Same as references today — belief and reciprocity — with explicit, visible stakes. |
-| **Is AI scoring a black box?** | Scores and answers should cite reasoning and evidence where the product exposes them. |
-| **Agent misbehavior** | Agent trust derives from the human; incentives align with monitoring and controlling agents. |
+| **Gaming**                          | World ID limits sybils; structured data + LLM can surface inconsistencies; staking makes vouching costly for bad actors.                       |
+| **Why vouch for someone?**          | Same as references today — belief and reciprocity — with explicit, visible stakes.                                                             |
+| **Is AI scoring a black box?**      | Scores and answers should cite reasoning and evidence where the product exposes them.                                                          |
+| **Agent misbehavior**               | Agent trust derives from the human; incentives align with monitoring and controlling agents.                                                   |
 
 ---
 
@@ -225,6 +225,7 @@ Veridex treats agents as **registered credentials** tied to a verified human (Wo
 ## Installation & Setup
 
 ### Prerequisites
+
 - Node.js 18+
 - npm
 - Supabase account (free tier works)
@@ -245,6 +246,7 @@ cd ../backend && npm install
 ### 3. Configure Environment Variables
 
 **Frontend** (`frontend/.env.local`):
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
@@ -253,6 +255,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 **Backend** (`backend/.env`):
+
 ```env
 SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
@@ -281,9 +284,11 @@ cd backend && npm run dev
 ## Team Assignments
 
 ### Person 1: World ID + Authentication
+
 **Focus:** User verification and session management
 
 **Files to work on:**
+
 ```
 frontend/
 ├── src/app/verify/page.tsx          # World ID verification UI
@@ -295,6 +300,7 @@ backend/
 ```
 
 **Key tasks:**
+
 - [ ] Integrate World ID MiniKit SDK (`@worldcoin/minikit-js`)
 - [ ] Implement proof verification with World ID API
 - [ ] Complete GitHub OAuth flow (exchange code for token)
@@ -302,6 +308,7 @@ backend/
 - [ ] Handle verification errors gracefully
 
 **API Endpoints:**
+
 - `POST /api/auth/verify` - Verify World ID proof
 - `GET /api/auth/github` - Initiate GitHub OAuth
 - `GET /api/auth/github/callback` - Handle OAuth callback
@@ -309,9 +316,11 @@ backend/
 ---
 
 ### Person 2: Backend + Scoring Engine
+
 **Focus:** Core business logic, GitHub ingestion, trust scoring
 
 **Files to work on:**
+
 ```
 backend/
 ├── src/services/
@@ -325,6 +334,7 @@ backend/
 ```
 
 **Key tasks:**
+
 - [ ] Complete GitHub data ingestion (repos, commits, PRs)
 - [ ] Implement all 6 score components
 - [ ] Add integrity mechanisms:
@@ -335,6 +345,7 @@ backend/
 - [ ] Trigger score recomputation on new reviews
 
 **API Endpoints:**
+
 - `POST /api/reputation/evidence` - Save manual LinkedIn/project evidence and recompute score
 - `POST /api/reputation/ingest` - Fetch GitHub data, compute scores
 - `GET /api/reputation/:userId` - Get full profile
@@ -344,6 +355,7 @@ backend/
 - `GET /api/review/:workerId` - Get reviews
 
 **Score Components (0-100 each):**
+
 1. `developer_competence` - Repo quality, stars, languages
 2. `collaboration` - External PRs, issues, contributions
 3. `consistency` - Commit frequency, active months
@@ -352,6 +364,7 @@ backend/
 6. `peer_trust` - Weighted reviews
 
 **Person 2 Handoff Note (Apr 4):**
+
 - Base reputation scoring is still algorithmic in `veridex/backend/src/services/scoring.ts`; it does not use an LLM for `overall_trust_score`.
 - The scorer now uses 3 evidence buckets: GitHub data, manual professional evidence (`linkedin_data` + `other_platforms.projects`), and staked reviews.
 - `veridex/backend/src/services/reputationIngestion.ts` is now the shared sync path for reputation updates. Both `POST /api/reputation/ingest` and the GitHub OAuth callback use it, so GitHub connect and manual re-ingest now hit the same scoring pipeline.
@@ -366,11 +379,13 @@ backend/
 - Review creation still triggers score recomputation, so manual evidence, GitHub evidence, and reviews all affect the updated worker score.
 
 **Notes For Other People:**
+
 - `Person 1`: preserve the current GitHub OAuth contract. Do not reintroduce broad repo scopes or store GitHub access tokens. The callback already auto-syncs the worker reputation through `syncWorkerReputation(...)`, so a successful GitHub connect should update `github_username`, `github_data`, score fields, and skills without a separate frontend ingest call.
 - `Person 3`: a successful GitHub connect should now update the worker profile automatically after the OAuth redirect. For non-GitHub/manual profile building, send structured data to `POST /api/reputation/evidence`. No GitHub private repo permission is needed for the current product.
 - `Person 4`: contextual scoring and agent logic can rely more heavily on `worker_profiles.computed_skills`, `specializations`, `years_experience`, and `github_data.{languages, contributions, collaboration}` because those fields are now populated from better GitHub-derived signals.
 
 **Files Modified By Person 2 So Far:**
+
 - `veridex/backend/src/routes/auth.ts` - GitHub OAuth now uses least privilege and auto-syncs the reputation layer
 - `veridex/backend/src/routes/reputation.ts` - shared ingest path for GitHub/manual evidence
 - `veridex/backend/src/routes/review.ts` - recomputes worker score after reviews
@@ -383,9 +398,11 @@ backend/
 ---
 
 ### Person 3: Frontend UI/UX
+
 **Focus:** All pages and components, user experience
 
 **Files to work on:**
+
 ```
 frontend/
 ├── src/app/
@@ -410,6 +427,7 @@ frontend/
 ```
 
 **Key tasks:**
+
 - [ ] Connect all pages to real backend APIs
 - [ ] Implement user state/context (logged in user, balance)
 - [ ] Add loading states and error handling
@@ -433,9 +451,11 @@ frontend/
 ---
 
 ### Person 4: AI + Agents
+
 **Focus:** Gemini integration, contextual scoring, Agent Credentials (registration, verification API, disputes/slashing narrative)
 
 **Files to work on:**
+
 ```
 backend/
 ├── src/services/
@@ -457,6 +477,7 @@ frontend/
 ```
 
 **Key tasks:**
+
 - [ ] Refine Gemini prompts for worker evaluation
 - [ ] Implement job description parsing
 - [ ] Build contextual fit scoring (met/partial/missing)
@@ -465,6 +486,7 @@ frontend/
 - [ ] Public agent lookup API for counterparties (verification flow)
 
 **API Endpoints:**
+
 - `POST /api/chat` - Send message, get AI response
 - `POST /api/contextual-score` - Get fit score for job desc
 - `POST /api/agent/spawn` - Register agent / mint Agent Credential (implementation name; not “spawn” in product copy)
@@ -472,6 +494,7 @@ frontend/
 - `GET /api/agent/:agentId` - Lookup agent (public)
 
 **Gemini prompts to refine:**
+
 1. `evaluateWorker` - Answer questions about worker qualifications
 2. `parseJobRequirements` - Extract structured requirements from JD
 3. `generateContextualEvaluation` - Match worker to requirements
@@ -481,6 +504,7 @@ frontend/
 ## API Reference
 
 ### Public Endpoints (no auth required)
+
 ```
 GET  /api/trust/:veridexId     # Query user's trust score
 GET  /api/agent/:agentId       # Lookup agent identity
@@ -489,6 +513,7 @@ GET  /api/review/:workerId     # Get reviews for worker
 ```
 
 ### Authenticated Endpoints (require Bearer token)
+
 ```
 POST /api/auth/verify          # Verify World ID
 POST /api/reputation/ingest    # Trigger GitHub ingestion
@@ -506,16 +531,16 @@ GET  /api/stake/:userId        # Get user's stakes
 
 ## Database Tables
 
-| Table | Description |
-|-------|-------------|
-| `users` | Core user data, WLD balance, roles |
-| `worker_profiles` | GitHub data, skills, trust scores |
-| `reviews` | Staked reviews with ratings |
-| `stakes` | WLD stakes on workers |
-| `agents` | Agent Credentials (identifiers, inheritance, domains, stake refs) tied to users |
-| `contextual_scores` | Cached fit scores |
-| `chat_sessions` | Chat history |
-| `query_log` | Profile view tracking |
+| Table               | Description                                                                     |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `users`             | Core user data, WLD balance, roles                                              |
+| `worker_profiles`   | GitHub data, skills, trust scores                                               |
+| `reviews`           | Staked reviews with ratings                                                     |
+| `stakes`            | WLD stakes on workers                                                           |
+| `agents`            | Agent Credentials (identifiers, inheritance, domains, stake refs) tied to users |
+| `contextual_scores` | Cached fit scores                                                               |
+| `chat_sessions`     | Chat history                                                                    |
+| `query_log`         | Profile view tracking                                                           |
 
 ---
 
@@ -550,29 +575,32 @@ Auth layer is fully implemented and live. World ID verification, JWT sessions, G
 **GitHub OAuth:** Full server-side flow. The user's JWT is encoded into the OAuth `state` param so the callback can associate the GitHub account to the right user. After callback, `worker_profiles.github_username` and `github_data` are populated.
 
 ### Files created
-| File | Purpose |
-|------|---------|
+
+| File                                            | Purpose                                   |
+| ----------------------------------------------- | ----------------------------------------- |
 | `veridex/frontend/src/contexts/AuthContext.tsx` | React auth context + localStorage session |
-| `veridex/frontend/src/components/Providers.tsx` | Client wrapper for `layout.tsx` |
+| `veridex/frontend/src/components/Providers.tsx` | Client wrapper for `layout.tsx`           |
 
 ### Files modified
-| File | What changed |
-|------|-------------|
-| `veridex/backend/src/middleware/auth.ts` | Real JWT verification (was hardcoded `mock-user-id`) |
-| `veridex/backend/src/routes/auth.ts` | JWT generation, `/me`, `/profile`, `/rp-context`, full GitHub OAuth callback |
-| `veridex/backend/.env.example` | Added `JWT_SECRET`, `WORLD_RP_ID`, `WORLD_ID_PRIVATE_KEY`, fixed `GITHUB_CALLBACK_URL` (was port 3000, must be 8000) |
-| `veridex/frontend/src/components/WorldIDButton.tsx` | Real IDKit widget (was mock) with dev-mode fallback |
-| `veridex/frontend/src/components/Navbar.tsx` | Consumes `useAuth()` — shows real user + logout button |
-| `veridex/frontend/src/components/GitHubConnectButton.tsx` | Real OAuth redirect with token |
-| `veridex/frontend/src/app/verify/page.tsx` | Wired to backend + Auth Context login + redirect logic |
-| `veridex/frontend/src/app/onboarding/page.tsx` | Auth guard, GitHub detection, profile save |
-| `veridex/frontend/src/app/layout.tsx` | Wrapped with `<Providers>` |
-| `veridex/frontend/src/lib/api.ts` | Added `verifyWorldId`, `getMe`, `updateProfile` |
-| `veridex/frontend/src/lib/worldid.ts` | Cleaned up stubs, kept types + `isDevMode()` |
+
+| File                                                      | What changed                                                                                                         |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `veridex/backend/src/middleware/auth.ts`                  | Real JWT verification (was hardcoded `mock-user-id`)                                                                 |
+| `veridex/backend/src/routes/auth.ts`                      | JWT generation, `/me`, `/profile`, `/rp-context`, full GitHub OAuth callback                                         |
+| `veridex/backend/.env.example`                            | Added `JWT_SECRET`, `WORLD_RP_ID`, `WORLD_ID_PRIVATE_KEY`, fixed `GITHUB_CALLBACK_URL` (was port 3000, must be 8000) |
+| `veridex/frontend/src/components/WorldIDButton.tsx`       | Real IDKit widget (was mock) with dev-mode fallback                                                                  |
+| `veridex/frontend/src/components/Navbar.tsx`              | Consumes `useAuth()` — shows real user + logout button                                                               |
+| `veridex/frontend/src/components/GitHubConnectButton.tsx` | Real OAuth redirect with token                                                                                       |
+| `veridex/frontend/src/app/verify/page.tsx`                | Wired to backend + Auth Context login + redirect logic                                                               |
+| `veridex/frontend/src/app/onboarding/page.tsx`            | Auth guard, GitHub detection, profile save                                                                           |
+| `veridex/frontend/src/app/layout.tsx`                     | Wrapped with `<Providers>`                                                                                           |
+| `veridex/frontend/src/lib/api.ts`                         | Added `verifyWorldId`, `getMe`, `updateProfile`                                                                      |
+| `veridex/frontend/src/lib/worldid.ts`                     | Cleaned up stubs, kept types + `isDevMode()`                                                                         |
 
 ### How to set up
 
 **Backend `backend/.env`** — create this file (not committed):
+
 ```env
 SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
@@ -592,6 +620,7 @@ GEMINI_CHATBOT_API_KEY=...
 ```
 
 **Frontend `frontend/.env.local`** — create this file (not committed):
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
@@ -605,22 +634,26 @@ Set `NEXT_PUBLIC_DEV_MOCK_WORLDID=true` and `DEV_SKIP_WORLDID_VERIFY=true` to by
 ### How to use auth from other code (P2, P3, P4)
 
 **Getting a token (for testing):**
+
 ```bash
 curl -X POST http://localhost:8000/api/auth/verify \
   -H "Content-Type: application/json" \
   -d '{"merkle_root":"test","nullifier_hash":"test-user-1","proof":"test","verification_level":"orb"}'
 # Returns: { success: true, user: {...}, isNewUser: true, token: "eyJ..." }
 ```
+
 (Requires `DEV_SKIP_WORLDID_VERIFY=true` on backend)
 
 **Making authenticated API calls (frontend):**
+
 ```typescript
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from "@/contexts/AuthContext";
 const { user, token } = useAuth();
 // token is the Bearer token — pass it to any api.ts function that takes a token param
 ```
 
 **New API endpoints added:**
+
 - `GET /api/auth/rp-context` — get signed World ID context (called by WorldIDButton internally)
 - `GET /api/auth/me` — returns the current user (requires Bearer token)
 - `PUT /api/auth/profile` — update `display_name`, `roles`, `profession_category` (requires Bearer token)
@@ -628,3 +661,7 @@ const { user, token } = useAuth();
 **Notes for P2:** After GitHub OAuth completes, `worker_profiles.github_username` is populated. You can then call `POST /api/reputation/ingest` for that user to pull their GitHub data.
 
 **Notes for P3:** Use `useAuth()` hook for the current user everywhere. Call `updateProfile()` from `api.ts` to save onboarding data. Auth guards: check `if (!user && !isLoading) router.push('/verify')`.
+
+## Team notes
+
+Our API shouldn't be able to be invoked by anyone who isn't signed in with us (there is a cost involved)

@@ -46,6 +46,7 @@ export interface Review {
   reviewer_trust_score_at_time: number | null;
   is_flagged: boolean;
   flag_reason: string | null;
+  contract_id: string | null;
   status: 'active' | 'flagged' | 'slashed';
   created_at: string;
   // joined fields
@@ -89,6 +90,41 @@ export interface Agent {
   created_at: string;
   // joined fields
   parent?: User & { worker_profile?: WorkerProfile };
+}
+
+export type ContractStatus = 'draft' | 'active' | 'completed' | 'closed';
+
+export interface Contract {
+  id: string;
+  employer_id: string;
+  worker_id: string;
+  title: string;
+  description: string | null;
+  payment_amount: number;
+  buy_in_amount: number | null;
+  duration_days: number | null;
+  status: ContractStatus;
+  worker_payout: number | null;
+  staker_payout_total: number | null;
+  platform_fee: number | null;
+  completed_at: string | null;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  has_review?: boolean;
+  worker?: User & { worker_profiles?: WorkerProfile };
+  employer?: User;
+  review?: Review;
+}
+
+export interface ContractPayment {
+  id: string;
+  contract_id: string;
+  recipient_id: string;
+  amount: number;
+  payment_type: 'worker_payout' | 'staker_share' | 'platform_fee';
+  stake_id: string | null;
+  created_at: string;
 }
 
 export interface ChatMessage {

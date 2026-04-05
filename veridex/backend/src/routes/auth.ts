@@ -277,6 +277,11 @@ router.put('/profile', requireAuth, async (req: AuthenticatedRequest, res: Respo
   try {
     const { display_name, roles, profession_category } = req.body;
 
+    // Enforce: a user cannot be both a worker and a client (employer)
+    if (Array.isArray(roles) && roles.includes('worker') && roles.includes('client')) {
+      return res.status(400).json({ error: 'A user cannot be both a worker and an employer' });
+    }
+
     const { data: updatedUser, error } = await supabase
       .from('users')
       .update({
