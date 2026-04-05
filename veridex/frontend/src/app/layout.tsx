@@ -19,7 +19,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'Veridex - Decentralized Trust Platform',
-  description: 'Build portable reputation with World ID verification. Stake WLD on integrity. Spawn accountable AI agents.',
+  description: 'Build portable reputation with World ID verification. Stake WLD on integrity. Issue traceable agent credentials tied to real humans.',
 };
 
 export default function RootLayout({

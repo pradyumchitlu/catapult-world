@@ -9,7 +9,7 @@ const workerLinks = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/browse', label: 'Browse' },
   { href: '/staker', label: 'Vouches' },
-  { href: '/agents', label: 'Agents' },
+  { href: '/agents', label: 'Credentials' },
 ];
 
 const employerLinks = [
