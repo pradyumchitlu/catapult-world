@@ -5,6 +5,7 @@ import { gradientText, colors } from '@/lib/styles';
 interface TrustScoreCardProps {
   score: number;
   size?: 'sm' | 'md' | 'lg';
+  minHeight?: string | number;
 }
 
 function getScoreColor(score: number): string {
@@ -27,7 +28,7 @@ const SIZE = {
   lg: { ring: 144, fontSize: '42px', pad: '28px' },
 };
 
-export default function TrustScoreCard({ score, size = 'lg' }: TrustScoreCardProps) {
+export default function TrustScoreCard({ score, size = 'lg', minHeight }: TrustScoreCardProps) {
   const { ring, fontSize, pad } = SIZE[size];
   const r = ring * 0.45;
   const circumference = 2 * Math.PI * r;
@@ -37,9 +38,9 @@ export default function TrustScoreCard({ score, size = 'lg' }: TrustScoreCardPro
   return (
     <div
       className="rounded-2xl border border-white/40 bg-white/30 backdrop-blur-xl shadow-[0_8px_32px_rgba(37,99,235,0.06)]"
-      style={{ padding: pad }}
+      style={{ padding: pad, minHeight }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: minHeight ? `calc(${typeof minHeight === 'number' ? `${minHeight}px` : minHeight} - (${pad} * 2))` : undefined, height: '100%' }}>
         {/* Ring */}
         <div style={{ position: 'relative', width: ring, height: ring, marginBottom: '16px' }}>
           <svg

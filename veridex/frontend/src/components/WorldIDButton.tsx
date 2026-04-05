@@ -5,10 +5,13 @@ import LoadingSpinner from './LoadingSpinner';
 import { IDKitRequestWidget, orbLegacy } from '@worldcoin/idkit';
 import type { IDKitResult } from '@worldcoin/idkit';
 import { verifyWorldId } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 interface WorldIDButtonProps {
   onSuccess: (result: { user: any; isNewUser: boolean; token: string }) => void;
   onError: (error: string) => void;
+  className?: string;
+  children?: React.ReactNode;
 }
 
 const IS_DEV_MOCK = process.env.NEXT_PUBLIC_DEV_MOCK_WORLDID === 'true';
@@ -22,7 +25,7 @@ function WorldIdIcon() {
   );
 }
 
-export default function WorldIDButton({ onSuccess, onError }: WorldIDButtonProps) {
+export default function WorldIDButton({ onSuccess, onError, className, children }: WorldIDButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -53,7 +56,10 @@ export default function WorldIDButton({ onSuccess, onError }: WorldIDButtonProps
       <button
         onClick={handleMockVerify}
         disabled={isLoading}
-        className="btn-primary py-4 px-6 rounded-xl text-lg flex items-center justify-center gap-3 disabled:opacity-50"
+        className={cn(
+          'btn-primary py-4 px-6 rounded-xl text-lg flex items-center justify-center gap-3 disabled:opacity-50',
+          className
+        )}
       >
         {isLoading ? (
           <>
@@ -61,10 +67,12 @@ export default function WorldIDButton({ onSuccess, onError }: WorldIDButtonProps
             <span>Verifying...</span>
           </>
         ) : (
-          <>
-            <WorldIdIcon />
-            <span>Verify with World ID (Dev)</span>
-          </>
+          children || (
+            <>
+              <WorldIdIcon />
+              <span>Verify with World ID (Dev)</span>
+            </>
+          )
         )}
       </button>
     );
@@ -105,7 +113,10 @@ export default function WorldIDButton({ onSuccess, onError }: WorldIDButtonProps
       <button
         onClick={handleOpen}
         disabled={isLoading}
-        className="btn-primary py-4 px-6 rounded-xl text-lg flex items-center justify-center gap-3 disabled:opacity-50"
+        className={cn(
+          'btn-primary py-4 px-6 rounded-xl text-lg flex items-center justify-center gap-3 disabled:opacity-50',
+          className
+        )}
       >
         {isLoading ? (
           <>
@@ -113,10 +124,12 @@ export default function WorldIDButton({ onSuccess, onError }: WorldIDButtonProps
             <span>Verifying...</span>
           </>
         ) : (
-          <>
-            <WorldIdIcon />
-            <span>Verify with World ID</span>
-          </>
+          children || (
+            <>
+              <WorldIdIcon />
+              <span>Verify with World ID</span>
+            </>
+          )
         )}
       </button>
       {rpContext && (

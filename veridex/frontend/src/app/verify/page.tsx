@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import WorldIDButton from '@/components/WorldIDButton';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
+import { ButtonRotate } from '@/components/ui/button-rotate';
 import {
   col,
   headingLg,
@@ -22,14 +23,12 @@ export default function VerifyPage() {
   const [error, setError] = useState<string | null>(null);
   const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
 
-  // If already logged in (session restored from localStorage), redirect to dashboard
   useEffect(() => {
     if (!isLoading && user && !pendingRedirect) {
       router.push('/dashboard');
     }
   }, [user, isLoading, router, pendingRedirect]);
 
-  // Fire redirect after login() has settled
   useEffect(() => {
     if (pendingRedirect) {
       router.push(pendingRedirect);
@@ -43,8 +42,8 @@ export default function VerifyPage() {
     login(result.token, result.user);
   };
 
-  const handleVerificationError = (error: string) => {
-    setError(error);
+  const handleVerificationError = (message: string) => {
+    setError(message);
   };
 
   if (isLoading) {
@@ -58,33 +57,37 @@ export default function VerifyPage() {
   return (
     <div style={{ minHeight: '100vh' }}>
       <div style={col}>
-        {/* ── Hero ─────────────────────────────────────────────── */}
-        <div className="fade-up fade-up-1" style={{ marginBottom: '64px' }}>
-          <h1 style={{ ...headingLg, margin: '0 0 28px 0' }}>
-            Verify your <em style={{ fontStyle: 'italic' }}>identity.</em>
-          </h1>
+        <div
+          className="fade-up fade-up-1"
+          style={{
+            marginBottom: '64px',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) minmax(300px, 380px)',
+            gap: '40px',
+            alignItems: 'center',
+          }}
+        >
+          <div>
+            <h1 style={{ ...headingLg, margin: '0 0 28px 0' }}>
+              Verify your <em style={{ fontStyle: 'italic' }}>identity.</em>
+            </h1>
 
-          <p
-            style={{
-              ...textSecondary,
-              maxWidth: '560px',
-              margin: '0',
-            }}
-          >
-            Prove you&apos;re a unique human with World ID. This is the
-            foundation of your trust profile — one person, one identity.
-          </p>
-
-          <div className="fade-up fade-up-2" style={{ marginTop: '36px' }}>
-            <WorldIDButton
-              onSuccess={handleVerificationSuccess}
-              onError={handleVerificationError}
-            />
+            <p
+              style={{
+                ...textSecondary,
+                maxWidth: '560px',
+                margin: '0',
+              }}
+            >
+              Prove you&apos;re a unique human with World ID. This is the
+              foundation of your trust profile - one person, one identity.
+            </p>
 
             {error && (
               <div
                 style={{
                   marginTop: '24px',
+                  maxWidth: '560px',
                   padding: '12px 20px',
                   backgroundColor: 'rgba(244, 63, 94, 0.08)',
                   border: '1px solid rgba(244, 63, 94, 0.2)',
@@ -98,9 +101,24 @@ export default function VerifyPage() {
               </div>
             )}
           </div>
+
+          <div className="fade-up fade-up-2" style={{ display: 'flex', justifyContent: 'center' }}>
+            <WorldIDButton
+              onSuccess={handleVerificationSuccess}
+              onError={handleVerificationError}
+              className="bg-transparent hover:bg-transparent p-0 shadow-none"
+            >
+              <ButtonRotate
+                label="VERIFY WORLD ID"
+                interactive={false}
+                className="scale-[1.08] md:scale-[1.16]"
+                buttonClassName="h-[280px] w-[280px] md:h-[320px] md:w-[320px]"
+                centerClassName="h-[112px] w-[112px] md:h-[124px] md:w-[124px]"
+              />
+            </WorldIDButton>
+          </div>
         </div>
 
-        {/* ── Why World ID ───────────────────────────────────────── */}
         <GlassCard className="fade-up fade-up-3">
           <span style={sectionLabel}>Why World ID</span>
 
@@ -108,7 +126,7 @@ export default function VerifyPage() {
             {
               num: '01',
               title: 'Human Verification',
-              body: 'Cryptographic proof that you\'re a real person — not a bot, not a duplicate account.',
+              body: 'Cryptographic proof that you are a real person - not a bot, not a duplicate account.',
             },
             {
               num: '02',
