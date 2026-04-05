@@ -5,7 +5,7 @@ import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'Veridex API Docs',
-  description: 'Editorial API documentation for the public Veridex trust and verification surfaces that are live today.',
+  description: 'Editorial API documentation for the live Veridex trust surfaces and embedded login partner app setup.',
 };
 
 type EndpointDoc = {
@@ -355,6 +355,7 @@ export default function ApiDocsPage() {
             <p className={styles.sidebarEyebrow}>Public API</p>
             <nav className={styles.sidebarNav} aria-label="API sections">
               <a href="#overview">Overview</a>
+              <a href="#embedded-login">Embedded Login</a>
               {endpointDocs.map((endpoint) => (
                 <a key={endpoint.id} href={`#${endpoint.id}`}>
                   {endpoint.path}
@@ -366,7 +367,7 @@ export default function ApiDocsPage() {
             <div className={styles.sidebarMeta}>
               <div>
                 <span>Scope</span>
-                <p>Public read surfaces only.</p>
+                <p>Public docs plus signed-in partner app management.</p>
               </div>
               <div>
                 <span>Format</span>
@@ -377,10 +378,6 @@ export default function ApiDocsPage() {
                 <p>Agent lookup is live, but still documented as beta.</p>
               </div>
             </div>
-
-            <Link href="/agents" className={styles.textLink}>
-              Back to Credentials
-            </Link>
           </div>
         </aside>
 
@@ -389,12 +386,14 @@ export default function ApiDocsPage() {
             <p className={styles.heroEyebrow}>Veridex API</p>
             <h1>Trust surfaces, documented with restraint.</h1>
             <p className={styles.heroBody}>
-              This documentation covers the public Veridex endpoints that are live today. It is intentionally
-              narrow, deliberately calm, and written as a reference rather than a dashboard.
+              This documentation covers the public Veridex endpoints that are live today, plus the new embedded login
+              contract for partner apps. It is intentionally narrow, deliberately calm, and written as a reference
+              rather than a dashboard.
             </p>
             <p className={styles.heroBody}>
-              Every route on this page is a public <InlineCode>GET</InlineCode> endpoint. Response examples are
-              sanitized to avoid publishing wallet addresses, evidence storage metadata, or raw platform exports.
+              Trust response examples are sanitized to avoid publishing wallet addresses, evidence storage metadata,
+              or raw platform exports. Embedded login remains additive and does not replace the existing first-party
+              Veridex login.
             </p>
           </header>
 
@@ -410,19 +409,101 @@ export default function ApiDocsPage() {
               <div className={styles.overviewRow}>
                 <div className={styles.overviewLabel}>Authentication</div>
                 <div className={styles.overviewCopy}>
-                  The documented routes are public and do not require a bearer token.
+                  Trust routes are public. Embedded login uses OAuth-style partner credentials and does not affect the
+                  normal Veridex app bearer token flow.
                 </div>
               </div>
               <div className={styles.overviewRow}>
                 <div className={styles.overviewLabel}>What is included</div>
                 <div className={styles.overviewCopy}>
-                  Trust, reputation, reviews, and beta agent lookup. Broken or undocumented routes stay out of this contract.
+                  Embedded login, developer app setup, trust, reputation, reviews, and beta agent lookup. Broken or
+                  undocumented routes stay out of this contract.
                 </div>
               </div>
               <div className={styles.overviewRow}>
                 <div className={styles.overviewLabel}>Tone</div>
                 <div className={styles.overviewCopy}>
                   These docs are the public contract for what external consumers should rely on right now.
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="embedded-login" className={styles.docSection}>
+            <h2 className={styles.sectionHeading}>Embedded Login</h2>
+            <div className={styles.overviewRows}>
+              <div className={styles.overviewRow}>
+                <div className={styles.overviewLabel}>Authorize URL</div>
+                <div className={styles.overviewCopy}>
+                  <InlineCode>GET /auth/authorize</InlineCode> accepts <InlineCode>client_id</InlineCode>, <InlineCode>redirect_uri</InlineCode>, <InlineCode>response_type=code</InlineCode>, <InlineCode>scope</InlineCode>, <InlineCode>state</InlineCode>, <InlineCode>code_challenge</InlineCode>, <InlineCode>code_challenge_method=S256</InlineCode>, and optional <InlineCode>response_mode=web_message|query</InlineCode>.
+                </div>
+              </div>
+              <div className={styles.overviewRow}>
+                <div className={styles.overviewLabel}>Token exchange</div>
+                <div className={styles.overviewCopy}>
+                  <InlineCode>POST /api/oauth/token</InlineCode> is server-side only in v1 and expects <InlineCode>grant_type</InlineCode>, <InlineCode>client_id</InlineCode>, <InlineCode>client_secret</InlineCode>, <InlineCode>code</InlineCode>, <InlineCode>redirect_uri</InlineCode>, and <InlineCode>code_verifier</InlineCode>.
+                </div>
+              </div>
+              <div className={styles.overviewRow}>
+                <div className={styles.overviewLabel}>Identity payload</div>
+                <div className={styles.overviewCopy}>
+                  Tokens and <InlineCode>GET /api/oauth/userinfo</InlineCode> return identity-first fields: <InlineCode>sub</InlineCode>, <InlineCode>veridex_user_id</InlineCode>, and profile fields only when <InlineCode>profile</InlineCode> scope is granted.
+                </div>
+              </div>
+              <div className={styles.overviewRow}>
+                <div className={styles.overviewLabel}>Partner setup</div>
+                <div className={styles.overviewCopy}>
+                  Use the dedicated developer apps page to create partner apps. Each app gets a <InlineCode>client_id</InlineCode>, one-time <InlineCode>client_secret</InlineCode>, and a registered redirect URI allowlist.
+                </div>
+              </div>
+            </div>
+
+            <div className={`${styles.docsCta} ${styles.embeddedDocsCta}`}>
+              <div>
+                <p className={styles.exampleLabel}>Developer Apps</p>
+                <h3 className={styles.ctaHeading}>Need a client ID and secret?</h3>
+                <p className={styles.closingCopy}>
+                  Open the dedicated developer apps page to register a partner client and manage callback allowlists.
+                </p>
+              </div>
+              <Link href="/developers/apps" className={styles.ctaButton}>
+                Open Developer Apps
+              </Link>
+            </div>
+
+            <div className={styles.detailBlock} style={{ marginTop: '28px' }}>
+              <h3 className={styles.blockHeading}>Hosted SDK</h3>
+              <div className={styles.exampleGrid}>
+                <div>
+                  <div className={styles.exampleLabel}>Browser</div>
+                  <pre className={styles.codeBlock}>{`<script src="<base-url>/veridex-auth.js"></script>
+<script>
+  async function loginWithVeridex() {
+    const auth = await window.VeridexAuth.login({
+      baseUrl: '<base-url>',
+      clientId: 'vdx_cli_...',
+      redirectUri: 'https://partner.example.com/auth/callback'
+    });
+
+    await fetch('/api/veridex/exchange', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(auth)
+    });
+  }
+</script>`}</pre>
+                </div>
+                <div>
+                  <div className={styles.exampleLabel}>Backend</div>
+                  <pre className={styles.codeBlock}>{`POST <base-url>/api/oauth/token
+{
+  "grant_type": "authorization_code",
+  "client_id": "vdx_cli_...",
+  "client_secret": "vdx_sec_...",
+  "code": "<auth code>",
+  "redirect_uri": "https://partner.example.com/auth/callback",
+  "code_verifier": "<pkce verifier>"
+}`}</pre>
                 </div>
               </div>
             </div>
@@ -442,8 +523,9 @@ export default function ApiDocsPage() {
               </p>
             </blockquote>
             <p className={styles.closingCopy}>
-              The product-facing route for this page is <InlineCode>/api-docs</InlineCode>. The legacy
-              <InlineCode>/query-demo</InlineCode> path still redirects here for compatibility.
+              The product-facing route for docs is <InlineCode>/api-docs</InlineCode>. Legacy <InlineCode>/query-demo</InlineCode>
+              still redirects here for compatibility, while <InlineCode>/developers/apps</InlineCode> now hosts the
+              standalone management experience.
             </p>
           </section>
         </main>

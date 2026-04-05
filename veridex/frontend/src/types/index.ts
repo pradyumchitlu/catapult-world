@@ -266,6 +266,37 @@ export interface AgentSummary {
   recent_actions_count: number;
 }
 
+export interface OAuthApp {
+  id: string;
+  name: string;
+  client_id: string;
+  client_secret?: string;
+  redirect_uris: string[];
+  allowed_origins: string[];
+  scopes: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OAuthAuthorizeValidationResponse {
+  app: {
+    name: string;
+    client_id: string;
+  };
+  redirect_uri: string;
+  scope: string;
+  state: string;
+  response_mode: 'query' | 'web_message';
+  issuer: string;
+}
+
+export interface OAuthAuthorizeCompletionResponse {
+  code: string;
+  state: string;
+  redirect_uri: string;
+  response_mode: 'query' | 'web_message';
+}
+
 export interface AgentListResponse {
   summary: AgentSummary;
   agents: Agent[];

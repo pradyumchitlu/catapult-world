@@ -4,6 +4,9 @@ import type {
   ContextualScoreApiResponse,
   EvidenceProject,
   EvidenceUploadDraft,
+  OAuthApp,
+  OAuthAuthorizeCompletionResponse,
+  OAuthAuthorizeValidationResponse,
   Review,
   ScoreComponents,
   User,
@@ -207,6 +210,75 @@ export const verifyWorldWalletAuth = (
     };
     user: any;
   }>('/api/auth/world-wallet/verify', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    token,
+  });
+
+// Embedded OAuth
+export const listOAuthApps = (token: string) =>
+  fetchApi<{ apps: OAuthApp[] }>('/api/oauth/apps', { token });
+
+export const createOAuthApp = (
+  data: {
+    name: string;
+    redirect_uris: string[];
+    allowed_origins?: string[];
+    scopes?: string[];
+  },
+  token: string
+) =>
+  fetchApi<{ app: OAuthApp }>('/api/oauth/apps', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    token,
+  });
+
+export const updateOAuthApp = (
+  appId: string,
+  data: {
+    name: string;
+    redirect_uris: string[];
+    allowed_origins?: string[];
+    scopes?: string[];
+  },
+  token: string
+) =>
+  fetchApi<{ app: OAuthApp }>(`/api/oauth/apps/${appId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    token,
+  });
+
+export const validateOAuthAuthorize = (data: {
+  client_id: string;
+  redirect_uri: string;
+  scope: string;
+  state: string;
+  response_type: 'code';
+  code_challenge: string;
+  code_challenge_method: 'S256';
+  response_mode?: 'query' | 'web_message';
+}) =>
+  fetchApi<OAuthAuthorizeValidationResponse>('/api/oauth/authorize/validate', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const completeOAuthAuthorize = (
+  data: {
+    client_id: string;
+    redirect_uri: string;
+    scope: string;
+    state: string;
+    response_type: 'code';
+    code_challenge: string;
+    code_challenge_method: 'S256';
+    response_mode?: 'query' | 'web_message';
+  },
+  token: string
+) =>
+  fetchApi<OAuthAuthorizeCompletionResponse>('/api/oauth/authorize/complete', {
     method: 'POST',
     body: JSON.stringify(data),
     token,

@@ -14,6 +14,7 @@ import agentRoutes from './routes/agent';
 import chatRoutes from './routes/chat';
 import walletRoutes from './routes/wallet';
 import contractRoutes from './routes/contract';
+import oauthRoutes from './routes/oauth';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -50,6 +51,7 @@ app.use('/api/agent', agentRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/contract', contractRoutes);
+app.use('/api/oauth', oauthRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

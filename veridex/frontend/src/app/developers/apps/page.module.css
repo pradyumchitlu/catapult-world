@@ -1,0 +1,127 @@
+.page {
+  min-height: calc(100vh - 72px);
+  background:
+    radial-gradient(circle at top left, rgba(219, 234, 254, 0.92), transparent 28%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: 56px 0 96px;
+}
+
+.frame {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: grid;
+  gap: 36px;
+}
+
+.hero {
+  padding-bottom: 30px;
+  border-bottom: 1px solid rgba(207, 219, 235, 0.9);
+}
+
+.heroTopline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.eyebrow,
+.cardLabel {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #4f46e5;
+}
+
+.backLink {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4338ca;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: #312e81;
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 32px;
+  align-items: end;
+}
+
+.title {
+  margin: 0 0 16px 0;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: clamp(42px, 7vw, 72px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  color: #111827;
+  max-width: 11ch;
+}
+
+.lead {
+  margin: 0;
+  max-width: 48rem;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.8;
+  color: #526175;
+}
+
+.heroCard {
+  padding: 24px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(246,249,255,0.98));
+  border: 1px solid #dde6f4;
+  box-shadow: 0 18px 48px rgba(66, 91, 124, 0.08);
+}
+
+.cardList {
+  margin: 14px 0 0 0;
+  padding-left: 18px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #526175;
+}
+
+.cardList li + li {
+  margin-top: 8px;
+}
+
+@media (max-width: 960px) {
+  .frame {
+    padding: 0 24px;
+  }
+
+  .heroTopline,
+  .heroGrid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding-top: 36px;
+    padding-bottom: 72px;
+  }
+
+  .frame {
+    padding: 0 18px;
+  }
+
+  .title {
+    max-width: none;
+    font-size: 42px;
+  }
+}
