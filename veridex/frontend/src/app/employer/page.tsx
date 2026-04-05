@@ -75,10 +75,7 @@ export default function EmployerPage() {
     if (!token) return;
     setActionLoading(id);
     try {
-      const result = await activateContract(id, token) as any;
-      if (result.new_balance != null && user) {
-        updateUser({ ...user, wld_balance: result.new_balance });
-      }
+      await activateContract(id, token);
       await fetchContracts();
     } catch (error) {
       console.error('Activate failed:', error);
@@ -163,9 +160,9 @@ export default function EmployerPage() {
           style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '32px' }}
         >
           <GlassCard style={{ padding: '28px' }}>
-            <span style={sectionLabel}>WLD Balance</span>
+            <span style={sectionLabel}>Contracts Created</span>
             <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '32px', fontWeight: 700, ...gradientText }}>
-              {(user?.wld_balance || 0).toLocaleString()} WLD
+              {contracts.length}
             </div>
           </GlassCard>
 
@@ -179,7 +176,7 @@ export default function EmployerPage() {
           <GlassCard style={{ padding: '28px' }}>
             <span style={sectionLabel}>Total Spent</span>
             <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '32px', fontWeight: 700, ...gradientText }}>
-              {totalSpent.toLocaleString()} WLD
+              {totalSpent.toLocaleString()} ETH
             </div>
           </GlassCard>
         </div>

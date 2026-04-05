@@ -296,10 +296,13 @@ export const getAgent = (agentId: string) =>
   fetchApi(`/api/agent/${agentId}`);
 
 // Stakes
-export const createStake = (workerId: string, amount: number, token: string) =>
+export const getPlatformAddress = () =>
+  fetchApi<{ address: string }>('/api/stake/platform-address');
+
+export const createStake = (workerId: string, amount_eth: number, transaction_id: string, token: string) =>
   fetchApi('/api/stake', {
     method: 'POST',
-    body: JSON.stringify({ workerId, amount }),
+    body: JSON.stringify({ workerId, amount_eth, transaction_id }),
     token,
   });
 
@@ -339,11 +342,21 @@ export const getContextualScore = (workerId: string, jobDescription: string, tok
     token,
   });
 
-// Agents
-export const spawnAgent = (name: string, token: string) =>
+// Agents (Agent Credential registration)
+export const spawnAgent = (
+  params: {
+    name: string;
+    identifier?: string;
+    identifier_type?: string;
+    inheritance_fraction?: number;
+    authorized_domains?: string[];
+    stake_amount?: number;
+  },
+  token: string
+) =>
   fetchApi('/api/agent/spawn', {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(params),
     token,
   });
 

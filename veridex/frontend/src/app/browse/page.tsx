@@ -5,7 +5,7 @@ import WorkerCard from '@/components/WorkerCard';
 import JobDescriptionInput from '@/components/JobDescriptionInput';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
-import { browseWorkers } from '@/lib/api';
+import { browseWorkers, getContextualScore } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   col,
@@ -45,6 +45,7 @@ export default function BrowsePage() {
   const [jobDescription, setJobDescription] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
   const isEmployer = user?.roles?.includes('client');
+  const { token } = useAuth();
 
   useEffect(() => {
     const fetchWorkers = async () => {
@@ -96,8 +97,22 @@ export default function BrowsePage() {
     setIsEvaluating(true);
     setJobDescription(description);
     try {
-      // TODO: Call contextual score API for all workers
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const results = await Promise.allSettled(
+        workers.map((worker) =>
+          getContextualScore(worker.user_id, description, token || undefined) as Promise<{ fit_score: number }>
+        )
+      );
+
+      const updatedWorkers = workers.map((worker, i) => {
+        const result = results[i];
+        if (result.status === 'fulfilled') {
+          return { ...worker, contextualFitScore: result.value.fit_score };
+        }
+        return worker;
+      });
+
+      setWorkers(updatedWorkers);
+      setFilteredWorkers(updatedWorkers);
     } catch (error) {
       console.error('Failed to evaluate workers:', error);
     } finally {

@@ -4,7 +4,7 @@ export interface User {
   display_name: string | null;
   roles: ('worker' | 'staker' | 'client')[];
   profession_category: string | null;
-  wld_balance: number;
+  wld_balance?: number; // deprecated — staking uses real ETH now
   wallet_address: string | null;
   wallet_verified_at: string | null;
   wallet_verification_method: string | null;
@@ -172,7 +172,9 @@ export interface Stake {
   id: string;
   staker_id: string;
   worker_id: string;
-  amount: number;
+  amount_eth: number;
+  transaction_id?: string | null;
+  withdrawal_transaction_id?: string | null;
   status: 'active' | 'withdrawn';
   created_at: string;
   // joined fields
@@ -209,7 +211,14 @@ export interface Agent {
   id: string;
   parent_user_id: string;
   name: string;
+  identifier: string | null;
+  identifier_type: string;
+  inheritance_fraction: number;
   derived_score: number;
+  authorized_domains: string[];
+  stake_amount: number;
+  status: 'active' | 'suspended' | 'revoked';
+  dispute_count: number;
   created_at: string;
   // joined fields
   parent?: User & { worker_profile?: WorkerProfile };
@@ -248,6 +257,15 @@ export interface ContractPayment {
   payment_type: 'worker_payout' | 'staker_share' | 'platform_fee';
   stake_id: string | null;
   created_at: string;
+}
+
+export interface RegisterAgentParams {
+  name: string;
+  identifier?: string;
+  identifier_type?: string;
+  inheritance_fraction?: number;
+  authorized_domains?: string[];
+  stake_amount?: number;
 }
 
 export interface ChatMessage {

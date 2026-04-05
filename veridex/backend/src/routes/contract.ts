@@ -54,19 +54,6 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     // Calculate buy-in so employer can see cost before activating
     const buyIn = await calculateBuyIn(worker_id, payment_amount);
 
-    const { data: employer } = await supabase
-      .from('users')
-      .select('wld_balance')
-      .eq('id', employerId)
-      .single();
-
-    if (!employer || employer.wld_balance < buyIn.totalBuyIn) {
-      return res.status(400).json({
-        error: `Insufficient balance. Salary is ${payment_amount} WLD but total buy-in is ${buyIn.totalBuyIn} WLD (includes ${buyIn.stakerReward} staker reward + ${buyIn.platformFee} fee).`,
-        buyIn,
-      });
-    }
-
     const { data: contract, error } = await supabase
       .from('contracts')
       .insert({
@@ -118,24 +105,8 @@ router.put('/:id/activate', requireAuth, async (req: AuthenticatedRequest, res: 
     // Calculate buy-in at activation time (stakes may have changed since creation)
     const buyIn = await calculateBuyIn(contract.worker_id, contract.payment_amount);
 
-    const { data: employer } = await supabase
-      .from('users')
-      .select('wld_balance')
-      .eq('id', employerId)
-      .single();
-
-    if (!employer || employer.wld_balance < buyIn.totalBuyIn) {
-      return res.status(400).json({
-        error: `Insufficient balance. Need ${buyIn.totalBuyIn} WLD (salary ${buyIn.salary} + staker reward ${buyIn.stakerReward} + fee ${buyIn.platformFee}).`,
-        buyIn,
-      });
-    }
-
-    // Escrow buy-in from employer
-    await supabase
-      .from('users')
-      .update({ wld_balance: employer.wld_balance - buyIn.totalBuyIn })
-      .eq('id', employerId);
+    // Note: On-chain escrow for contract payments is a future feature.
+    // For now we record the breakdown and activate the contract.
 
     // Store the breakdown on the contract
     const { data: updated, error: updateError } = await supabase
@@ -156,7 +127,6 @@ router.put('/:id/activate', requireAuth, async (req: AuthenticatedRequest, res: 
       success: true,
       contract: updated,
       buyIn,
-      new_balance: employer.wld_balance - buyIn.totalBuyIn,
     });
   } catch (error) {
     console.error('Activate contract error:', error);

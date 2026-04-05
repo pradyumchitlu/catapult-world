@@ -104,7 +104,7 @@ export default function CreateContractModal({
             Hire {workerName}
           </h2>
           <p style={{ ...textMuted, marginBottom: '24px' }}>
-            Balance: {balance.toLocaleString()} WLD
+            Balance: {balance.toLocaleString()} ETH
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -135,7 +135,7 @@ export default function CreateContractModal({
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
                 <label style={{ ...headingSm, fontSize: '13px', display: 'block', marginBottom: '6px' }}>
-                  Salary (WLD)
+                  Salary (ETH)
                 </label>
                 <input
                   type="number"
@@ -176,26 +176,26 @@ export default function CreateContractModal({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: colors.textSecondary }}>Worker salary</span>
-                    <span style={{ fontWeight: 500 }}>{estimate.salary} WLD</span>
+                    <span style={{ fontWeight: 500 }}>{estimate.salary} ETH</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: colors.textSecondary }}>
                       Staker reward ({(estimate.stakerRewardRate * 100).toFixed(1)}%)
                     </span>
-                    <span style={{ fontWeight: 500, color: colors.cyan }}>{estimate.stakerReward} WLD</span>
+                    <span style={{ fontWeight: 500, color: colors.cyan }}>{estimate.stakerReward} ETH</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: colors.textSecondary }}>Platform fee (3%)</span>
-                    <span style={{ color: colors.textTertiary }}>{estimate.platformFee} WLD</span>
+                    <span style={{ color: colors.textTertiary }}>{estimate.platformFee} ETH</span>
                   </div>
                   <div style={{ borderTop: '1px solid rgba(37,99,235,0.12)', paddingTop: '8px', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontWeight: 600, color: colors.textPrimary }}>Total buy-in</span>
-                    <span style={{ fontWeight: 700, ...gradientText }}>{estimate.totalBuyIn} WLD</span>
+                    <span style={{ fontWeight: 700, ...gradientText }}>{estimate.totalBuyIn} ETH</span>
                   </div>
                 </div>
                 {estimate.totalStakedOnWorker > 0 && (
                   <p style={{ ...textMuted, fontSize: '11px', marginTop: '8px' }}>
-                    {estimate.totalStakedOnWorker.toLocaleString()} WLD staked on this worker — stakers earn a share when you hire.
+                    {estimate.totalStakedOnWorker.toLocaleString()} ETH staked on this worker — stakers earn a share when you hire.
                   </p>
                 )}
               </div>
@@ -203,7 +203,7 @@ export default function CreateContractModal({
 
             {!canAfford && salary > 0 && (
               <p style={{ color: colors.rose, fontSize: '13px' }}>
-                Insufficient balance. You need {totalCost.toLocaleString()} WLD but have {balance.toLocaleString()}.
+                Insufficient balance. You need {totalCost.toLocaleString()} ETH but have {balance.toLocaleString()}.
               </p>
             )}
 
@@ -214,7 +214,7 @@ export default function CreateContractModal({
                 className="btn-primary"
                 style={{ flex: 1 }}
               >
-                {isLoading ? 'Creating...' : `Create Contract (${totalCost} WLD)`}
+                {isLoading ? 'Creating...' : `Create Contract (${totalCost} ETH)`}
               </button>
               <button type="button" onClick={onClose} className="btn-secondary">
                 Cancel

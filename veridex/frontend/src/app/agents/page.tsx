@@ -97,7 +97,7 @@ export default function AgentsPage() {
     setError(null);
 
     try {
-      const result = await spawnAgent(newAgentName.trim(), token) as { agent: Agent };
+      const result = await spawnAgent({ name: newAgentName.trim() }, token) as { agent: Agent };
       setAgents((prev) => [result.agent, ...prev]);
       setNewAgentName('');
     } catch (err) {

@@ -367,11 +367,11 @@ router.get('/:userId', async (req, res) => {
     // Get total stakes
     const { data: stakes } = await supabase
       .from('stakes')
-      .select('amount')
+      .select('amount_eth')
       .eq('worker_id', userId)
       .eq('status', 'active');
 
-    const totalStaked = stakes?.reduce((sum, s) => sum + s.amount, 0) || 0;
+    const totalStaked = stakes?.reduce((sum, s) => sum + Number(s.amount_eth || 0), 0) || 0;
     const stakerCount = stakes?.length || 0;
     const workerProfile = user.worker_profiles
       ? await loadWorkerEvidenceSnapshot(user.worker_profiles as any).then((snapshot) => ({
@@ -431,7 +431,7 @@ router.get('/browse/workers', async (req, res) => {
 
         const { data: stakes } = await supabase
           .from('stakes')
-          .select('amount')
+          .select('amount_eth')
           .eq('worker_id', profile.user_id)
           .eq('status', 'active');
 
@@ -439,7 +439,7 @@ router.get('/browse/workers', async (req, res) => {
         const avgRating = reviewCount > 0
           ? (reviews ?? []).reduce((sum, r) => sum + r.rating, 0) / reviewCount
           : 0;
-        const totalStaked = (stakes || []).reduce((sum, s) => sum + s.amount, 0);
+        const totalStaked = (stakes || []).reduce((sum, s) => sum + Number(s.amount_eth || 0), 0);
 
         return {
           ...profile,
