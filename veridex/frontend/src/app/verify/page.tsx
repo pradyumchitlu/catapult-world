@@ -15,10 +15,12 @@ import {
   gradientText,
 } from '@/lib/styles';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMiniApp } from '@/contexts/MiniAppContext';
 
 export default function VerifyPage() {
   const router = useRouter();
   const { user, isLoading, login } = useAuth();
+  const { isInWorldApp, isMiniKitReady } = useMiniApp();
   const [error, setError] = useState<string | null>(null);
   const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
 
@@ -78,8 +80,9 @@ export default function VerifyPage() {
                 margin: '0',
               }}
             >
-              Prove you&apos;re a unique human with World ID. This is the
-              foundation of your trust profile - one person, one identity.
+              {isInWorldApp && isMiniKitReady
+                ? 'Continue with your World wallet inside World App, then use Wallet Auth and MiniKit transactions for staking.'
+                : 'Prove you&apos;re a unique human with World ID. This is the foundation of your trust profile - one person, one identity.'}
             </p>
 
             {error && (

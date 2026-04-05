@@ -6,6 +6,8 @@ import { IDKitRequestWidget, orbLegacy } from '@worldcoin/idkit';
 import type { IDKitResult } from '@worldcoin/idkit';
 import { verifyWorldId } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useMiniApp } from '@/contexts/MiniAppContext';
+import { loginWithMiniKitWorldWallet } from '@/lib/minikit';
 
 interface WorldIDButtonProps {
   onSuccess: (result: { user: any; isNewUser: boolean; token: string }) => void;
@@ -28,6 +30,7 @@ function WorldIdIcon() {
 export default function WorldIDButton({ onSuccess, onError, className, children }: WorldIDButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const { isInWorldApp, isMiniKitReady } = useMiniApp();
 
   // Dev mode: mock verification without World ID
   if (IS_DEV_MOCK) {
@@ -71,6 +74,45 @@ export default function WorldIDButton({ onSuccess, onError, className, children 
             <>
               <WorldIdIcon />
               <span>Verify with World ID (Dev)</span>
+            </>
+          )
+        )}
+      </button>
+    );
+  }
+
+  if (isInWorldApp && isMiniKitReady) {
+    const handleWorldAppLogin = async () => {
+      setIsLoading(true);
+      try {
+        const result = await loginWithMiniKitWorldWallet();
+        onSuccess(result);
+      } catch (error) {
+        onError(error instanceof Error ? error.message : 'World App sign-in failed');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    return (
+      <button
+        onClick={handleWorldAppLogin}
+        disabled={isLoading}
+        className={cn(
+          'btn-primary py-4 px-6 rounded-xl text-lg flex items-center justify-center gap-3 disabled:opacity-50',
+          className
+        )}
+      >
+        {isLoading ? (
+          <>
+            <LoadingSpinner />
+            <span>Signing in...</span>
+          </>
+        ) : (
+          children || (
+            <>
+              <WorldIdIcon />
+              <span>Continue with World App</span>
             </>
           )
         )}

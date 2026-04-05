@@ -162,6 +162,22 @@ export const verifyWalletSignature = (
     token,
   });
 
+export const prepareWorldWalletLogin = () =>
+  fetchApi<{
+    nonce: string;
+    statement: string;
+    expires_at: string;
+    session_token: string;
+  }>('/api/auth/world-wallet/login/prepare', {
+    method: 'POST',
+  });
+
+export const loginWithWorldWallet = (data: { payload: unknown; nonce: string; session_token: string }) =>
+  fetchApi<VerifyWorldIdResponse>('/api/auth/world-wallet/login', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
 export const prepareWorldWalletAuth = (token: string) =>
   fetchApi<{
     nonce: string;

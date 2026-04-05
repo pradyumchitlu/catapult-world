@@ -8,7 +8,12 @@ import type {
 } from '@worldcoin/minikit-js/commands';
 import { createPublicClient, http, parseEther, toHex } from 'viem';
 import { worldchain, worldchainSepolia } from 'viem/chains';
-import { prepareWorldWalletAuth, verifyWorldWalletAuth } from '@/lib/api';
+import {
+  loginWithWorldWallet,
+  prepareWorldWalletAuth,
+  prepareWorldWalletLogin,
+  verifyWorldWalletAuth,
+} from '@/lib/api';
 
 const MINI_APP_ID =
   process.env.NEXT_PUBLIC_WORLD_MINI_APP_ID ||
@@ -76,6 +81,33 @@ export async function linkWorldWalletWithMiniKit(token: string) {
     },
     token
   );
+}
+
+export async function loginWithMiniKitWorldWallet() {
+  if (!isMiniKitConfigured()) {
+    throw new Error('World App sign-in is not configured yet. Add NEXT_PUBLIC_WORLD_MINI_APP_ID to the frontend environment.');
+  }
+
+  if (!MiniKit.isInstalled()) {
+    throw new Error('Open Veridex inside World App to sign in with your World wallet.');
+  }
+
+  const prepared = await prepareWorldWalletLogin();
+  const result = await MiniKit.walletAuth({
+    nonce: prepared.nonce,
+    statement: prepared.statement,
+    expirationTime: new Date(prepared.expires_at),
+  });
+
+  if (result.executedWith === 'fallback') {
+    throw new Error('World App sign-in is only available inside World App.');
+  }
+
+  return loginWithWorldWallet({
+    payload: result.data as MiniAppWalletAuthSuccessPayload,
+    nonce: prepared.nonce,
+    session_token: prepared.session_token,
+  });
 }
 
 export async function sendMiniKitStakeTransaction(

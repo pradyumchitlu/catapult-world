@@ -27,8 +27,8 @@ const { verifySiweMessage } = require('@worldcoin/minikit-js/siwe') as {
 };
 
 interface WorldWalletAuthSession {
-  purpose: 'world_wallet_auth';
-  userId: string;
+  purpose: 'world_wallet_auth' | 'world_wallet_login';
+  userId?: string;
   nonce: string;
   statement: string;
   expiresAt: string;
@@ -48,17 +48,20 @@ function createWorldWalletAuthStatement() {
   return 'Link your World wallet to Veridex for Mini App staking on World Chain.';
 }
 
-function createWorldWalletAuthSession(userId: string) {
+function createWorldWalletLoginStatement() {
+  return 'Sign in to Veridex with your World wallet inside World App.';
+}
+
+function createWorldWalletSession(params: { purpose: WorldWalletAuthSession['purpose']; userId?: string; statement: string }) {
   const nonce = generateSiweNonce(20);
-  const statement = createWorldWalletAuthStatement();
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
   const sessionToken = jwt.sign(
     {
-      purpose: 'world_wallet_auth',
-      userId,
+      purpose: params.purpose,
+      userId: params.userId,
       nonce,
-      statement,
+      statement: params.statement,
       expiresAt,
     } satisfies WorldWalletAuthSession,
     JWT_SECRET,
@@ -67,10 +70,29 @@ function createWorldWalletAuthSession(userId: string) {
 
   return {
     nonce,
-    statement,
+    statement: params.statement,
     expires_at: expiresAt,
     session_token: sessionToken,
   };
+}
+
+function createWorldWalletAuthSession(userId: string) {
+  return createWorldWalletSession({
+    purpose: 'world_wallet_auth',
+    userId,
+    statement: createWorldWalletAuthStatement(),
+  });
+}
+
+function createWorldWalletLoginSession() {
+  return createWorldWalletSession({
+    purpose: 'world_wallet_login',
+    statement: createWorldWalletLoginStatement(),
+  });
+}
+
+function worldWalletHash(address: string) {
+  return `world-wallet:${address.toLowerCase()}`;
 }
 
 function buildOAuthState(userId: string, provider: OAuthProvider, returnTo?: string): string {
@@ -373,6 +395,15 @@ router.post('/world-wallet/prepare', requireAuth, async (req: AuthenticatedReque
   }
 });
 
+router.post('/world-wallet/login/prepare', async (_req: Request, res: Response) => {
+  try {
+    return res.json(createWorldWalletLoginSession());
+  } catch (error) {
+    console.error('World wallet login prepare error:', error);
+    return res.status(500).json({ error: 'Failed to prepare World wallet login' });
+  }
+});
+
 router.post('/world-wallet/verify', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const payload = req.body?.payload;
@@ -430,6 +461,116 @@ router.post('/world-wallet/verify', requireAuth, async (req: AuthenticatedReques
   } catch (error) {
     const message = error instanceof Error ? error.message : 'World wallet auth failed';
     console.error('World wallet verify error:', error);
+    return res.status(400).json({ error: message });
+  }
+});
+
+router.post('/world-wallet/login', async (req: Request, res: Response) => {
+  try {
+    const payload = req.body?.payload;
+    const nonce = typeof req.body?.nonce === 'string' ? req.body.nonce : '';
+    const sessionToken = typeof req.body?.session_token === 'string' ? req.body.session_token : '';
+
+    if (!payload || !nonce || !sessionToken) {
+      return res.status(400).json({ error: 'payload, nonce, and session_token are required' });
+    }
+
+    const session = jwt.verify(sessionToken, JWT_SECRET) as WorldWalletAuthSession;
+
+    if (session.purpose !== 'world_wallet_login') {
+      return res.status(400).json({ error: 'Invalid world wallet login session' });
+    }
+
+    if (session.nonce !== nonce) {
+      return res.status(400).json({ error: 'Wallet login nonce mismatch' });
+    }
+
+    if (new Date(session.expiresAt).getTime() < Date.now()) {
+      return res.status(400).json({ error: 'Wallet login session expired' });
+    }
+
+    const verification = await verifySiweMessage(payload, nonce, session.statement);
+    if (!verification.isValid) {
+      return res.status(400).json({ error: 'World wallet login verification failed' });
+    }
+
+    const walletAddress = normalizeAddress(verification.siweMessageData.address);
+    const now = new Date().toISOString();
+
+    const { data: existingByWallet, error: existingWalletError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('wallet_address', walletAddress)
+      .maybeSingle();
+
+    if (existingWalletError) {
+      throw existingWalletError;
+    }
+
+    let user = existingByWallet;
+    let isNewUser = false;
+
+    if (!user) {
+      const { data: existingByHash, error: existingHashError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('world_id_hash', worldWalletHash(walletAddress))
+        .maybeSingle();
+
+      if (existingHashError) {
+        throw existingHashError;
+      }
+
+      user = existingByHash;
+    }
+
+    if (user) {
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update({
+          wallet_address: walletAddress,
+          wallet_verified_at: now,
+          wallet_verification_method: 'world_app_wallet_auth',
+        })
+        .eq('id', user.id)
+        .select('*')
+        .single();
+
+      if (updateError || !updatedUser) {
+        throw updateError || new Error('Failed to update World wallet login user');
+      }
+
+      user = updatedUser;
+    } else {
+      const { data: createdUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          world_id_hash: worldWalletHash(walletAddress),
+          wallet_address: walletAddress,
+          wallet_verified_at: now,
+          wallet_verification_method: 'world_app_wallet_auth',
+        })
+        .select('*')
+        .single();
+
+      if (createError || !createdUser) {
+        throw createError || new Error('Failed to create World wallet login user');
+      }
+
+      user = createdUser;
+      isNewUser = true;
+    }
+
+    const token = generateToken(user.id, user.world_id_hash);
+    return res.json({
+      success: true,
+      user,
+      isNewUser,
+      token,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'World wallet login failed';
+    console.error('World wallet login error:', error);
     return res.status(400).json({ error: message });
   }
 });
