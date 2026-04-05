@@ -30,7 +30,7 @@ function WorldIdIcon() {
 export default function WorldIDButton({ onSuccess, onError, className, children }: WorldIDButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const { isInWorldApp, isMiniKitReady } = useMiniApp();
+  const { isInWorldApp, isMiniKitReady, isDetectingMiniApp } = useMiniApp();
 
   // Dev mode: mock verification without World ID
   if (IS_DEV_MOCK) {
@@ -77,6 +77,21 @@ export default function WorldIDButton({ onSuccess, onError, className, children 
             </>
           )
         )}
+      </button>
+    );
+  }
+
+  if (isInWorldApp && isDetectingMiniApp) {
+    return (
+      <button
+        disabled
+        className={cn(
+          'btn-primary py-4 px-6 rounded-xl text-lg flex items-center justify-center gap-3 disabled:opacity-50',
+          className
+        )}
+      >
+        <LoadingSpinner />
+        <span>Preparing World App...</span>
       </button>
     );
   }
