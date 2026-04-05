@@ -5,7 +5,7 @@ import type {
   EvidenceProjectDraft,
 } from './evidenceExtraction';
 
-const MODEL = 'gemini-2.0-flash';
+const MODEL = 'gemini-3-flash-preview';
 
 /** Prefer GEMINI_API_KEY for all calls; otherwise chat vs scoring-specific keys. */
 function getGenAI(mode: 'chat' | 'scoring'): GoogleGenerativeAI {

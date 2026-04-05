@@ -37,7 +37,7 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
 
   return (
     <>
-      <button onClick={() => setIsOpen(true)} className="btn-primary">
+      <button onClick={() => setIsOpen(true)} className="btn-primary" style={{ whiteSpace: 'nowrap' }}>
         Stake WLD
       </button>
 

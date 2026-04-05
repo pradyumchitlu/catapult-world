@@ -7,7 +7,7 @@ import TrustScoreCard from '@/components/TrustScoreCard';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
 import ReviewsList from '@/components/ReviewsList';
 import StakeButton from '@/components/StakeButton';
-import ChatPanel from '@/components/ChatPanel';
+import ChatDrawer from '@/components/ChatDrawer';
 import CreateContractModal from '@/components/CreateContractModal';
 import GlassCard from '@/components/GlassCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -91,7 +91,17 @@ export default function ProfilePage() {
   const { user, profile, reviews, totalStaked, stakerCount } = data;
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div style={{ display: 'flex', gap: '24px', maxWidth: '1400px', margin: '0 auto', padding: '0 24px', alignItems: 'flex-start' }}>
+      {/* Profile content */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          maxWidth: showChat ? 'calc(100% - 404px)' : '1152px',
+          margin: showChat ? '0' : '0 auto',
+          transition: 'max-width 0.3s ease, margin 0.3s ease',
+        }}
+      >
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-8">
         <div>
@@ -158,15 +168,26 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3" style={{ flexShrink: 0 }}>
+          {token && (
+            <button
+              onClick={() => setShowChat(!showChat)}
+              className="btn-secondary"
+              style={{ fontSize: '13px', padding: '8px 16px', whiteSpace: 'nowrap' }}
+            >
+              {showChat ? 'Close Chat' : 'Ask AI'}
+            </button>
+          )}
           {isEmployer && (
             <button onClick={() => setShowHireModal(true)} className="btn-primary">
               Hire
             </button>
           )}
-          <Link href={`/review/${workerId}`} className="btn-secondary">
-            Leave Review
-          </Link>
+          {isEmployer && (
+            <Link href={`/review/${workerId}`} className="btn-secondary">
+              Leave Review
+            </Link>
+          )}
           <StakeButton workerId={workerId} workerName={user.display_name || 'Worker'} />
         </div>
       </div>
@@ -213,33 +234,13 @@ export default function ProfilePage() {
         </GlassCard>
       )}
 
-      {/* AI Chat Panel */}
-      <GlassCard className="mb-8">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '18px', fontWeight: 600, color: '#1E293B' }}>Ask About This Worker</h2>
-          <button
-            onClick={() => setShowChat(!showChat)}
-            className="btn-secondary"
-            style={{ fontSize: '13px', padding: '8px 16px' }}
-          >
-            {showChat ? 'Hide Chat' : 'Open Chat'}
-          </button>
-        </div>
-        {showChat && (
-          <ChatPanel workerId={workerId} workerName={user.display_name || 'Worker'} />
-        )}
-        {!showChat && (
-          <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '14px', color: '#94A3B8' }}>
-            Chat with our AI to get detailed insights about this worker&apos;s qualifications, grounded in their real data.
-          </p>
-        )}
-      </GlassCard>
-
       {/* Reviews */}
       <GlassCard>
         <h2 style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '18px', fontWeight: 600, color: '#1E293B', marginBottom: '16px' }}>Reviews</h2>
         <ReviewsList reviews={reviews} />
       </GlassCard>
+
+      <div style={{ height: '64px' }} />
 
       {showHireModal && currentUser && token && (
         <CreateContractModal
@@ -250,6 +251,18 @@ export default function ProfilePage() {
           onSubmit={handleCreateContract}
           onClose={() => setShowHireModal(false)}
           isLoading={isCreatingContract}
+        />
+      )}
+      </div>
+
+      {/* Chat Drawer */}
+      {token && (
+        <ChatDrawer
+          isOpen={showChat}
+          onClose={() => setShowChat(false)}
+          workerId={workerId}
+          workerName={user.display_name || 'Worker'}
+          token={token}
         />
       )}
     </div>

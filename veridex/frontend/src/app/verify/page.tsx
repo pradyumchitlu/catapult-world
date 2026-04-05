@@ -11,7 +11,6 @@ import {
   headingLg,
   headingSm,
   sectionLabel,
-  separator,
   textSecondary,
   gradientText,
 } from '@/lib/styles';
@@ -121,57 +120,49 @@ export default function VerifyPage() {
 
         <GlassCard className="fade-up fade-up-3">
           <span style={sectionLabel}>Why World ID</span>
-
-          {[
-            {
-              num: '01',
-              title: 'Human Verification',
-              body: 'Cryptographic proof that you are a real person - not a bot, not a duplicate account.',
-            },
-            {
-              num: '02',
-              title: 'One Person, One Identity',
-              body: 'Sybil-resistant by design. Each human gets exactly one Veridex profile, preventing reputation gaming.',
-            },
-            {
-              num: '03',
-              title: 'Privacy Preserving',
-              body: 'Zero-knowledge proofs verify your humanity without exposing personal data. Your identity stays yours.',
-            },
-          ].map((item, i, arr) => (
-            <div key={item.num}>
-              <div style={{ padding: i === 0 ? '0 0 28px 0' : '28px 0' }}>
-                <div
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '32px',
+            }}
+          >
+            {[
+              {
+                num: '01',
+                title: 'Human Verification',
+                body: 'Cryptographic proof that you are a real person - not a bot, not a duplicate account.',
+              },
+              {
+                num: '02',
+                title: 'One Person, One Identity',
+                body: 'Sybil-resistant by design. Each human gets exactly one Veridex profile, preventing reputation gaming.',
+              },
+              {
+                num: '03',
+                title: 'Privacy Preserving',
+                body: 'Zero-knowledge proofs verify your humanity without exposing personal data. Your identity stays yours.',
+              },
+            ].map((item) => (
+              <div key={item.num}>
+                <span
                   style={{
-                    display: 'flex',
-                    gap: '36px',
-                    alignItems: 'flex-start',
+                    ...gradientText,
+                    fontFamily: 'var(--font-fraunces), Georgia, serif',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    display: 'block',
+                    marginBottom: '10px',
                   }}
                 >
-                  <span
-                    style={{
-                      ...gradientText,
-                      fontFamily: 'var(--font-fraunces), Georgia, serif',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                      letterSpacing: '0.04em',
-                      lineHeight: '1.75',
-                      minWidth: '24px',
-                    }}
-                  >
-                    {item.num}
-                  </span>
-                  <div>
-                    <p style={{ ...headingSm, margin: '0 0 10px 0' }}>
-                      {item.title}
-                    </p>
-                    <p style={textSecondary}>{item.body}</p>
-                  </div>
-                </div>
+                  {item.num}
+                </span>
+                <p style={{ ...headingSm, margin: '0 0 8px 0' }}>{item.title}</p>
+                <p style={{ ...textSecondary, fontSize: '14px', lineHeight: '1.65' }}>{item.body}</p>
               </div>
-              {i < arr.length - 1 && <div style={separator} />}
-            </div>
-          ))}
+            ))}
+          </div>
         </GlassCard>
 
         <div style={{ height: '64px' }} />

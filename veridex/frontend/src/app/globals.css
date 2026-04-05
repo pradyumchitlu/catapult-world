@@ -273,6 +273,20 @@
   }
 }
 
+/* Chat markdown styling */
+.chat-markdown p { margin: 0 0 8px 0; }
+.chat-markdown p:last-child { margin-bottom: 0; }
+.chat-markdown ul, .chat-markdown ol { margin: 4px 0 8px 0; padding-left: 20px; }
+.chat-markdown li { margin-bottom: 4px; }
+.chat-markdown strong { font-weight: 600; color: #1E293B; }
+.chat-markdown code { font-size: 12px; background: rgba(37,99,235,0.08); padding: 2px 6px; border-radius: 4px; font-family: var(--font-geist-mono), monospace; }
+.chat-markdown pre { margin: 8px 0; padding: 12px; border-radius: 8px; background: #0F172A; color: #E2E8F0; overflow-x: auto; }
+.chat-markdown pre code { background: none; padding: 0; font-size: 13px; }
+.chat-markdown h1, .chat-markdown h2, .chat-markdown h3 { font-weight: 600; color: #1E293B; margin: 12px 0 6px 0; }
+.chat-markdown h1 { font-size: 16px; }
+.chat-markdown h2 { font-size: 15px; }
+.chat-markdown h3 { font-size: 14px; }
+
 @layer base {
   .theme { --font-heading: var(--font-sans); --font-sans: var(--font-sans);
   }

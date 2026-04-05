@@ -1,15 +1,19 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import LoadingSpinner from './LoadingSpinner';
+import { sendChatMessage } from '@/lib/api';
+import { colors } from '@/lib/styles';
 import type { ChatMessage } from '@/types';
 
 interface ChatPanelProps {
   workerId: string;
   workerName: string;
+  token: string;
 }
 
-export default function ChatPanel({ workerId, workerName }: ChatPanelProps) {
+export default function ChatPanel({ workerId, workerName, token }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +28,6 @@ export default function ChatPanel({ workerId, workerName }: ChatPanelProps) {
     scrollToBottom();
   }, [messages]);
 
-  // Initial prompt
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([
@@ -51,19 +54,16 @@ export default function ChatPanel({ workerId, workerName }: ChatPanelProps) {
     setIsLoading(true);
 
     try {
-      // TODO: Call chat API
-      // const response = await sendChatMessage(workerId, input, sessionId, token);
-      // setSessionId(response.session_id);
-      // setMessages((prev) => [...prev, { role: 'assistant', content: response.message, timestamp: new Date().toISOString() }]);
-
-      // Placeholder response
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: `Based on ${workerName}'s verified data:\n\nThis worker has demonstrated strong capabilities in this area. Their GitHub activity shows consistent contributions, and their reviews highlight positive experiences.\n\n*This is a placeholder response. Full AI evaluation coming soon.*`,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+      const response = await sendChatMessage(workerId, input, sessionId, token);
+      setSessionId(response.session_id);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: response.message,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
     } catch (error) {
       console.error('Chat error:', error);
       setMessages((prev) => [
@@ -86,29 +86,74 @@ export default function ChatPanel({ workerId, workerName }: ChatPanelProps) {
     }
   };
 
+  const bubbleStyle = (role: 'user' | 'assistant'): React.CSSProperties =>
+    role === 'user'
+      ? {
+          maxWidth: '80%',
+          padding: '12px 16px',
+          borderRadius: '14px 14px 4px 14px',
+          background: colors.primary,
+          color: '#ffffff',
+        }
+      : {
+          maxWidth: '80%',
+          padding: '12px 16px',
+          borderRadius: '14px 14px 14px 4px',
+          background: 'rgba(37,99,235,0.06)',
+          border: '1px solid rgba(37,99,235,0.12)',
+          color: '#1E293B',
+        };
+
   return (
-    <div className="flex flex-col h-[400px]">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+      <div style={{ flex: 1, overflowY: 'auto', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            style={{
+              display: 'flex',
+              justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start',
+            }}
           >
-            <div
-              className={`max-w-[80%] p-3 rounded-lg ${
-                message.role === 'user'
-                  ? 'bg-veridex-primary text-white'
-                  : 'bg-worldcoin-gray-700 text-white'
-              }`}
-            >
-              <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+            <div style={bubbleStyle(message.role)}>
+              {message.role === 'user' ? (
+                <p
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    fontSize: '14px',
+                    fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                    lineHeight: '1.6',
+                    margin: 0,
+                  }}
+                >
+                  {message.content}
+                </p>
+              ) : (
+                <div
+                  className="chat-markdown"
+                  style={{
+                    fontSize: '14px',
+                    fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                    lineHeight: '1.6',
+                  }}
+                >
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                </div>
+              )}
             </div>
           </div>
         ))}
         {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-worldcoin-gray-700 p-3 rounded-lg">
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div
+              style={{
+                padding: '12px 16px',
+                borderRadius: '14px 14px 14px 4px',
+                background: 'rgba(37,99,235,0.06)',
+                border: '1px solid rgba(37,99,235,0.12)',
+              }}
+            >
               <LoadingSpinner />
             </div>
           </div>
@@ -117,20 +162,22 @@ export default function ChatPanel({ workerId, workerName }: ChatPanelProps) {
       </div>
 
       {/* Input */}
-      <div className="flex gap-2">
+      <div style={{ display: 'flex', gap: '8px' }}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask about this worker's qualifications..."
-          className="input flex-1"
+          placeholder="Ask a question..."
+          className="input"
+          style={{ flex: 1, fontSize: '14px' }}
           disabled={isLoading}
         />
         <button
           onClick={handleSend}
           disabled={!input.trim() || isLoading}
-          className="btn-primary px-4 disabled:opacity-50"
+          className="btn-primary"
+          style={{ padding: '8px 16px', fontSize: '13px' }}
         >
           Send
         </button>

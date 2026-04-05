@@ -55,6 +55,11 @@ interface EvidenceUploadResponse {
   draft: EvidenceUploadDraft;
 }
 
+interface ChatResponse {
+  session_id: string;
+  message: string;
+}
+
 interface FetchOptions extends RequestInit {
   token?: string;
 }
@@ -398,7 +403,7 @@ export const createContractReview = (
 
 // Chat
 export const sendChatMessage = (workerId: string, message: string, sessionId: string | null, token: string) =>
-  fetchApi('/api/chat', {
+  fetchApi<ChatResponse>('/api/chat', {
     method: 'POST',
     body: JSON.stringify({ worker_id: workerId, message, session_id: sessionId }),
     token,
