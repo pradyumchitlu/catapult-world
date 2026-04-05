@@ -5,6 +5,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { createStake, getPlatformAddress } from '@/lib/api';
 import { sendETHToAddress } from '@/lib/wallet';
+import { colors } from '@/lib/styles';
 
 interface StakeButtonProps {
   workerId: string;
@@ -59,55 +60,125 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
         Stake ETH
       </button>
 
-      {/* Modal */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Stake on {workerName}</h3>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{
+            background: 'rgba(15, 23, 42, 0.38)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+          }}
+        >
+          <div
+            className="w-full max-w-md"
+            style={{
+              background: 'rgba(255, 255, 255, 0.84)',
+              border: '1px solid rgba(255, 255, 255, 0.9)',
+              borderRadius: '28px',
+              boxShadow:
+                '0 30px 80px rgba(37, 99, 235, 0.18), inset 0 1px 0 rgba(255,255,255,0.92)',
+              padding: '28px',
+            }}
+          >
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <span
+                  className="mb-3 block text-[11px] font-medium uppercase tracking-[0.18em]"
+                  style={{ color: colors.primaryDark }}
+                >
+                  Back the Builder
+                </span>
+                <h3 className="text-xl font-semibold" style={{ color: colors.textPrimary }}>
+                  Stake on {workerName}
+                </h3>
+              </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-veridex-gray-400 hover:text-white"
+                aria-label="Close stake modal"
+                className="flex h-10 w-10 items-center justify-center rounded-full transition-colors"
+                style={{
+                  color: colors.primaryDark,
+                  background: 'rgba(37, 99, 235, 0.1)',
+                }}
               >
-                ✕
+                ×
               </button>
             </div>
 
-            <p className="text-veridex-gray-400 text-sm mb-6">
+            <p className="mb-6 text-sm" style={{ color: colors.textSecondary, lineHeight: 1.7 }}>
               Stake ETH to show you believe in this worker. Your stake affects their Veridex score.
             </p>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium mb-2">Amount (ETH)</label>
+              <label className="mb-2 block text-sm font-medium" style={{ color: colors.textPrimary }}>
+                Amount (ETH)
+              </label>
               <input
                 type="number"
                 min={0.001}
                 step={0.001}
                 value={amount}
                 onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-                className="input w-full"
+                className="w-full"
+                style={{
+                  border: '1px solid rgba(37, 99, 235, 0.18)',
+                  background: 'rgba(255,255,255,0.92)',
+                  color: colors.textPrimary,
+                  borderRadius: '16px',
+                  padding: '14px 16px',
+                  outline: 'none',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.84)',
+                }}
               />
-              <div className="flex justify-between mt-2">
-                {[0.005, 0.01, 0.05, 0.1].map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => setAmount(preset)}
-                    className="px-3 py-1 text-sm bg-veridex-gray-700 rounded hover:bg-veridex-gray-600"
-                  >
-                    {preset}
-                  </button>
-                ))}
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {[0.005, 0.01, 0.05, 0.1].map((preset) => {
+                  const isSelected = amount === preset;
+
+                  return (
+                    <button
+                      key={preset}
+                      onClick={() => setAmount(preset)}
+                      className="rounded-xl px-3 py-2 text-sm transition-all"
+                      style={{
+                        background: isSelected
+                          ? 'linear-gradient(135deg, #2563EB, #3B82F6)'
+                          : 'rgba(37, 99, 235, 0.08)',
+                        color: isSelected ? '#FFFFFF' : colors.primaryDark,
+                        border: isSelected
+                          ? '1px solid transparent'
+                          : '1px solid rgba(37, 99, 235, 0.14)',
+                        boxShadow: isSelected ? '0 10px 20px rgba(37,99,235,0.2)' : 'none',
+                      }}
+                    >
+                      {preset}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {stakingStatus && (
-              <div className="mb-4 p-3 bg-blue-500/20 border border-blue-500 rounded-lg text-blue-300 text-sm">
+              <div
+                className="mb-4 rounded-2xl p-3 text-sm"
+                style={{
+                  background: 'rgba(37, 99, 235, 0.1)',
+                  border: '1px solid rgba(37, 99, 235, 0.18)',
+                  color: colors.primaryDark,
+                }}
+              >
                 {stakingStatus}
               </div>
             )}
 
             {error && (
-              <div className="mb-4 p-3 bg-veridex-error/20 border border-veridex-error rounded-lg text-veridex-error text-sm">
+              <div
+                className="mb-4 rounded-2xl p-3 text-sm"
+                style={{
+                  background: 'rgba(244, 63, 94, 0.1)',
+                  border: '1px solid rgba(244, 63, 94, 0.18)',
+                  color: colors.rose,
+                }}
+              >
                 {error}
               </div>
             )}
@@ -115,15 +186,25 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
             <div className="flex gap-3">
               <button
                 onClick={() => setIsOpen(false)}
-                className="btn-secondary flex-1"
+                className="flex-1 rounded-2xl px-4 py-3 font-medium transition-colors"
                 disabled={isStaking}
+                style={{
+                  background: 'rgba(37, 99, 235, 0.08)',
+                  color: colors.primaryDark,
+                  border: '1px solid rgba(37, 99, 235, 0.14)',
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleStake}
                 disabled={isStaking || amount <= 0}
-                className="btn-primary flex-1 disabled:opacity-50"
+                className="flex-1 rounded-2xl px-4 py-3 font-medium disabled:opacity-50"
+                style={{
+                  background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
+                  color: '#FFFFFF',
+                  boxShadow: '0 16px 32px rgba(37,99,235,0.22)',
+                }}
               >
                 {isStaking ? <LoadingSpinner /> : `Stake ${amount} ETH`}
               </button>

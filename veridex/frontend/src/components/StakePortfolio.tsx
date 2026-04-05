@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { Stake, User, WorkerProfile } from '@/types';
+import { colors } from '@/lib/styles';
 
 interface StakeWithWorker extends Stake {
   worker: User & {
@@ -19,7 +20,7 @@ interface StakePortfolioProps {
 export default function StakePortfolio({ stakes }: StakePortfolioProps) {
   if (stakes.length === 0) {
     return (
-      <div className="text-center py-8 text-veridex-gray-400">
+      <div className="py-8 text-center" style={{ color: colors.textTertiary }}>
         You haven&apos;t staked on any workers yet.
       </div>
     );
@@ -28,11 +29,11 @@ export default function StakePortfolio({ stakes }: StakePortfolioProps) {
   const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
     switch (trend) {
       case 'up':
-        return <span className="text-veridex-success">↑</span>;
+        return <span style={{ color: colors.success }}>↑</span>;
       case 'down':
-        return <span className="text-veridex-error">↓</span>;
+        return <span style={{ color: colors.rose }}>↓</span>;
       default:
-        return <span className="text-veridex-gray-400">→</span>;
+        return <span style={{ color: colors.textMuted }}>→</span>;
     }
   };
 
@@ -58,23 +59,41 @@ export default function StakePortfolio({ stakes }: StakePortfolioProps) {
         return (
           <div
             key={stake.id}
-            className="p-4 bg-veridex-gray-700/50 rounded-lg flex items-center justify-between"
+            className="flex items-center justify-between gap-4"
+            style={{
+              padding: '18px 20px',
+              borderRadius: '20px',
+              background: 'rgba(255,255,255,0.74)',
+              border: '1px solid rgba(255,255,255,0.88)',
+              boxShadow:
+                '0 12px 28px rgba(37,99,235,0.08), inset 0 1px 0 rgba(255,255,255,0.9)',
+            }}
           >
             <div className="flex items-center gap-4">
-              <Link href={`/profile/${stake.worker_id}`} className="hover:underline">
-                <div className="font-medium">{stake.worker.display_name}</div>
-                <div className="text-sm text-veridex-gray-400">
-                  Score: {workerScore ?? 'N/A'}
-                  {' '}{getTrendIcon(stake.scoreTrend)}
+              <Link
+                href={`/profile/${stake.worker_id}`}
+                className="transition-opacity hover:opacity-80"
+              >
+                <div className="font-medium" style={{ color: colors.textPrimary }}>
+                  {stake.worker.display_name}
+                </div>
+                <div className="text-sm" style={{ color: colors.textSecondary }}>
+                  Score: {workerScore ?? 'N/A'}{' '}{getTrendIcon(stake.scoreTrend)}
                 </div>
               </Link>
             </div>
 
             <div className="text-right">
-              <div className="font-semibold text-veridex-primary">
+              <div
+                className="font-semibold"
+                style={{ color: colors.primaryDark, fontSize: '17px' }}
+              >
                 {stake.amount_eth.toLocaleString()} ETH
               </div>
-              <div className={`text-sm ${stake.yieldEarned >= 0 ? 'text-veridex-success' : 'text-veridex-error'}`}>
+              <div
+                className="text-sm"
+                style={{ color: stake.yieldEarned >= 0 ? colors.success : colors.rose }}
+              >
                 {stake.yieldEarned >= 0 ? '+' : ''}{stake.yieldEarned} ETH yield
               </div>
             </div>
