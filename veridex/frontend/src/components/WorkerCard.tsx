@@ -62,7 +62,7 @@ export default function WorkerCard({ worker, showContextualScore }: WorkerCardPr
             >
               {worker.overall_trust_score}
             </div>
-            <div style={textMuted}>Trust Score</div>
+            <div style={textMuted}>Veridex Score</div>
           </div>
         </div>
 

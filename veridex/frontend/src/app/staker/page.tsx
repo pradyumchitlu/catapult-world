@@ -172,7 +172,7 @@ export default function StakerPage() {
               {
                 num: '02',
                 title: 'Earn',
-                body: 'Earn returns when the workers you staked on see their trust score improve over time.',
+                body: 'Earn returns when the workers you staked on see their Veridex score improve over time.',
               },
               {
                 num: '03',

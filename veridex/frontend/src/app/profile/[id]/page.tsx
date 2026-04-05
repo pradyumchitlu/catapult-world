@@ -193,7 +193,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 mb-8">
-        {/* Trust Score */}
+        {/* Veridex Score */}
         <div className="lg:col-span-1">
           <TrustScoreCard score={profile.overall_trust_score} />
           <GlassCard className="mt-4">

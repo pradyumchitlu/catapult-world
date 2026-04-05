@@ -481,7 +481,7 @@ function OnboardingContent() {
   useEffect(() => {
     if (githubStatus === 'connected') {
       setGithubConnected(true);
-      setGithubMessage('GitHub connected. We will sync your repositories and calculate your trust score after setup.');
+      setGithubMessage('GitHub connected. We will sync your repositories and calculate your Veridex score after setup.');
     } else if (githubStatus === 'error') {
       setGithubMessage('GitHub connection did not complete. You can try again anytime.');
     }

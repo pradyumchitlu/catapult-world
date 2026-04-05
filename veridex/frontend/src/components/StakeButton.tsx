@@ -74,7 +74,7 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
             </div>
 
             <p className="text-veridex-gray-400 text-sm mb-6">
-              Stake ETH to show you believe in this worker. Your stake affects their trust score.
+              Stake ETH to show you believe in this worker. Your stake affects their Veridex score.
             </p>
 
             <div className="mb-6">

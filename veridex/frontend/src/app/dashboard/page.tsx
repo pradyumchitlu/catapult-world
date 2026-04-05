@@ -257,7 +257,7 @@ function DashboardContent() {
     { label: 'Consistency', score: scoreComponents.consistency, detail: `${githubContributions.total_commits_last_year ?? 0} estimated commits last year · ${githubContributions.active_months ?? 0} estimated active months · ${linkedinExperiences.length + manualEvidenceEntries.length} saved evidence records` },
     { label: 'Recency', score: scoreComponents.recency, detail: `${githubContributions.commits_last_30_days ?? 0} estimated commits / 30d · ${githubContributions.commits_last_90_days ?? 0} estimated commits / 90d · ${reviews.length} active reviews` },
     { label: 'Employer Reviews', score: scoreComponents.employer_outcomes, detail: `${clientReviewCount} client review${clientReviewCount !== 1 ? 's' : ''} currently affect employer outcomes; rating 4-5 is positive, 3 is neutral, 1-2 is negative.` },
-    { label: 'Staking', score: scoreComponents.staking, detail: `${totalStaked.toLocaleString()} ETH across ${stakerCount} active stake${stakerCount !== 1 ? 's' : ''}, weighted by each staker's current trust score` },
+    { label: 'Staking', score: scoreComponents.staking, detail: `${totalStaked.toLocaleString()} ETH across ${stakerCount} active stake${stakerCount !== 1 ? 's' : ''}, weighted by each staker's current Veridex score` },
   ];
   const githubEvidence = [
     { label: 'Public Repos', value: githubData.public_repos ?? githubData.profile?.public_repos ?? '—' },

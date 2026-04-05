@@ -38,7 +38,7 @@ const endpointDocs: EndpointDoc[] = [
     method: 'GET',
     path: '/api/trust/:veridexId',
     auth: 'None',
-    purpose: 'Resolve the public trust surface for a Veridex user, including trust score, score summaries, staking totals, and review aggregates.',
+    purpose: 'Resolve the public trust surface for a Veridex user, including Veridex score, score summaries, staking totals, and review aggregates.',
     params: [
       {
         name: 'veridexId',
