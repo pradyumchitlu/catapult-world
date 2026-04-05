@@ -7,6 +7,8 @@ import { createWalletChallenge, getWalletBalances, resolveWalletTokens, verifyWa
 import { connectInjectedWallet, signWalletMessage } from '@/lib/wallet';
 import { colors, gradientText, sectionLabel, textMuted, textSecondary } from '@/lib/styles';
 import type { TokenBalance, User, WalletBalancesResponse } from '@/types';
+import { useMiniApp } from '@/contexts/MiniAppContext';
+import { linkWorldWalletWithMiniKit } from '@/lib/minikit';
 
 const WATCHLIST_STORAGE_PREFIX = 'veridex_wallet_watchlist_';
 
@@ -47,6 +49,7 @@ function formatBalance(value: string | null, digits = 4) {
 }
 
 export default function WalletBalancesCard({ token, user, onUserUpdated }: WalletBalancesCardProps) {
+  const { isInWorldApp, isMiniKitReady } = useMiniApp();
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [newTokenAddress, setNewTokenAddress] = useState('');
   const [balances, setBalances] = useState<WalletBalancesResponse | null>(null);
@@ -115,6 +118,14 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
     setError(null);
 
     try {
+      if (isInWorldApp && isMiniKitReady) {
+        const result = await linkWorldWalletWithMiniKit(token);
+        onUserUpdated(result.user);
+        setBalances(null);
+        await loadBalances(watchlist, result.wallet_address);
+        return;
+      }
+
       const { address } = await connectInjectedWallet();
       const challenge = await createWalletChallenge(address, token);
       const signed = await signWalletMessage(challenge.challenge);
@@ -195,7 +206,9 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
           <p style={textSecondary}>
             {user.wallet_address
               ? `Connected Wallet: ${shortenAddress(user.wallet_address)}`
-              : 'Connect wallet to view real World Chain balances.'}
+              : isInWorldApp && isMiniKitReady
+                ? 'Link your World wallet to view live World Chain balances.'
+                : 'Connect wallet to view real World Chain balances.'}
           </p>
           {user.wallet_verified_at && (
             <p style={{ ...textMuted, marginTop: '6px' }}>
@@ -225,7 +238,9 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
               ? 'Connecting...'
               : user.wallet_address
                 ? 'Reconnect Wallet'
-                : 'Connect Wallet'}
+                : isInWorldApp && isMiniKitReady
+                  ? 'Link World Wallet'
+                  : 'Connect Wallet'}
           </button>
         </div>
       </div>
@@ -256,7 +271,9 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
           }}
         >
           <p style={textSecondary}>
-            Veridex will verify wallet ownership with a signed message, then read your on-chain native and ERC-20 balances through backend-owned World Chain RPC.
+            {isInWorldApp && isMiniKitReady
+              ? 'Veridex will verify your World wallet through World App Wallet Auth, then read your balances from World Chain.'
+              : 'Veridex will verify wallet ownership with a signed message, then read your on-chain native and ERC-20 balances through backend-owned World Chain RPC.'}
           </p>
         </div>
       )}

@@ -1,11 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useUserOperationReceipt } from '@worldcoin/minikit-react';
 import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { createStake, getPlatformAddress } from '@/lib/api';
 import { ensureCanSendETH, sendETHToAddress } from '@/lib/wallet';
 import { colors } from '@/lib/styles';
+import { useMiniApp } from '@/contexts/MiniAppContext';
+import {
+  createWorldChainPublicClient,
+  getWorldAppApiBaseUrl,
+  linkWorldWalletWithMiniKit,
+  sendMiniKitStakeTransaction,
+} from '@/lib/minikit';
 
 interface StakeButtonProps {
   workerId: string;
@@ -14,12 +22,22 @@ interface StakeButtonProps {
 }
 
 export default function StakeButton({ workerId, workerName, onStake }: StakeButtonProps) {
-  const { user, token } = useAuth();
+  const { user, token, updateUser } = useAuth();
+  const { isInWorldApp, isMiniKitReady } = useMiniApp();
   const [isOpen, setIsOpen] = useState(false);
   const [amount, setAmount] = useState(0.01);
   const [isStaking, setIsStaking] = useState(false);
   const [stakingStatus, setStakingStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const publicClient = useMemo(() => createWorldChainPublicClient(), []);
+  const { poll: pollUserOperationReceipt, isLoading: isPollingReceipt } = useUserOperationReceipt({
+    client: publicClient,
+    apiBaseUrl: getWorldAppApiBaseUrl(),
+    pollingInterval: 2500,
+    timeout: 120000,
+    confirmations: 1,
+  });
+  const preferMiniKit = isInWorldApp && isMiniKitReady;
 
   const handleStake = async () => {
     if (amount <= 0 || !token) return;
@@ -29,7 +47,7 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
       return;
     }
 
-    if (!user?.wallet_address) {
+    if (!preferMiniKit && !user?.wallet_address) {
       setError('Please connect your wallet in settings before staking.');
       return;
     }
@@ -41,13 +59,54 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
       setStakingStatus('Getting platform address...');
       const { address: platformAddress } = await getPlatformAddress();
 
-      setStakingStatus('Checking wallet balance and gas...');
-      await ensureCanSendETH(platformAddress, amount.toString());
+      let txHash = '';
 
-      setStakingStatus('Confirm the transaction in MetaMask...');
-      const { txHash } = await sendETHToAddress(platformAddress, amount.toString());
+      if (preferMiniKit) {
+        let activeUser = user;
 
-      setStakingStatus('Verifying on-chain...');
+        if (!activeUser?.wallet_address || activeUser.wallet_verification_method !== 'world_app_wallet_auth') {
+          setStakingStatus('Linking your World wallet...');
+          const walletResult = await linkWorldWalletWithMiniKit(token);
+          updateUser(walletResult.user);
+          activeUser = walletResult.user;
+        }
+
+        setStakingStatus('Opening World App transaction prompt...');
+        const txResult = await sendMiniKitStakeTransaction(platformAddress, amount.toString());
+
+        if (txResult.executedWith === 'fallback') {
+          throw new Error('World App staking is only available inside World App.');
+        }
+
+        if (!txResult.data?.userOpHash) {
+          throw new Error('World App did not return a transaction reference.');
+        }
+
+        setStakingStatus('Waiting for on-chain confirmation...');
+        const receiptResult = await pollUserOperationReceipt(txResult.data.userOpHash);
+        txHash = receiptResult.transactionHash;
+
+        if (!txHash) {
+          throw new Error('World App transaction did not resolve to an on-chain hash.');
+        }
+
+        if (
+          activeUser?.wallet_address &&
+          txResult.data.from &&
+          activeUser.wallet_address.toLowerCase() !== txResult.data.from.toLowerCase()
+        ) {
+          throw new Error('The World wallet used for this transaction does not match your linked wallet.');
+        }
+      } else {
+        setStakingStatus('Checking wallet balance and gas...');
+        await ensureCanSendETH(platformAddress, amount.toString());
+
+        setStakingStatus('Confirm the transaction in MetaMask...');
+        const txResult = await sendETHToAddress(platformAddress, amount.toString());
+        txHash = txResult.txHash;
+      }
+
+      setStakingStatus('Recording stake in Veridex...');
       await createStake(workerId, amount, txHash, token);
 
       onStake?.(amount);
@@ -65,7 +124,7 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
   return (
     <>
       <button onClick={() => setIsOpen(true)} className="btn-primary">
-        Stake ETH
+        {preferMiniKit ? 'Stake with World App' : 'Stake ETH'}
       </button>
 
       {isOpen && (
@@ -114,7 +173,9 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
             </div>
 
             <p className="mb-6 text-sm" style={{ color: colors.textSecondary, lineHeight: 1.7 }}>
-              Stake ETH to show you believe in this worker. Your stake affects their Veridex score.
+              {preferMiniKit
+                ? 'Use your World wallet inside World App to back this worker with a tiny ETH stake on World Chain.'
+                : 'Stake ETH to show you believe in this worker. Your stake affects their Veridex score.'}
             </p>
 
             <div className="mb-6">
@@ -206,7 +267,7 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
               </button>
               <button
                 onClick={handleStake}
-                disabled={isStaking || amount <= 0}
+                disabled={isStaking || isPollingReceipt || amount <= 0}
                 className="flex-1 rounded-2xl px-4 py-3 font-medium disabled:opacity-50"
                 style={{
                   background: 'linear-gradient(135deg, #2563EB, #3B82F6)',
@@ -214,7 +275,11 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
                   boxShadow: '0 16px 32px rgba(37,99,235,0.22)',
                 }}
               >
-                {isStaking ? <LoadingSpinner /> : `Stake ${amount} ETH`}
+                {isStaking || isPollingReceipt
+                  ? <LoadingSpinner />
+                  : preferMiniKit
+                    ? `Stake ${amount} ETH with World App`
+                    : `Stake ${amount} ETH`}
               </button>
             </div>
           </div>

@@ -7,8 +7,11 @@ import { createClient } from '@supabase/supabase-js';
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl) throw new Error('Missing env var: SUPABASE_URL');
+if (!supabaseServiceKey) throw new Error('Missing env var: SUPABASE_SERVICE_ROLE_KEY');
 
 export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {

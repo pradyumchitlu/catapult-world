@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { signRequest } from '@worldcoin/idkit-server';
 import supabase from '../lib/supabase';
@@ -17,11 +18,59 @@ const JWT_SECRET = process.env.JWT_SECRET || 'veridex-dev-secret';
 const WORLD_APP_ID = process.env.WORLD_APP_ID || '';
 const WORLD_RP_ID = process.env.WORLD_RP_ID || '';
 const WORLD_ID_PRIVATE_KEY = process.env.WORLD_ID_PRIVATE_KEY || '';
+const { verifySiweMessage } = require('@worldcoin/minikit-js/siwe') as {
+  verifySiweMessage: (
+    payload: unknown,
+    nonce: string,
+    statement?: string
+  ) => Promise<{ isValid: boolean; siweMessageData: { address: string } }>;
+};
+
+interface WorldWalletAuthSession {
+  purpose: 'world_wallet_auth';
+  userId: string;
+  nonce: string;
+  statement: string;
+  expiresAt: string;
+}
 
 type OAuthProvider = 'github';
 
 function frontendUrl(): string {
   return process.env.FRONTEND_URL || 'http://localhost:3000';
+}
+
+function generateSiweNonce(length = 20): string {
+  return crypto.randomBytes(length).toString('hex').slice(0, length);
+}
+
+function createWorldWalletAuthStatement() {
+  return 'Link your World wallet to Veridex for Mini App staking on World Chain.';
+}
+
+function createWorldWalletAuthSession(userId: string) {
+  const nonce = generateSiweNonce(20);
+  const statement = createWorldWalletAuthStatement();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+  const sessionToken = jwt.sign(
+    {
+      purpose: 'world_wallet_auth',
+      userId,
+      nonce,
+      statement,
+      expiresAt,
+    } satisfies WorldWalletAuthSession,
+    JWT_SECRET,
+    { expiresIn: '20m' }
+  );
+
+  return {
+    nonce,
+    statement,
+    expires_at: expiresAt,
+    session_token: sessionToken,
+  };
 }
 
 function buildOAuthState(userId: string, provider: OAuthProvider, returnTo?: string): string {
@@ -311,6 +360,76 @@ router.post('/wallet/verify', requireAuth, async (req: AuthenticatedRequest, res
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Wallet verification failed';
     console.error('Wallet verify error:', error);
+    return res.status(400).json({ error: message });
+  }
+});
+
+router.post('/world-wallet/prepare', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    return res.json(createWorldWalletAuthSession(req.userId!));
+  } catch (error) {
+    console.error('World wallet prepare error:', error);
+    return res.status(500).json({ error: 'Failed to prepare World wallet auth' });
+  }
+});
+
+router.post('/world-wallet/verify', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const payload = req.body?.payload;
+    const nonce = typeof req.body?.nonce === 'string' ? req.body.nonce : '';
+    const sessionToken = typeof req.body?.session_token === 'string' ? req.body.session_token : '';
+
+    if (!payload || !nonce || !sessionToken) {
+      return res.status(400).json({ error: 'payload, nonce, and session_token are required' });
+    }
+
+    const session = jwt.verify(sessionToken, JWT_SECRET) as WorldWalletAuthSession;
+
+    if (session.purpose !== 'world_wallet_auth' || session.userId !== req.userId) {
+      return res.status(400).json({ error: 'Invalid world wallet auth session' });
+    }
+
+    if (session.nonce !== nonce) {
+      return res.status(400).json({ error: 'Wallet auth nonce mismatch' });
+    }
+
+    if (new Date(session.expiresAt).getTime() < Date.now()) {
+      return res.status(400).json({ error: 'Wallet auth session expired' });
+    }
+
+    const verification = await verifySiweMessage(payload, nonce, session.statement);
+    if (!verification.isValid) {
+      return res.status(400).json({ error: 'World wallet auth verification failed' });
+    }
+
+    const walletAddress = normalizeAddress(verification.siweMessageData.address);
+    const now = new Date().toISOString();
+
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('users')
+      .update({
+        wallet_address: walletAddress,
+        wallet_verified_at: now,
+        wallet_verification_method: 'world_app_wallet_auth',
+      })
+      .eq('id', req.userId)
+      .select('*')
+      .single();
+
+    if (updateError || !updatedUser) {
+      throw updateError || new Error('Failed to persist World wallet auth');
+    }
+
+    return res.json({
+      success: true,
+      wallet_address: walletAddress,
+      verified_at: now,
+      wallet: getWalletInfo(updatedUser),
+      user: updatedUser,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'World wallet auth failed';
+    console.error('World wallet verify error:', error);
     return res.status(400).json({ error: message });
   }
 });

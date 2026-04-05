@@ -1,3 +1,5 @@
+export type WalletVerificationMethod = 'signature' | 'world_app_wallet_auth' | null;
+
 export interface User {
   id: string;
   world_id_hash: string;
@@ -7,7 +9,7 @@ export interface User {
   wld_balance?: number; // deprecated — staking uses real ETH now
   wallet_address: string | null;
   wallet_verified_at: string | null;
-  wallet_verification_method: string | null;
+  wallet_verification_method: WalletVerificationMethod;
   wallet_last_balance_sync_at: string | null;
   created_at: string;
   updated_at: string;
@@ -16,7 +18,7 @@ export interface User {
 export interface WalletInfo {
   wallet_address: string | null;
   wallet_verified_at: string | null;
-  wallet_verification_method: string | null;
+  wallet_verification_method: WalletVerificationMethod;
   wallet_last_balance_sync_at: string | null;
 }
 
@@ -57,6 +59,7 @@ export interface WorldAppWalletAuthPrepareResponse {
   nonce: string;
   statement: string;
   expires_at: string;
+  session_token: string;
 }
 
 export interface ScoreComponents {

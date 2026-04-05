@@ -162,6 +162,38 @@ export const verifyWalletSignature = (
     token,
   });
 
+export const prepareWorldWalletAuth = (token: string) =>
+  fetchApi<{
+    nonce: string;
+    statement: string;
+    expires_at: string;
+    session_token: string;
+  }>('/api/auth/world-wallet/prepare', {
+    method: 'POST',
+    token,
+  });
+
+export const verifyWorldWalletAuth = (
+  data: { payload: unknown; nonce: string; session_token: string },
+  token: string
+) =>
+  fetchApi<{
+    success: boolean;
+    wallet_address: string;
+    verified_at: string;
+    wallet: {
+      wallet_address: string | null;
+      wallet_verified_at: string | null;
+      wallet_verification_method: string | null;
+      wallet_last_balance_sync_at: string | null;
+    };
+    user: any;
+  }>('/api/auth/world-wallet/verify', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    token,
+  });
+
 // Reputation
 export const triggerIngestion = (userId: string, token: string) =>
   fetchApi<IngestionResponse>('/api/reputation/ingest', {

@@ -6,6 +6,7 @@ import GitHubConnectButton from '@/components/GitHubConnectButton';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMiniApp } from '@/contexts/MiniAppContext';
 import {
   createWalletChallenge,
   saveReputationEvidence,
@@ -14,6 +15,7 @@ import {
   uploadEvidenceDraft,
   verifyWalletSignature,
 } from '@/lib/api';
+import { linkWorldWalletWithMiniKit } from '@/lib/minikit';
 import { connectInjectedWallet, signWalletMessage } from '@/lib/wallet';
 import {
   col,
@@ -432,6 +434,7 @@ function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, token, isLoading: authLoading, updateUser } = useAuth();
+  const { isInWorldApp, isMiniKitReady } = useMiniApp();
   const githubStatus = searchParams.get('github');
 
   const [step, setStep] = useState(1);
@@ -602,6 +605,14 @@ function OnboardingContent() {
     setWalletError(null);
 
     try {
+      if (isInWorldApp && isMiniKitReady) {
+        const result = await linkWorldWalletWithMiniKit(token);
+        updateUser(result.user);
+        setWalletAddress(result.wallet_address);
+        setWalletConnected(true);
+        return;
+      }
+
       const { address } = await connectInjectedWallet();
       const challenge = await createWalletChallenge(address, token);
       const { signature } = await signWalletMessage(challenge.challenge);
@@ -1026,9 +1037,13 @@ function OnboardingContent() {
 
           {step === 3 && (
             <div>
-              <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>Connect your wallet</h2>
+              <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>
+                {isInWorldApp && isMiniKitReady ? 'Link your World wallet' : 'Connect your wallet'}
+              </h2>
               <p style={{ ...textSecondary, fontSize: '14px', marginBottom: '28px' }}>
-                Link your MetaMask wallet for staking and on-chain identity verification.
+                {isInWorldApp && isMiniKitReady
+                  ? 'Link your World wallet so you can stake directly inside World App.'
+                  : 'Link your browser wallet for staking and on-chain identity verification.'}
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
@@ -1113,10 +1128,16 @@ function OnboardingContent() {
                     </div>
                     <div>
                       <div style={{ ...headingSm, fontSize: '14px', color: colors.textPrimary }}>
-                        {walletConnecting ? 'Connecting...' : 'Connect MetaMask'}
+                        {walletConnecting
+                          ? 'Connecting...'
+                          : isInWorldApp && isMiniKitReady
+                            ? 'Link World Wallet'
+                            : 'Connect Wallet'}
                       </div>
                       <div style={{ ...textSecondary, fontSize: '12px' }}>
-                        Sign a message to verify wallet ownership
+                        {isInWorldApp && isMiniKitReady
+                          ? 'Approve Wallet Auth in World App to verify your wallet'
+                          : 'Sign a message to verify wallet ownership'}
                       </div>
                     </div>
                   </button>
