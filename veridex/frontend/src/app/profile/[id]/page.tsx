@@ -83,7 +83,7 @@ export default function ProfilePage() {
   if (!data) {
     return (
       <div className="text-center py-12">
-        <p className="text-worldcoin-gray-400">Profile not found.</p>
+        <p className="text-veridex-gray-400">Profile not found.</p>
       </div>
     );
   }
@@ -178,7 +178,7 @@ export default function ProfilePage() {
           <GlassCard className="mt-4">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ fontSize: '14px', color: '#94A3B8' }}>Total Staked</span>
-              <span style={{ fontSize: '14px', fontWeight: 600, color: '#2563EB' }}>{totalStaked.toLocaleString()} WLD</span>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#2563EB' }}>{totalStaked.toLocaleString()} ETH</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '14px', color: '#94A3B8' }}>Stakers</span>

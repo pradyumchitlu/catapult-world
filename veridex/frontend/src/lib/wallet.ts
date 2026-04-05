@@ -1,6 +1,6 @@
 'use client';
 
-import { BrowserProvider } from 'ethers';
+import { BrowserProvider, parseEther } from 'ethers';
 
 declare global {
   interface Window {
@@ -39,4 +39,20 @@ export async function signWalletMessage(message: string): Promise<{ address: str
   const signature = await signer.signMessage(message);
   const address = await signer.getAddress();
   return { address, signature };
+}
+
+export async function sendETHToAddress(to: string, amountETH: string): Promise<{ txHash: string }> {
+  const ethereum = getInjectedEthereum();
+  const provider = new BrowserProvider(ethereum);
+  await provider.send('eth_requestAccounts', []);
+  const signer = await provider.getSigner();
+  const tx = await signer.sendTransaction({
+    to,
+    value: parseEther(amountETH),
+  });
+  const receipt = await tx.wait();
+  if (!receipt) {
+    throw new Error('Transaction failed — no receipt');
+  }
+  return { txHash: receipt.hash };
 }

@@ -13,7 +13,6 @@ export const fakeUser = {
   display_name: 'Alice Developer',
   roles: ['worker'],
   profession_category: 'software',
-  wld_balance: 1000,
   created_at: '2025-01-01T00:00:00Z',
   updated_at: '2025-01-01T00:00:00Z',
 };
@@ -24,7 +23,6 @@ export const fakeUser2 = {
   display_name: 'Bob Client',
   roles: ['client'],
   profession_category: null,
-  wld_balance: 500,
   created_at: '2025-01-02T00:00:00Z',
   updated_at: '2025-01-02T00:00:00Z',
 };

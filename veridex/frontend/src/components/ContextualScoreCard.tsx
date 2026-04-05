@@ -16,7 +16,7 @@ export default function ContextualScoreCard({ fitScore, breakdown }: ContextualS
   };
 
   return (
-    <div className="bg-worldcoin-gray-700/50 rounded-lg p-4">
+    <div className="bg-veridex-gray-700/50 rounded-lg p-4">
       {/* Score Header */}
       <div className="flex items-center gap-4 mb-4">
         <div className={`text-4xl font-bold ${getScoreColor(fitScore)}`}>
@@ -24,7 +24,7 @@ export default function ContextualScoreCard({ fitScore, breakdown }: ContextualS
         </div>
         <div>
           <div className="font-semibold">Contextual Fit Score</div>
-          <div className="text-sm text-worldcoin-gray-400">
+          <div className="text-sm text-veridex-gray-400">
             Based on job requirements analysis
           </div>
         </div>
@@ -45,7 +45,7 @@ export default function ContextualScoreCard({ fitScore, breakdown }: ContextualS
               {breakdown.met.map((item, i) => (
                 <div key={i} className="text-sm">
                   <div className="text-white">{item.requirement}</div>
-                  <div className="text-worldcoin-gray-400">{item.evidence}</div>
+                  <div className="text-veridex-gray-400">{item.evidence}</div>
                 </div>
               ))}
             </div>
@@ -65,7 +65,7 @@ export default function ContextualScoreCard({ fitScore, breakdown }: ContextualS
               {breakdown.partial.map((item, i) => (
                 <div key={i} className="text-sm">
                   <div className="text-white">{item.requirement}</div>
-                  <div className="text-worldcoin-gray-400">{item.evidence}</div>
+                  <div className="text-veridex-gray-400">{item.evidence}</div>
                   <div className="text-veridex-warning">Gap: {item.gap}</div>
                 </div>
               ))}
@@ -84,7 +84,7 @@ export default function ContextualScoreCard({ fitScore, breakdown }: ContextualS
             </div>
             <div className="space-y-1 pl-6">
               {breakdown.missing.map((item, i) => (
-                <div key={i} className="text-sm text-worldcoin-gray-400">
+                <div key={i} className="text-sm text-veridex-gray-400">
                   {item.requirement}
                 </div>
               ))}

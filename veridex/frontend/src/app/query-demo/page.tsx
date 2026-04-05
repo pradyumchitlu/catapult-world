@@ -87,15 +87,15 @@ export default function QueryDemoPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-2">External Query API Demo</h1>
-      <p className="text-worldcoin-gray-400 mb-8">
+      <p className="text-veridex-gray-400 mb-8">
         Test the external APIs that third-party services can use to query trust scores and agent identities.
       </p>
 
       {/* Trust Score Query */}
       <div className="card mb-8">
         <h2 className="text-xl font-semibold mb-4">Query Trust Score</h2>
-        <p className="text-sm text-worldcoin-gray-400 mb-4">
-          <code className="bg-worldcoin-gray-700 px-2 py-1 rounded">GET /api/trust/:veridexId</code>
+        <p className="text-sm text-veridex-gray-400 mb-4">
+          <code className="bg-veridex-gray-700 px-2 py-1 rounded">GET /api/trust/:veridexId</code>
         </p>
         <div className="flex gap-3 mb-4">
           <input
@@ -114,7 +114,7 @@ export default function QueryDemoPage() {
           </button>
         </div>
         {trustResult && (
-          <pre className="bg-worldcoin-gray-900 p-4 rounded-lg text-sm overflow-x-auto">
+          <pre className="bg-veridex-gray-900 p-4 rounded-lg text-sm overflow-x-auto">
             {JSON.stringify(trustResult, null, 2)}
           </pre>
         )}
@@ -123,8 +123,8 @@ export default function QueryDemoPage() {
       {/* Agent Lookup */}
       <div className="card mb-8">
         <h2 className="text-xl font-semibold mb-4">Lookup Agent</h2>
-        <p className="text-sm text-worldcoin-gray-400 mb-4">
-          <code className="bg-worldcoin-gray-700 px-2 py-1 rounded">GET /api/agent/:agentId</code>
+        <p className="text-sm text-veridex-gray-400 mb-4">
+          <code className="bg-veridex-gray-700 px-2 py-1 rounded">GET /api/agent/:agentId</code>
         </p>
         <div className="flex gap-3 mb-4">
           <input
@@ -143,7 +143,7 @@ export default function QueryDemoPage() {
           </button>
         </div>
         {agentResult && (
-          <pre className="bg-worldcoin-gray-900 p-4 rounded-lg text-sm overflow-x-auto">
+          <pre className="bg-veridex-gray-900 p-4 rounded-lg text-sm overflow-x-auto">
             {JSON.stringify(agentResult, null, 2)}
           </pre>
         )}
@@ -155,13 +155,13 @@ export default function QueryDemoPage() {
         <div className="space-y-4 text-sm">
           <div>
             <code className="text-veridex-secondary">GET /api/trust/:veridexId</code>
-            <p className="text-worldcoin-gray-300 mt-1">
+            <p className="text-veridex-gray-300 mt-1">
               Returns trust score, verification status, score components, and staking info for a user.
             </p>
           </div>
           <div>
             <code className="text-veridex-secondary">GET /api/agent/:agentId</code>
-            <p className="text-worldcoin-gray-300 mt-1">
+            <p className="text-veridex-gray-300 mt-1">
               Returns agent info including derived score and parent human&apos;s identity.
             </p>
           </div>

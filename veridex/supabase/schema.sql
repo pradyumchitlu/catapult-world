@@ -12,7 +12,7 @@ CREATE TABLE users (
     NOT ('worker' = ANY(roles) AND 'client' = ANY(roles))
   ),
   profession_category TEXT,             -- 'software', 'writing', 'design', 'trades', 'other'
-  wld_balance INTEGER DEFAULT 1000,     -- starting WLD credits
+  -- wld_balance removed: staking now uses real ETH via MetaMask
   wallet_address TEXT,
   wallet_verified_at TIMESTAMPTZ,
   wallet_verification_method TEXT DEFAULT 'signature',
@@ -138,7 +138,7 @@ CREATE TABLE reviews (
   rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
   content TEXT,
   job_category TEXT,                    -- 'software', 'gardening', 'writing', 'design', etc.
-  stake_amount INTEGER NOT NULL DEFAULT 0,  -- WLD staked on this review
+  stake_amount INTEGER NOT NULL DEFAULT 0,  -- amount staked on this review
   reviewer_trust_score_at_time INTEGER, -- snapshot of reviewer's score when review was left
   is_flagged BOOLEAN DEFAULT false,     -- flagged by integrity checks
   flag_reason TEXT,                     -- e.g. 'mutual_review_detected'
@@ -151,7 +151,11 @@ CREATE TABLE stakes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   staker_id UUID REFERENCES users(id) ON DELETE CASCADE,
   worker_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  amount INTEGER NOT NULL,
+  amount INTEGER NOT NULL,              -- kept for scoring compatibility
+  amount_wei TEXT,                      -- precise wei amount as string
+  amount_eth NUMERIC,                   -- human-readable ETH amount
+  tx_hash TEXT,                         -- on-chain deposit transaction hash
+  withdrawal_tx_hash TEXT,              -- on-chain withdrawal transaction hash
   status TEXT DEFAULT 'active',         -- active, withdrawn
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -185,7 +189,7 @@ CREATE TABLE agents (
   inheritance_fraction NUMERIC(3,2) DEFAULT 0.70 CHECK (inheritance_fraction >= 0 AND inheritance_fraction <= 1),
   derived_score INTEGER DEFAULT 0,        -- inheritance_fraction × parent's overall_trust_score
   authorized_domains TEXT[] DEFAULT '{}', -- e.g. {'defi','content','negotiation'}
-  stake_amount INTEGER DEFAULT 0,         -- WLD locked as collateral for this agent
+  stake_amount INTEGER DEFAULT 0,         -- collateral for this agent
   status TEXT DEFAULT 'active',           -- 'active', 'suspended', 'revoked'
   dispute_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()

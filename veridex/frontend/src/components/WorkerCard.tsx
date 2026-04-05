@@ -135,7 +135,7 @@ export default function WorkerCard({ worker, showContextualScore }: WorkerCardPr
             {worker.avgRating.toFixed(1)} ★
           </span>
           <span style={{ color: colors.primary, fontWeight: 500 }}>
-            {worker.totalStaked.toLocaleString()} WLD
+            {worker.totalStaked.toLocaleString()} ETH
           </span>
         </div>
       </GlassCard>

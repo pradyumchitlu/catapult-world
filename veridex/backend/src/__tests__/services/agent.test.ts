@@ -83,15 +83,8 @@ describe('registerAgent', () => {
     expect(agent.authorized_domains).toEqual(['defi']);
   });
 
-  it('should deduct stake from user balance when stake_amount > 0', async () => {
-    // Mock user lookup for balance check
-    __setMockResponse('users', 'select', {
-      data: { wld_balance: 1000 },
-      error: null,
-    });
-    // Mock balance update
-    __setMockResponse('users', 'update', { data: null, error: null });
-    // Mock agent insert
+  it('should record stake_amount without deducting balance (future on-chain feature)', async () => {
+    // No user lookup or balance update needed — staking is handled on-chain
     __setMockResponse('agents', 'insert', {
       data: {
         id: 'staked-agent-id',
@@ -118,35 +111,6 @@ describe('registerAgent', () => {
     });
 
     expect(agent.stake_amount).toBe(200);
-  });
-
-  it('should throw when stake exceeds balance', async () => {
-    __setMockResponse('users', 'select', {
-      data: { wld_balance: 50 },
-      error: null,
-    });
-
-    await expect(
-      registerAgent({
-        userId: TEST_USER_ID,
-        name: 'Expensive Agent',
-        parentScore: 85,
-        stake_amount: 500,
-      })
-    ).rejects.toThrow('Insufficient WLD balance for agent stake');
-  });
-
-  it('should throw when user not found for stake check', async () => {
-    __setMockResponse('users', 'select', { data: null, error: { message: 'Not found' } });
-
-    await expect(
-      registerAgent({
-        userId: 'nonexistent',
-        name: 'Ghost Agent',
-        parentScore: 0,
-        stake_amount: 100,
-      })
-    ).rejects.toThrow('User not found');
   });
 
   it('should handle zero parent score correctly', async () => {

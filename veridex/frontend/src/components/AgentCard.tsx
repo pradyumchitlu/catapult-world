@@ -104,7 +104,7 @@ export default function AgentCard({ agent }: AgentCardProps) {
         {agent.stake_amount > 0 && (
           <div>
             <span style={{ color: '#94A3B8' }}>Stake:</span>{' '}
-            <span style={{ color: '#0EA5E9', fontWeight: 500 }}>{agent.stake_amount} WLD</span>
+            <span style={{ color: '#0EA5E9', fontWeight: 500 }}>{agent.stake_amount} ETH</span>
           </div>
         )}
         {agent.dispute_count > 0 && (

@@ -264,12 +264,36 @@ export default function DashboardPage() {
   const hasManualEvidence = linkedinExperiences.length > 0 || manualEvidenceEntries.length > 0 || uploadedFiles.length > 0;
   const clientReviewCount = reviews.filter((review) => Array.isArray(review.reviewer?.roles) && review.reviewer.roles.includes('client')).length;
   const scoreInsights = [
-    { label: 'Identity', score: scoreComponents.identity_assurance, detail: `World ID verified · ${profile.github_username ? 'GitHub connected' : 'GitHub not connected'} · ${hasManualEvidence ? 'manual evidence present' : 'no manual evidence yet'}` },
-    { label: 'Evidence', score: scoreComponents.evidence_depth, detail: `${githubData.significant_repo_count ?? githubData.repos?.length ?? 0} notable repos · ${manualProofBackedCount} proof-backed manual entries · ${profile.years_experience ?? 0}y experience` },
-    { label: 'Consistency', score: scoreComponents.consistency, detail: `${githubContributions.total_commits_last_year ?? 0} commits last year · ${githubContributions.active_months ?? 0} active months · ${linkedinExperiences.length + manualEvidenceEntries.length} saved evidence records` },
-    { label: 'Recency', score: scoreComponents.recency, detail: `${githubContributions.commits_last_30_days ?? 0} commits / 30d · ${githubContributions.commits_last_90_days ?? 0} commits / 90d · ${reviews.length} active reviews` },
-    { label: 'Employer Reviews', score: scoreComponents.employer_outcomes, detail: `${clientReviewCount} client review${clientReviewCount !== 1 ? 's' : ''} currently affect employer outcomes; rating 4-5 is positive, 3 is neutral, 1-2 is negative.` },
-    { label: 'Staking', score: scoreComponents.staking, detail: `${totalStaked.toLocaleString()} WLD across ${stakerCount} active stake${stakerCount !== 1 ? 's' : ''}, weighted by each staker's current trust score` },
+    {
+      label: 'Identity',
+      score: scoreComponents.identity_assurance,
+      detail: `World ID verified · ${profile.github_username ? 'GitHub connected' : 'GitHub not connected'} · ${hasManualEvidence ? 'manual evidence present' : 'no manual evidence yet'}`,
+    },
+    {
+      label: 'Evidence',
+      score: scoreComponents.evidence_depth,
+      detail: `${githubData.significant_repo_count ?? githubData.repos?.length ?? 0} notable repos · ${manualProofBackedCount} proof-backed manual entries · ${profile.years_experience ?? 0}y experience`,
+    },
+    {
+      label: 'Consistency',
+      score: scoreComponents.consistency,
+      detail: `${githubContributions.total_commits_last_year ?? 0} commits last year · ${githubContributions.active_months ?? 0} active months · ${linkedinExperiences.length + manualEvidenceEntries.length} saved evidence records`,
+    },
+    {
+      label: 'Recency',
+      score: scoreComponents.recency,
+      detail: `${githubContributions.commits_last_30_days ?? 0} commits / 30d · ${githubContributions.commits_last_90_days ?? 0} commits / 90d · ${reviews.length} active reviews`,
+    },
+    {
+      label: 'Employer Reviews',
+      score: scoreComponents.employer_outcomes,
+      detail: `${clientReviewCount} client review${clientReviewCount !== 1 ? 's' : ''} currently affect employer outcomes; rating 4-5 is positive, 3 is neutral, 1-2 is negative.`,
+    },
+    {
+      label: 'Staking',
+      score: scoreComponents.staking,
+      detail: `${totalStaked.toLocaleString()} ETH across ${stakerCount} active stake${stakerCount !== 1 ? 's' : ''}, weighted by each staker's current trust score`,
+    },
   ];
   const githubEvidence = [
     { label: 'Repos', value: githubData.public_repos ?? githubData.profile?.public_repos ?? '—' },
@@ -539,7 +563,7 @@ export default function DashboardPage() {
                 <GlassCard style={{ padding: '24px', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <span style={sectionLabel}>Balance</span>
                   <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '28px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>
-                    {(user?.wld_balance || 0).toLocaleString()} WLD
+                    {(user?.wld_balance || 0).toLocaleString()} ETH
                   </div>
                   <div style={textMuted}>Veridex Credits</div>
                 </GlassCard>
@@ -547,7 +571,7 @@ export default function DashboardPage() {
                 <GlassCard style={{ padding: '24px', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <span style={sectionLabel}>Staked on You</span>
                   <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '28px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>
-                    {totalStaked.toLocaleString()} WLD
+                    {totalStaked.toLocaleString()} ETH
                   </div>
                   <div style={textMuted}>{stakerCount} staker{stakerCount !== 1 ? 's' : ''}</div>
                 </GlassCard>

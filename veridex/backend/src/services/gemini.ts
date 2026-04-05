@@ -255,7 +255,7 @@ GUIDELINES:
    - 60–79: Moderately trusted — solid in some areas, gaps in others
    - 40–59: Developing — limited evidence or mixed signals
    - Below 40: Early stage — minimal verified data available
-5. **Review credibility** — higher stake amounts signal greater reviewer confidence. A 500 WLD review carries more weight than a 10 WLD review. Mention this when discussing reviews.
+5. **Review credibility** — higher stake amounts signal greater reviewer confidence. A high-stake review carries more weight than a low-stake review. Mention this when discussing reviews.
 6. **Balance positive and negative signals** fairly. Never make claims unsupported by the data.
 7. **Score components** — when relevant, explain which dimensions (developer_competence, collaboration, consistency, specialization_depth, activity_recency, peer_trust) are strongest/weakest.
 
@@ -263,7 +263,7 @@ Worker Profile:
 ${JSON.stringify(workerData.profile, null, 2)}
 
 Recent Reviews (sorted by stake amount):
-${workerData.reviews.map((r: any) => `- Rating: ${r.rating}/5, Stake: ${r.stake_amount} WLD, Category: ${r.job_category || 'General'}
+${workerData.reviews.map((r: any) => `- Rating: ${r.rating}/5, Stake: ${r.stake_amount} ETH, Category: ${r.job_category || 'General'}
   Review: "${r.content || 'No written feedback'}"
   Reviewer: ${r.reviewer?.display_name || 'Anonymous'}`).join('\n')}`;
 

@@ -291,10 +291,13 @@ export const getAgent = (agentId: string) =>
   fetchApi(`/api/agent/${agentId}`);
 
 // Stakes
-export const createStake = (workerId: string, amount: number, token: string) =>
+export const getPlatformAddress = () =>
+  fetchApi<{ address: string }>('/api/stake/platform-address');
+
+export const createStake = (workerId: string, amount: number, tx_hash: string, token: string) =>
   fetchApi('/api/stake', {
     method: 'POST',
-    body: JSON.stringify({ workerId, amount }),
+    body: JSON.stringify({ workerId, amount, tx_hash }),
     token,
   });
 

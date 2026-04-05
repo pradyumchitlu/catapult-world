@@ -5,15 +5,14 @@ import Link from 'next/link';
 import StakePortfolio from '@/components/StakePortfolio';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
+import { useAuth } from '@/contexts/AuthContext';
+import { getStakes, getWalletBalances } from '@/lib/api';
 import {
   col,
   headingLg,
-  headingMd,
   headingSm,
   sectionLabel,
-  separator,
   textSecondary,
-  textMuted,
   gradientText,
   colors,
 } from '@/lib/styles';
@@ -26,67 +25,37 @@ interface StakeWithWorker extends Stake {
 }
 
 export default function StakerPage() {
+  const { user, token } = useAuth();
   const [stakes, setStakes] = useState<StakeWithWorker[]>([]);
-  const [wldBalance, setWldBalance] = useState(0);
+  const [ethBalance, setEthBalance] = useState<string | null>(null);
   const [totalReturns, setTotalReturns] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Fetch staker portfolio data
+    if (!user?.id || !token) return;
+
     const fetchPortfolio = async () => {
       try {
-        // Placeholder data
-        setWldBalance(750);
-        setTotalReturns(125);
-        setStakes([
-          {
-            id: '1',
-            staker_id: 'current-user',
-            worker_id: '1',
-            amount: 250,
-            status: 'active',
-            created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            worker: {
-              id: '1',
-              world_id_hash: 'hash1',
-              display_name: 'Alice Developer',
-              roles: ['worker'],
-              profession_category: 'software',
-              wld_balance: 1000,
-              wallet_address: null,
-              wallet_verified_at: null,
-              wallet_verification_method: null,
-              wallet_last_balance_sync_at: null,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              worker_profile: {
-                id: '1',
-                user_id: '1',
-                github_username: 'alice',
-                github_data: {},
-                linkedin_data: {},
-                other_platforms: {},
-                computed_skills: ['TypeScript', 'React'],
-                specializations: ['Full-stack'],
-                years_experience: 5,
-                overall_trust_score: 85,
-                score_components: {
-                  identity_assurance: 76,
-                  evidence_depth: 88,
-                  consistency: 85,
-                  recency: 92,
-                  employer_outcomes: 50,
-                  staking: 78,
-                },
-                ingestion_status: 'completed',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-            },
-            scoreTrend: 'up',
-            yieldEarned: 45,
-          },
-        ]);
+        const { stakes: rawStakes } = await getStakes(user.id, token) as { stakes: any[] };
+        const mapped: StakeWithWorker[] = (rawStakes || []).map((s: any) => ({
+          ...s,
+          scoreTrend: s.score_trend || 'stable',
+          yieldEarned: s.yield_earned || 0,
+        }));
+        setStakes(mapped);
+        setTotalReturns(mapped.reduce((sum, s) => sum + s.yieldEarned, 0));
+
+        // Fetch on-chain ETH balance if wallet connected
+        if (user.wallet_address) {
+          try {
+            const balances = await getWalletBalances(token, { includeNative: true });
+            if (balances.native_balance) {
+              setEthBalance(balances.native_balance.formatted_balance);
+            }
+          } catch {
+            // Wallet balance fetch is non-critical
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch portfolio:', error);
       } finally {
@@ -95,7 +64,7 @@ export default function StakerPage() {
     };
 
     fetchPortfolio();
-  }, []);
+  }, [user?.id, token, user?.wallet_address]);
 
   if (isLoading) {
     return (
@@ -105,12 +74,12 @@ export default function StakerPage() {
     );
   }
 
-  const totalStaked = stakes.reduce((sum, s) => sum + s.amount, 0);
+  const totalStaked = stakes.reduce((sum, s) => sum + (s.amount_eth || s.amount), 0);
 
   return (
     <div style={{ minHeight: '100vh' }}>
       <div style={col}>
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="fade-up fade-up-1" style={{ marginBottom: '48px' }}>
           <h1 style={{ ...headingLg, fontSize: '48px', margin: '0 0 12px 0' }}>
             Staker Portfolio
@@ -120,7 +89,7 @@ export default function StakerPage() {
           </p>
         </div>
 
-        {/* ── Summary Cards ── */}
+        {/* Summary Cards */}
         <div
           className="fade-up fade-up-2"
           style={{
@@ -131,7 +100,7 @@ export default function StakerPage() {
           }}
         >
           <GlassCard style={{ padding: '28px' }}>
-            <span style={sectionLabel}>WLD Balance</span>
+            <span style={sectionLabel}>Wallet Balance</span>
             <div
               style={{
                 fontFamily: 'var(--font-fraunces), Georgia, serif',
@@ -140,7 +109,7 @@ export default function StakerPage() {
                 ...gradientText,
               }}
             >
-              {wldBalance.toLocaleString()} WLD
+              {ethBalance ? `${ethBalance} ETH` : user?.wallet_address ? 'Loading...' : 'No wallet'}
             </div>
           </GlassCard>
 
@@ -154,7 +123,7 @@ export default function StakerPage() {
                 ...gradientText,
               }}
             >
-              {totalStaked.toLocaleString()} WLD
+              {totalStaked.toLocaleString()} ETH
             </div>
           </GlassCard>
 
@@ -168,12 +137,12 @@ export default function StakerPage() {
                 color: totalReturns >= 0 ? colors.success : '#F43F5E',
               }}
             >
-              {totalReturns >= 0 ? '+' : ''}{totalReturns.toLocaleString()} WLD
+              {totalReturns >= 0 ? '+' : ''}{totalReturns.toLocaleString()} ETH
             </div>
           </GlassCard>
         </div>
 
-        {/* ── Active Stakes ── */}
+        {/* Active Stakes */}
         <GlassCard className="fade-up fade-up-3" style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <span style={sectionLabel}>Active Stakes</span>
@@ -184,7 +153,7 @@ export default function StakerPage() {
           <StakePortfolio stakes={stakes} />
         </GlassCard>
 
-        {/* ── How Staking Works ── */}
+        {/* How Staking Works */}
         <GlassCard className="fade-up fade-up-4">
           <span style={sectionLabel}>How Staking Works</span>
           <div
@@ -198,7 +167,7 @@ export default function StakerPage() {
               {
                 num: '01',
                 title: 'Stake',
-                body: 'Stake WLD on workers you believe will perform well. Your conviction becomes an economic signal of trust.',
+                body: 'Stake ETH on workers you believe will perform well. Your conviction becomes an economic signal of trust.',
               },
               {
                 num: '02',

@@ -83,9 +83,7 @@ describe('POST /api/agent/spawn', () => {
       },
       error: null,
     });
-    // For stake deduction
-    __setMockResponse('users', 'select', { data: { ...fakeUser, wld_balance: 1000 }, error: null });
-    __setMockResponse('users', 'update', { data: null, error: null });
+    // No balance check needed — staking is handled on-chain
 
     const res = await request(app)
       .post('/api/agent/spawn')

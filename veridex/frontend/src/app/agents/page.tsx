@@ -247,7 +247,7 @@ export default function AgentsPage() {
           {/* Stake Amount */}
           <div>
             <label style={{ fontSize: '13px', fontWeight: 500, color: '#1E293B', display: 'block', marginBottom: '6px' }}>
-              Stake Collateral <span style={{ color: '#94A3B8', fontWeight: 400 }}>(optional, WLD)</span>
+              Stake Collateral <span style={{ color: '#94A3B8', fontWeight: 400 }}>(optional, ETH)</span>
             </label>
             <input
               type="number"
@@ -260,7 +260,7 @@ export default function AgentsPage() {
             />
             {user && (
               <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>
-                Balance: {user.wld_balance} WLD
+                Balance: {user.wld_balance} ETH
               </div>
             )}
           </div>

@@ -4,7 +4,7 @@ export interface User {
   display_name: string | null;
   roles: ('worker' | 'staker' | 'client')[];
   profession_category: string | null;
-  wld_balance: number;
+  wld_balance?: number; // deprecated — staking uses real ETH now
   wallet_address: string | null;
   wallet_verified_at: string | null;
   wallet_verification_method: string | null;
@@ -173,6 +173,10 @@ export interface Stake {
   staker_id: string;
   worker_id: string;
   amount: number;
+  amount_wei?: string;
+  amount_eth?: number;
+  tx_hash?: string;
+  withdrawal_tx_hash?: string;
   status: 'active' | 'withdrawn';
   created_at: string;
   // joined fields

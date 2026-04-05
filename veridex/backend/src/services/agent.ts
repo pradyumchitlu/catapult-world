@@ -37,7 +37,7 @@ export interface RegisterAgentParams {
 /**
  * Register a new Agent Credential tied to a verified human.
  * derived_score = inheritance_fraction × parent's trust score.
- * If stake_amount > 0, deducts from user's wld_balance.
+ * stake_amount is recorded but not deducted here — on-chain ETH staking via MetaMask is a future feature.
  */
 export async function registerAgent(params: RegisterAgentParams): Promise<Agent> {
   const {
@@ -52,32 +52,6 @@ export async function registerAgent(params: RegisterAgentParams): Promise<Agent>
   } = params;
 
   const derivedScore = Math.round(parentScore * inheritance_fraction);
-
-  // Deduct stake from user's balance if > 0
-  if (stake_amount > 0) {
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('wld_balance')
-      .eq('id', userId)
-      .single();
-
-    if (userError || !user) {
-      throw new Error('User not found');
-    }
-
-    if (user.wld_balance < stake_amount) {
-      throw new Error('Insufficient WLD balance for agent stake');
-    }
-
-    const { error: balanceError } = await supabase
-      .from('users')
-      .update({ wld_balance: user.wld_balance - stake_amount })
-      .eq('id', userId);
-
-    if (balanceError) {
-      throw new Error('Failed to deduct stake from balance');
-    }
-  }
 
   const { data: agent, error } = await supabase
     .from('agents')

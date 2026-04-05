@@ -7,11 +7,14 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  createWalletChallenge,
   saveReputationEvidence,
   triggerIngestion,
   updateProfile,
   uploadEvidenceDraft,
+  verifyWalletSignature,
 } from '@/lib/api';
+import { connectInjectedWallet, signWalletMessage } from '@/lib/wallet';
 import {
   col,
   headingMd,
@@ -83,6 +86,8 @@ interface OnboardingDraft {
   selectedRoles: string[];
   professionCategory: string | null;
   step: number;
+  walletConnected: boolean;
+  walletAddress: string | null;
   githubConnected: boolean;
   portfolioUrlsText: string;
   projectUrlsText: string;
@@ -100,11 +105,11 @@ const PROFESSION_CATEGORIES = [
 
 const ROLES = [
   { id: 'worker', label: 'Worker', description: 'Build reputation and get hired' },
-  { id: 'staker', label: 'Staker', description: 'Stake WLD on workers you believe in' },
+  { id: 'staker', label: 'Staker', description: 'Stake ETH on workers you believe in' },
   { id: 'client', label: 'Client', description: 'Find and evaluate workers' },
 ];
 
-const STEPS = ['Profile', 'Profession', 'Connect', 'Evidence'];
+const STEPS = ['Profile', 'Profession', 'Wallet', 'Connect', 'Evidence'];
 
 const fieldLabelStyle = {
   ...headingSm,
@@ -367,6 +372,10 @@ function getDraftStep(
   return Math.max(3, fallbackStep);
 }
 
+function truncateAddress(address: string): string {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
 function kindLabel(kind: EvidenceItemKind): string {
   if (kind === 'portfolio') return 'Portfolio';
   if (kind === 'work_sample') return 'Work Sample';
@@ -399,6 +408,10 @@ function OnboardingContent() {
   const [displayName, setDisplayName] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>(['worker']);
   const [professionCategory, setProfessionCategory] = useState<string | null>(null);
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletConnecting, setWalletConnecting] = useState(false);
+  const [walletError, setWalletError] = useState<string | null>(null);
   const [githubConnected, setGithubConnected] = useState(false);
   const [githubMessage, setGithubMessage] = useState<string | null>(null);
   const [portfolioUrlsText, setPortfolioUrlsText] = useState('');
@@ -442,12 +455,18 @@ function OnboardingContent() {
     const nextProfessionCategory = typeof draft?.professionCategory === 'string'
       ? draft.professionCategory
       : (user.profession_category || null);
+    const nextWalletConnected = Boolean(draft?.walletConnected) || Boolean(user.wallet_address);
+    const nextWalletAddress = typeof draft?.walletAddress === 'string'
+      ? draft.walletAddress
+      : (user.wallet_address || null);
     const nextGithubConnected = Boolean(draft?.githubConnected) || githubStatus === 'connected';
     const fallbackStep = typeof draft?.step === 'number' ? draft.step : 1;
 
     setDisplayName(nextDisplayName);
     setSelectedRoles(nextSelectedRoles);
     setProfessionCategory(nextProfessionCategory);
+    setWalletConnected(nextWalletConnected);
+    setWalletAddress(nextWalletAddress);
     setGithubConnected(nextGithubConnected);
     setPortfolioUrlsText(typeof draft?.portfolioUrlsText === 'string' ? draft.portfolioUrlsText : '');
     setProjectUrlsText(typeof draft?.projectUrlsText === 'string' ? draft.projectUrlsText : '');
@@ -476,6 +495,8 @@ function OnboardingContent() {
       selectedRoles,
       professionCategory,
       step,
+      walletConnected,
+      walletAddress,
       githubConnected,
       portfolioUrlsText,
       projectUrlsText,
@@ -489,6 +510,8 @@ function OnboardingContent() {
     selectedRoles,
     professionCategory,
     step,
+    walletConnected,
+    walletAddress,
     githubConnected,
     portfolioUrlsText,
     projectUrlsText,
@@ -523,6 +546,35 @@ function OnboardingContent() {
       }
       return [...prev, roleId];
     });
+  };
+
+  const handleConnectWallet = async () => {
+    if (!token) return;
+    setWalletConnecting(true);
+    setWalletError(null);
+
+    try {
+      const { address } = await connectInjectedWallet();
+      const challenge = await createWalletChallenge(address, token);
+      const { signature } = await signWalletMessage(challenge.challenge);
+      const result = await verifyWalletSignature(
+        {
+          wallet_address: address,
+          message: challenge.challenge,
+          signature,
+          nonce: challenge.nonce,
+        },
+        token
+      );
+      updateUser(result.user);
+      setWalletAddress(result.wallet_address);
+      setWalletConnected(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to connect wallet';
+      setWalletError(message);
+    } finally {
+      setWalletConnecting(false);
+    }
   };
 
   const updateExperienceField = (id: string, field: keyof EditableExperience, value: string) => {
@@ -908,6 +960,142 @@ function OnboardingContent() {
 
           {step === 3 && (
             <div>
+              <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>Connect your wallet</h2>
+              <p style={{ ...textSecondary, fontSize: '14px', marginBottom: '28px' }}>
+                Link your MetaMask wallet for staking and on-chain identity verification.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                {walletConnected && walletAddress ? (
+                  <div
+                    style={{
+                      padding: '18px 20px',
+                      borderRadius: '14px',
+                      border: `1.5px solid ${colors.success}`,
+                      background: 'rgba(34,197,94,0.06)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '14px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: colors.success,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '16px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      ✓
+                    </div>
+                    <div>
+                      <div style={{ ...headingSm, fontSize: '14px', color: colors.textPrimary }}>
+                        Wallet connected
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                          fontSize: '13px',
+                          color: colors.textTertiary,
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {truncateAddress(walletAddress)}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleConnectWallet}
+                    disabled={walletConnecting}
+                    style={{
+                      padding: '18px 20px',
+                      borderRadius: '14px',
+                      border: '1.5px solid rgba(37,99,235,0.2)',
+                      background: 'rgba(255,255,255,0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '14px',
+                      cursor: walletConnecting ? 'wait' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      width: '100%',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #f6851b, #e2761b)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#fff',
+                        fontSize: '18px',
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      M
+                    </div>
+                    <div>
+                      <div style={{ ...headingSm, fontSize: '14px', color: colors.textPrimary }}>
+                        {walletConnecting ? 'Connecting...' : 'Connect MetaMask'}
+                      </div>
+                      <div style={{ ...textSecondary, fontSize: '12px' }}>
+                        Sign a message to verify wallet ownership
+                      </div>
+                    </div>
+                  </button>
+                )}
+
+                {walletError && (
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(244,63,94,0.24)',
+                      background: 'rgba(244,63,94,0.06)',
+                      fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                      fontSize: '13px',
+                      color: '#e11d48',
+                    }}
+                  >
+                    {walletError}
+                  </div>
+                )}
+              </div>
+
+              <div style={separator} />
+
+              <p style={{ ...textSecondary, fontSize: '13px', marginBottom: '24px' }}>
+                Wallet connection is optional. You can always add it later from your dashboard.
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => setStep(2)} className="btn-secondary" style={{ flex: 1 }}>
+                  ← Back
+                </button>
+                <button
+                  onClick={() => setStep(4)}
+                  className="btn-primary"
+                  style={{ flex: 2 }}
+                >
+                  {walletConnected ? 'Continue →' : 'Skip for now →'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div>
               <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>Connect platforms</h2>
               <p style={{ ...textSecondary, fontSize: '14px', marginBottom: '28px' }}>
                 GitHub is optional but valuable. You can also prove reputation through uploaded evidence and client reviews.
@@ -945,11 +1133,11 @@ function OnboardingContent() {
               </p>
 
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button onClick={() => setStep(2)} className="btn-secondary" style={{ flex: 1 }}>
+                <button onClick={() => setStep(3)} className="btn-secondary" style={{ flex: 1 }}>
                   ← Back
                 </button>
                 <button
-                  onClick={() => setStep(4)}
+                  onClick={() => setStep(5)}
                   className="btn-primary"
                   style={{ flex: 2 }}
                 >
@@ -959,7 +1147,7 @@ function OnboardingContent() {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div>
               <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>
                 Add evidence
@@ -1455,7 +1643,7 @@ function OnboardingContent() {
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button onClick={() => setStep(3)} className="btn-secondary" style={{ flex: 1 }}>
+                <button onClick={() => setStep(4)} className="btn-secondary" style={{ flex: 1 }}>
                   ← Back
                 </button>
                 <button

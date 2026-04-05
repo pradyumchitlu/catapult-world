@@ -19,9 +19,6 @@ export interface BuyInBreakdown {
  * buy_in = salary + staker_reward + platform_fee
  *   staker_reward = salary * min(total_staked / 10000, 0.15)
  *   platform_fee  = salary * 0.03
- *
- * The more people stake on a worker, the more it costs to hire them —
- * stakers are rewarded for correctly identifying good workers.
  */
 export async function calculateBuyIn(workerId: string, salary: number): Promise<BuyInBreakdown> {
   const { data: stakes } = await supabase
@@ -48,11 +45,7 @@ export interface PaymentResult {
 
 /**
  * Process payment when a contract is completed.
- * - Worker receives the salary (payment_amount)
- * - Stakers split the staker_reward proportionally
- * - Platform keeps the fee
- *
- * All three amounts were escrowed at activation in the buy_in_amount column.
+ * Records payment ledger entries for audit. Actual on-chain settlement is a future feature.
  */
 export async function processCompletion(contractId: string): Promise<PaymentResult> {
   const { data: contract, error: contractError } = await supabase
@@ -69,8 +62,8 @@ export async function processCompletion(contractId: string): Promise<PaymentResu
     throw new Error(`Contract is ${contract.status}, expected submitted`);
   }
 
-  const workerPayout = contract.payment_amount; // salary goes to worker
-  const stakerPool = contract.staker_payout_total || 0; // pre-calculated at activation
+  const workerPayout = contract.payment_amount;
+  const stakerPool = contract.staker_payout_total || 0;
   const platformFee = contract.platform_fee || 0;
 
   // Fetch active stakes on this worker
@@ -106,23 +99,10 @@ export async function processCompletion(contractId: string): Promise<PaymentResu
   }
 
   const stakerPayoutTotal = stakerBreakdown.reduce((sum, s) => sum + s.amount, 0);
-
-  // If no stakers claimed the reward, give it to the worker
   const unclaimed = stakerPool - stakerPayoutTotal;
   const finalWorkerPayout = workerPayout + unclaimed;
 
-  // Credit worker
-  const { data: worker } = await supabase
-    .from('users')
-    .select('wld_balance')
-    .eq('id', contract.worker_id)
-    .single();
-
-  await supabase
-    .from('users')
-    .update({ wld_balance: (worker?.wld_balance || 0) + finalWorkerPayout })
-    .eq('id', contract.worker_id);
-
+  // Record worker payment
   await supabase.from('contract_payments').insert({
     contract_id: contractId,
     recipient_id: contract.worker_id,
@@ -130,19 +110,8 @@ export async function processCompletion(contractId: string): Promise<PaymentResu
     payment_type: 'worker_payout',
   });
 
-  // Credit each staker
+  // Record staker payments
   for (const entry of stakerBreakdown) {
-    const { data: staker } = await supabase
-      .from('users')
-      .select('wld_balance')
-      .eq('id', entry.staker_id)
-      .single();
-
-    await supabase
-      .from('users')
-      .update({ wld_balance: (staker?.wld_balance || 0) + entry.amount })
-      .eq('id', entry.staker_id);
-
     await supabase.from('contract_payments').insert({
       contract_id: contractId,
       recipient_id: entry.staker_id,

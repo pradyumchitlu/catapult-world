@@ -218,7 +218,6 @@ router.post('/verify', async (req: Request, res: Response) => {
       .from('users')
       .insert({
         world_id_hash: nullifier_hash,
-        wld_balance: 1000,
       })
       .select()
       .single();

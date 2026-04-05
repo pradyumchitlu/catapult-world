@@ -142,9 +142,9 @@ export default function Navbar() {
                   fontWeight: 500,
                   color: '#2563EB',
                 }}
-                title="Veridex Credits"
+                title={user.display_name || 'User'}
               >
-                {user.wld_balance.toLocaleString()} Credits
+                {user.display_name || 'User'}
               </span>
               <div
                 style={{

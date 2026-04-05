@@ -87,14 +87,14 @@ export default function ContractCard({
         <div>
           <span style={{ color: colors.textMuted }}>Salary </span>
           <span style={{ fontWeight: 600, color: colors.primary }}>
-            {contract.payment_amount.toLocaleString()} WLD
+            {contract.payment_amount.toLocaleString()} ETH
           </span>
         </div>
         {contract.buy_in_amount != null && (
           <div>
             <span style={{ color: colors.textMuted }}>Buy-in </span>
             <span style={{ fontWeight: 500, color: colors.textPrimary }}>
-              {contract.buy_in_amount.toLocaleString()} WLD
+              {contract.buy_in_amount.toLocaleString()} ETH
             </span>
           </div>
         )}
@@ -126,15 +126,15 @@ export default function ContractCard({
         >
           <span>
             <span style={{ color: colors.textMuted }}>Worker </span>
-            <span style={{ fontWeight: 500, color: colors.success }}>{contract.worker_payout} WLD</span>
+            <span style={{ fontWeight: 500, color: colors.success }}>{contract.worker_payout} ETH</span>
           </span>
           <span>
             <span style={{ color: colors.textMuted }}>Stakers </span>
-            <span style={{ fontWeight: 500, color: colors.cyan }}>{contract.staker_payout_total} WLD</span>
+            <span style={{ fontWeight: 500, color: colors.cyan }}>{contract.staker_payout_total} ETH</span>
           </span>
           <span>
             <span style={{ color: colors.textMuted }}>Fee </span>
-            <span style={{ color: colors.textTertiary }}>{contract.platform_fee} WLD</span>
+            <span style={{ color: colors.textTertiary }}>{contract.platform_fee} ETH</span>
           </span>
         </div>
       )}
