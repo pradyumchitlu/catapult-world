@@ -8,14 +8,17 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 interface GitHubConnectButtonProps {
   onConnect: () => void;
   isConnected: boolean;
+  returnTo?: string;
 }
 
-export default function GitHubConnectButton({ onConnect, isConnected }: GitHubConnectButtonProps) {
+export default function GitHubConnectButton({ onConnect, isConnected, returnTo }: GitHubConnectButtonProps) {
   const { token } = useAuth();
 
   const handleConnect = () => {
     if (token) {
-      window.location.href = `${API_URL}/api/auth/github?token=${token}`;
+      const params = new URLSearchParams({ token });
+      if (returnTo) params.set('return_to', returnTo);
+      window.location.href = `${API_URL}/api/auth/github?${params.toString()}`;
     } else {
       onConnect();
     }

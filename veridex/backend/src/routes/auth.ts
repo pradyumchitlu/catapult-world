@@ -24,8 +24,8 @@ function frontendUrl(): string {
   return process.env.FRONTEND_URL || 'http://localhost:3000';
 }
 
-function buildOAuthState(userId: string, provider: OAuthProvider): string {
-  return jwt.sign({ userId, provider }, JWT_SECRET, { expiresIn: '10m' });
+function buildOAuthState(userId: string, provider: OAuthProvider, returnTo?: string): string {
+  return jwt.sign({ userId, provider, returnTo }, JWT_SECRET, { expiresIn: '10m' });
 }
 
 function getUserIdFromAppToken(token: string | undefined): string | null {
@@ -41,15 +41,15 @@ function getUserIdFromAppToken(token: string | undefined): string | null {
   }
 }
 
-function getUserIdFromOAuthState(state: unknown, provider: OAuthProvider): string | null {
+function decodeOAuthState(state: unknown, provider: OAuthProvider): { userId: string; returnTo?: string } | null {
   if (typeof state !== 'string') {
     return null;
   }
 
   try {
-    const decoded = jwt.verify(state, JWT_SECRET) as { userId?: string; provider?: string };
+    const decoded = jwt.verify(state, JWT_SECRET) as { userId?: string; provider?: string; returnTo?: string };
     if (decoded.provider === provider && decoded.userId) {
-      return decoded.userId;
+      return { userId: decoded.userId, returnTo: decoded.returnTo };
     }
   } catch (error) {
     console.error(`Failed to decode ${provider} OAuth state:`, error);
@@ -62,14 +62,16 @@ function redirectOAuthResult(
   res: Response,
   provider: OAuthProvider,
   status: 'connected' | 'error',
-  reason?: string
+  reason?: string,
+  returnTo?: string
 ) {
   const params = new URLSearchParams({ [provider]: status });
   if (reason) {
     params.set('reason', reason);
   }
 
-  res.redirect(`${frontendUrl()}/onboarding?${params.toString()}`);
+  const page = returnTo === 'dashboard' ? '/dashboard' : '/onboarding';
+  res.redirect(`${frontendUrl()}${page}?${params.toString()}`);
 }
 
 /**
@@ -373,6 +375,7 @@ router.get('/github', (req: Request, res: Response) => {
   const redirectUri = process.env.GITHUB_CALLBACK_URL || 'http://localhost:8000/api/auth/github/callback';
   const scope = 'read:user';
   const userToken = req.query.token as string | undefined;
+  const returnTo = req.query.return_to as string | undefined;
 
   if (!clientId) {
     return res.status(500).json({ error: 'Missing GitHub OAuth configuration' });
@@ -388,7 +391,7 @@ router.get('/github', (req: Request, res: Response) => {
   }
 
   // Sign a short-lived state token so GitHub never sees the user's app JWT.
-  const state = buildOAuthState(userId, 'github');
+  const state = buildOAuthState(userId, 'github', returnTo);
 
   const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`;
 
@@ -408,11 +411,13 @@ router.get('/github/callback', async (req: Request, res: Response) => {
     }
 
     // Decode the short-lived signed state token to get the Veridex user.
-    const userId = getUserIdFromOAuthState(state, 'github');
+    const decoded = decodeOAuthState(state, 'github');
 
-    if (!userId) {
+    if (!decoded) {
       return redirectOAuthResult(res, 'github', 'error', 'missing_state');
     }
+
+    const { userId, returnTo } = decoded;
 
     // Exchange code for access token
     const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
@@ -432,7 +437,7 @@ router.get('/github/callback', async (req: Request, res: Response) => {
 
     if (tokenData.error || !tokenData.access_token) {
       console.error('GitHub token exchange failed:', tokenData);
-      return redirectOAuthResult(res, 'github', 'error', 'token_exchange');
+      return redirectOAuthResult(res, 'github', 'error', 'token_exchange', returnTo);
     }
 
     // Fetch GitHub user info
@@ -447,7 +452,7 @@ router.get('/github/callback', async (req: Request, res: Response) => {
 
     if (!githubUser.login) {
       console.error('GitHub user fetch failed:', githubUser);
-      return redirectOAuthResult(res, 'github', 'error', 'user_fetch');
+      return redirectOAuthResult(res, 'github', 'error', 'user_fetch', returnTo);
     }
 
     const { warning } = await syncWorkerReputation(userId, {
@@ -478,7 +483,7 @@ router.get('/github/callback', async (req: Request, res: Response) => {
       console.warn('GitHub OAuth sync warning:', warning);
     }
 
-    redirectOAuthResult(res, 'github', 'connected');
+    redirectOAuthResult(res, 'github', 'connected', undefined, returnTo);
   } catch (error) {
     console.error('GitHub callback error:', error);
     redirectOAuthResult(res, 'github', 'error');

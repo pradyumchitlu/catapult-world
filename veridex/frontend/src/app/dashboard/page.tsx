@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import TrustScoreCard from '@/components/TrustScoreCard';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
 import ReviewsList from '@/components/ReviewsList';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
 import WalletBalancesCard from '@/components/WalletBalancesCard';
+import UpdateEvidenceModal from '@/components/UpdateEvidenceModal';
 import ContractCard from '@/components/ContractCard';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -89,6 +90,7 @@ function shouldRecoverProfile(profile: WorkerProfile | null): boolean {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, token, isLoading: authLoading, updateUser } = useAuth();
   const recoveryTriggeredRef = useRef(false);
   const [profile, setProfile] = useState<WorkerProfile | null>(null);
@@ -97,9 +99,9 @@ export default function DashboardPage() {
   const [stakerCount, setStakerCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [isRerunningPipeline, setIsRerunningPipeline] = useState(false);
   const [workerContracts, setWorkerContracts] = useState<Contract[]>([]);
   const [contractActionLoading, setContractActionLoading] = useState<string | null>(null);
+  const [showEvidenceModal, setShowEvidenceModal] = useState(false);
 
   const applyReputationSnapshot = (data: {
     profile: WorkerProfile | null;
@@ -121,6 +123,21 @@ export default function DashboardPage() {
     recoveryTriggeredRef.current = false;
     setSyncMessage(null);
   }, [user?.id]);
+
+  // Handle GitHub OAuth redirect back to dashboard
+  useEffect(() => {
+    const githubStatus = searchParams.get('github');
+    if (!githubStatus) return;
+
+    if (githubStatus === 'connected') {
+      setSyncMessage('GitHub connected successfully. Refreshing your data...');
+    } else if (githubStatus === 'error') {
+      setSyncMessage('GitHub connection failed. You can try again from Update Evidence.');
+    }
+
+    // Clean up the URL params
+    router.replace('/dashboard', { scroll: false });
+  }, [searchParams, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -189,22 +206,20 @@ export default function DashboardPage() {
     }
   };
 
-  const handleRerunPipeline = async () => {
-    if (!user || !token || isRerunningPipeline) return;
-    setIsRerunningPipeline(true);
-    setSyncMessage('Re-running your full verification pipeline from GitHub and saved evidence...');
+  const handlePipelineComplete = async (warning?: string | null) => {
+    setShowEvidenceModal(false);
+    setSyncMessage(warning || 'Pipeline complete. Refreshing data...');
     setProfile((current) => current ? { ...current, ingestion_status: 'processing' } : current);
 
     try {
-      const result = await triggerIngestion(user.id, token);
-      const refreshed = await getReputation(user.id);
-      applyReputationSnapshot(refreshed);
-      setSyncMessage(result.warning || null);
+      if (user) {
+        const refreshed = await getReputation(user.id);
+        applyReputationSnapshot(refreshed);
+      }
+      setSyncMessage(warning || null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to rerun verification pipeline';
+      const message = error instanceof Error ? error.message : 'Failed to refresh data';
       setSyncMessage(message);
-    } finally {
-      setIsRerunningPipeline(false);
     }
   };
 
@@ -313,9 +328,9 @@ export default function DashboardPage() {
               <span style={{ ...textSecondary, fontSize: '14px' }}>{profile.years_experience}y experience</span>
             )}
             {token && (
-              <button onClick={handleRerunPipeline} disabled={isRerunningPipeline || isSyncing} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {isRerunningPipeline || isSyncing ? <LoadingSpinner /> : <span>↻</span>}
-                Re-run Pipeline
+              <button onClick={() => setShowEvidenceModal(true)} disabled={isSyncing} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isSyncing ? <LoadingSpinner /> : <span>↻</span>}
+                Update Evidence
               </button>
             )}
           </div>
@@ -345,15 +360,71 @@ export default function DashboardPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <ScoreBreakdown components={scoreComponents} />
+              </div>
+            </div>
 
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '24px' }}>
+              <GlassCard style={{ padding: '28px' }}>
+                <span style={sectionLabel}>Stored Scores</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                  {[
+                    { label: 'Evidence', value: groupedScores.evidence },
+                    { label: 'Employer', value: groupedScores.employer },
+                    { label: 'Staking', value: groupedScores.staking },
+                    { label: 'Veridex', value: groupedScores.veridex },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{ textAlign: 'center' }}>
+                      <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '24px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>{value}</div>
+                      <div style={textMuted}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
+
+              {renderHowCalculated()}
+
+              {(profile.computed_skills?.length > 0 || profile.specializations?.length > 0) && (
                 <GlassCard style={{ padding: '28px' }}>
-                  <span style={sectionLabel}>Stored Scores</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                  {profile.specializations?.length > 0 && (
+                    <div style={{ marginBottom: profile.computed_skills?.length > 0 ? '20px' : 0 }}>
+                      <span style={sectionLabel}>Specializations</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {profile.specializations.map((specialization) => (
+                          <span key={specialization} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', fontWeight: 500, color: colors.primary, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: '8px', padding: '4px 12px' }}>
+                            {specialization}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {profile.computed_skills?.length > 0 && (
+                    <div>
+                      {profile.specializations?.length > 0 && <div style={separator} />}
+                      <span style={sectionLabel}>Skills</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {profile.computed_skills.map((skill) => (
+                          <span key={skill} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: colors.textSecondary, background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(37,99,235,0.12)', borderRadius: '8px', padding: '4px 12px' }}>
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </GlassCard>
+              )}
+
+              {hasManualEvidence && (
+                <GlassCard style={{ padding: '28px' }}>
+                  <span style={sectionLabel}>Manual Evidence Used</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '16px' }}>
                     {[
-                      { label: 'Evidence', value: groupedScores.evidence },
-                      { label: 'Employer', value: groupedScores.employer },
-                      { label: 'Staking', value: groupedScores.staking },
-                      { label: 'Veridex', value: groupedScores.veridex },
+                      { label: 'Work History', value: linkedinExperiences.length },
+                      { label: 'Projects', value: manualProjects.length },
+                      { label: 'Portfolio', value: portfolioEntries.length },
+                      { label: 'Work Samples', value: workSamples.length },
+                      { label: 'Proof-Backed', value: manualProofBackedCount },
+                      { label: 'Uploads', value: uploadedFiles.length },
                     ].map(({ label, value }) => (
                       <div key={label} style={{ textAlign: 'center' }}>
                         <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '24px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>{value}</div>
@@ -361,137 +432,83 @@ export default function DashboardPage() {
                       </div>
                     ))}
                   </div>
-                </GlassCard>
 
-                {renderHowCalculated()}
-
-                {(profile.computed_skills?.length > 0 || profile.specializations?.length > 0) && (
-                  <GlassCard style={{ padding: '28px' }}>
-                    {profile.specializations?.length > 0 && (
-                      <div style={{ marginBottom: profile.computed_skills?.length > 0 ? '20px' : 0 }}>
-                        <span style={sectionLabel}>Specializations</span>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {profile.specializations.map((specialization) => (
-                            <span key={specialization} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', fontWeight: 500, color: colors.primary, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: '8px', padding: '4px 12px' }}>
-                              {specialization}
-                            </span>
-                          ))}
-                        </div>
+                  {manualSkills.length > 0 && (
+                    <>
+                      <div style={separator} />
+                      <span style={sectionLabel}>LinkedIn Skills</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {manualSkills.slice(0, 10).map((skill) => (
+                          <span key={skill} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', fontWeight: 500, color: colors.primary, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: '8px', padding: '4px 12px' }}>
+                            {skill}
+                          </span>
+                        ))}
                       </div>
-                    )}
+                    </>
+                  )}
 
-                    {profile.computed_skills?.length > 0 && (
-                      <div>
-                        {profile.specializations?.length > 0 && <div style={separator} />}
-                        <span style={sectionLabel}>Skills</span>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {profile.computed_skills.map((skill) => (
-                            <span key={skill} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: colors.textSecondary, background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(37,99,235,0.12)', borderRadius: '8px', padding: '4px 12px' }}>
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </GlassCard>
-                )}
-
-                {hasManualEvidence && (
-                  <GlassCard style={{ padding: '28px' }}>
-                    <span style={sectionLabel}>Manual Evidence Used</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                      {[
-                        { label: 'Work History', value: linkedinExperiences.length },
-                        { label: 'Projects', value: manualProjects.length },
-                        { label: 'Portfolio', value: portfolioEntries.length },
-                        { label: 'Work Samples', value: workSamples.length },
-                        { label: 'Proof-Backed', value: manualProofBackedCount },
-                        { label: 'Uploads', value: uploadedFiles.length },
-                      ].map(({ label, value }) => (
-                        <div key={label} style={{ textAlign: 'center' }}>
-                          <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '24px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>{value}</div>
-                          <div style={textMuted}>{label}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {manualSkills.length > 0 && (
-                      <>
-                        <div style={separator} />
-                        <span style={sectionLabel}>LinkedIn Skills</span>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {manualSkills.slice(0, 10).map((skill) => (
-                            <span key={skill} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', fontWeight: 500, color: colors.primary, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: '8px', padding: '4px 12px' }}>
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </>
-                    )}
-
-                    {linkedinExperiences.length > 0 && (
-                      <>
-                        <div style={separator} />
-                        <span style={sectionLabel}>Parsed Work History</span>
-                        <div style={{ display: 'grid', gap: '10px' }}>
-                          {linkedinExperiences.slice(0, 3).map((experience, index) => (
-                            <div key={`${experience.title || 'experience'}-${index}`} style={{ borderRadius: '12px', border: '1px solid rgba(37,99,235,0.12)', background: 'rgba(255,255,255,0.55)', padding: '14px 16px' }}>
-                              <div style={{ ...headingSm, fontSize: '14px' }}>
-                                {experience.title || 'Role'}{experience.company ? ` · ${experience.company}` : ''}
-                              </div>
-                              <div style={{ ...textSecondary, fontSize: '13px', marginTop: '4px' }}>
-                                {[experience.start_date, experience.end_date].filter(Boolean).join(' - ') || 'Dates not provided'}
-                              </div>
+                  {linkedinExperiences.length > 0 && (
+                    <>
+                      <div style={separator} />
+                      <span style={sectionLabel}>Parsed Work History</span>
+                      <div style={{ display: 'grid', gap: '10px' }}>
+                        {linkedinExperiences.slice(0, 3).map((experience, index) => (
+                          <div key={`${experience.title || 'experience'}-${index}`} style={{ borderRadius: '12px', border: '1px solid rgba(37,99,235,0.12)', background: 'rgba(255,255,255,0.55)', padding: '14px 16px' }}>
+                            <div style={{ ...headingSm, fontSize: '14px' }}>
+                              {experience.title || 'Role'}{experience.company ? ` · ${experience.company}` : ''}
                             </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
+                            <div style={{ ...textSecondary, fontSize: '13px', marginTop: '4px' }}>
+                              {[experience.start_date, experience.end_date].filter(Boolean).join(' - ') || 'Dates not provided'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
 
-                    {manualEvidenceUrls.length > 0 && (
-                      <>
-                        <div style={separator} />
-                        <span style={sectionLabel}>Proof Links Used</span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {manualEvidenceUrls.map((url) => (
-                            <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: colors.primary, textDecoration: 'none', overflowWrap: 'anywhere' }}>
-                              {url}
-                            </a>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </GlassCard>
-                )}
+                  {manualEvidenceUrls.length > 0 && (
+                    <>
+                      <div style={separator} />
+                      <span style={sectionLabel}>Proof Links Used</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {manualEvidenceUrls.map((url) => (
+                          <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: colors.primary, textDecoration: 'none', overflowWrap: 'anywhere' }}>
+                            {url}
+                          </a>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </GlassCard>
+              )}
 
-                {profile.github_username && (
-                  <GlassCard style={{ padding: '28px' }}>
-                    <span style={sectionLabel}>GitHub Evidence Used</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                      {githubEvidence.map(({ label, value }) => (
-                        <div key={label} style={{ textAlign: 'center' }}>
-                          <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '24px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>{value}</div>
-                          <div style={textMuted}>{label}</div>
-                        </div>
-                      ))}
-                    </div>
+              {profile.github_username && (
+                <GlassCard style={{ padding: '28px' }}>
+                  <span style={sectionLabel}>GitHub Evidence Used</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '16px' }}>
+                    {githubEvidence.map(({ label, value }) => (
+                      <div key={label} style={{ textAlign: 'center' }}>
+                        <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '24px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>{value}</div>
+                        <div style={textMuted}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
 
-                    {topLanguages.length > 0 && (
-                      <>
-                        <div style={separator} />
-                        <span style={sectionLabel}>Top Languages</span>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {topLanguages.map((language) => (
-                            <span key={language} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', fontWeight: 500, color: colors.primary, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: '8px', padding: '4px 12px' }}>
-                              {language}
-                            </span>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </GlassCard>
-                )}
-              </div>
+                  {topLanguages.length > 0 && (
+                    <>
+                      <div style={separator} />
+                      <span style={sectionLabel}>Top Languages</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {topLanguages.map((language) => (
+                          <span key={language} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', fontWeight: 500, color: colors.primary, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: '8px', padding: '4px 12px' }}>
+                            {language}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </GlassCard>
+              )}
             </div>
 
             {workerContracts.length > 0 && (
@@ -540,6 +557,16 @@ export default function DashboardPage() {
 
         <div style={{ height: '64px' }} />
       </div>
+
+      {showEvidenceModal && user && token && profile && (
+        <UpdateEvidenceModal
+          userId={user.id}
+          token={token}
+          githubUsername={profile.github_username}
+          onClose={() => setShowEvidenceModal(false)}
+          onComplete={handlePipelineComplete}
+        />
+      )}
     </div>
   );
 }
