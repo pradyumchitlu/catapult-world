@@ -20,7 +20,19 @@
       "mcp__supabase__execute_sql",
       "Bash(grep -n:*)",
       "WebFetch(domain:openclaw.ai)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(fc-list)",
+      "Bash(mkdir -p ~/.local/share/fonts)",
+      "Read(//tmp/**)",
+      "Bash(curl -sL \"https://fonts.google.com/download?family=Fraunces\" -o fraunces.zip)",
+      "Bash(curl -sL \"https://fonts.google.com/download?family=Inter\" -o inter.zip)",
+      "Bash(unzip -qo fraunces.zip -d fraunces_font)",
+      "Bash(curl -sL \"https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf\" -o ~/.local/share/fonts/Inter.ttf)",
+      "Bash(curl -sL \"https://github.com/google/fonts/raw/main/ofl/fraunces/Fraunces%5BSOFT%2CWONK%2Copsz%2Cwght%5D.ttf\" -o ~/.local/share/fonts/Fraunces.ttf)",
+      "Bash(curl -sL \"https://github.com/google/fonts/raw/main/ofl/fraunces/Fraunces-Italic%5BSOFT%2CWONK%2Copsz%2Cwght%5D.ttf\" -o ~/.local/share/fonts/Fraunces-Italic.ttf)",
+      "Bash(fc-cache -f)"
     ]
   }
 }
