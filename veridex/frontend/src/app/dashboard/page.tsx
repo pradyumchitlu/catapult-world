@@ -13,6 +13,7 @@ import ContractCard from '@/components/ContractCard';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMiniApp } from '@/contexts/MiniAppContext';
 import { getReputation, getWorkerContracts, listAgents, submitContract, triggerIngestion } from '@/lib/api';
 import {
   col,
@@ -92,6 +93,7 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, token, isLoading: authLoading, updateUser } = useAuth();
+  const { isInWorldApp, isMiniKitReady } = useMiniApp();
   const recoveryTriggeredRef = useRef(false);
   const [profile, setProfile] = useState<WorkerProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -282,6 +284,7 @@ function DashboardContent() {
   ];
   const isSyncing = profile.ingestion_status === 'processing' || profile.ingestion_status === 'pending';
   const profileName = user?.display_name || (typeof githubData.name === 'string' && githubData.name.trim()) || (profile.github_username ? `@${profile.github_username}` : 'Your Profile');
+  const isWorldWalletLinked = user?.wallet_verification_method === 'world_app_wallet_auth';
 
   const renderHowCalculated = () => (
     <GlassCard style={{ padding: '28px' }}>
@@ -589,9 +592,21 @@ function DashboardContent() {
                 <GlassCard style={{ padding: '24px', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <span style={sectionLabel}>Wallet Status</span>
                   <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '28px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>
-                    {user?.wallet_address ? 'Connected' : 'No Wallet'}
+                    {user?.wallet_address
+                      ? isWorldWalletLinked
+                        ? 'World Wallet Linked'
+                        : 'Wallet Connected'
+                      : isInWorldApp && isMiniKitReady
+                        ? 'World Wallet Pending'
+                        : 'No Wallet'}
                   </div>
-                  <div style={textMuted}>{user?.wallet_address ? `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}` : 'Connect a wallet to stake ETH'}</div>
+                  <div style={textMuted}>
+                    {user?.wallet_address
+                      ? `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}`
+                      : isInWorldApp && isMiniKitReady
+                        ? 'Verify once and Veridex can link your World wallet automatically.'
+                        : 'Connect a wallet to stake and receive payouts on World Chain.'}
+                  </div>
                 </GlassCard>
 
                 <GlassCard style={{ padding: '24px', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>

@@ -50,6 +50,8 @@ function formatBalance(value: string | null, digits = 4) {
 
 export default function WalletBalancesCard({ token, user, onUserUpdated }: WalletBalancesCardProps) {
   const { isInWorldApp, isMiniKitReady } = useMiniApp();
+  const isWorldWalletLinked = user.wallet_verification_method === 'world_app_wallet_auth';
+  const showWalletAction = !user.wallet_address || !isWorldWalletLinked;
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [newTokenAddress, setNewTokenAddress] = useState('');
   const [balances, setBalances] = useState<WalletBalancesResponse | null>(null);
@@ -205,14 +207,16 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
           </div>
           <p style={textSecondary}>
             {user.wallet_address
-              ? `Connected Wallet: ${shortenAddress(user.wallet_address)}`
+              ? isWorldWalletLinked
+                ? `World Wallet: ${shortenAddress(user.wallet_address)}`
+                : `Connected Wallet: ${shortenAddress(user.wallet_address)}`
               : isInWorldApp && isMiniKitReady
-                ? 'Link your World wallet to view live World Chain balances.'
+                ? 'Your World wallet can be linked natively for balances, staking, and payouts.'
                 : 'Connect wallet to view real World Chain balances.'}
           </p>
           {user.wallet_verified_at && (
             <p style={{ ...textMuted, marginTop: '6px' }}>
-              Verified {new Date(user.wallet_verified_at).toLocaleString()}
+              {isWorldWalletLinked ? 'Linked via World App Wallet Auth' : 'Verified'} {new Date(user.wallet_verified_at).toLocaleString()}
             </p>
           )}
         </div>
@@ -228,20 +232,24 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
               {isLoadingBalances ? 'Refreshing...' : 'Refresh'}
             </button>
           )}
-          <button
-            onClick={handleConnectWallet}
-            className="btn-primary"
-            style={{ padding: '10px 16px' }}
-            disabled={isConnecting || !token}
-          >
-            {isConnecting
-              ? 'Connecting...'
-              : user.wallet_address
-                ? 'Reconnect Wallet'
-                : isInWorldApp && isMiniKitReady
-                  ? 'Link World Wallet'
-                  : 'Connect Wallet'}
-          </button>
+          {showWalletAction && (
+            <button
+              onClick={handleConnectWallet}
+              className="btn-primary"
+              style={{ padding: '10px 16px' }}
+              disabled={isConnecting || !token}
+            >
+              {isConnecting
+                ? 'Connecting...'
+                : user.wallet_address
+                  ? isInWorldApp && isMiniKitReady
+                    ? 'Link World Wallet'
+                    : 'Reconnect Wallet'
+                  : isInWorldApp && isMiniKitReady
+                    ? 'Link World Wallet'
+                    : 'Connect Wallet'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -272,7 +280,7 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
         >
           <p style={textSecondary}>
             {isInWorldApp && isMiniKitReady
-              ? 'Veridex will verify your World wallet through World App Wallet Auth, then read your balances from World Chain.'
+              ? 'After World ID verification, Veridex can link your World wallet through World App Wallet Auth and use it as your native balance and payout address on World Chain.'
               : 'Veridex will verify wallet ownership with a signed message, then read your on-chain native and ERC-20 balances through backend-owned World Chain RPC.'}
           </p>
         </div>

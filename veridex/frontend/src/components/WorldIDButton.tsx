@@ -7,10 +7,9 @@ import type { IDKitResult } from '@worldcoin/idkit';
 import { verifyWorldId } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useMiniApp } from '@/contexts/MiniAppContext';
-import { loginWithMiniKitWorldWallet } from '@/lib/minikit';
 
 interface WorldIDButtonProps {
-  onSuccess: (result: { user: any; isNewUser: boolean; token: string }) => void;
+  onSuccess: (result: { user: any; isNewUser: boolean; token: string }) => void | Promise<void>;
   onError: (error: string) => void;
   className?: string;
   children?: React.ReactNode;
@@ -30,7 +29,7 @@ function WorldIdIcon() {
 export default function WorldIDButton({ onSuccess, onError, className, children }: WorldIDButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const { isInWorldApp, isMiniKitReady, isDetectingMiniApp } = useMiniApp();
+  const { isInWorldApp, isDetectingMiniApp } = useMiniApp();
   const [rpContext, setRpContext] = useState<any>(null);
 
   // Dev mode: mock verification without World ID
@@ -48,7 +47,7 @@ export default function WorldIDButton({ onSuccess, onError, className, children 
         };
 
         const result = await verifyWorldId(mockProof);
-        onSuccess(result);
+        await onSuccess(result);
       } catch (error) {
         onError(error instanceof Error ? error.message : 'Verification failed');
       } finally {
@@ -97,45 +96,6 @@ export default function WorldIDButton({ onSuccess, onError, className, children 
     );
   }
 
-  if (isInWorldApp && isMiniKitReady) {
-    const handleWorldAppLogin = async () => {
-      setIsLoading(true);
-      try {
-        const result = await loginWithMiniKitWorldWallet();
-        onSuccess(result);
-      } catch (error) {
-        onError(error instanceof Error ? error.message : 'World App sign-in failed');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    return (
-      <button
-        onClick={handleWorldAppLogin}
-        disabled={isLoading}
-        className={cn(
-          'btn-primary py-4 px-6 rounded-xl text-lg flex items-center justify-center gap-3 disabled:opacity-50',
-          className
-        )}
-      >
-        {isLoading ? (
-          <>
-            <LoadingSpinner />
-            <span>Signing in...</span>
-          </>
-        ) : (
-          children || (
-            <>
-              <WorldIdIcon />
-              <span>Continue with World App</span>
-            </>
-          )
-        )}
-      </button>
-    );
-  }
-
   const handleOpen = async () => {
     try {
       // Fetch a fresh signed rp_context from backend each time widget opens
@@ -154,7 +114,7 @@ export default function WorldIDButton({ onSuccess, onError, className, children 
       setIsOpen(false);
       // Send the full IDKit result — it already contains the correct nonce, action, and responses
       const apiResult = await verifyWorldId(result);
-      onSuccess(apiResult);
+      await onSuccess(apiResult);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Verification failed');
     } finally {

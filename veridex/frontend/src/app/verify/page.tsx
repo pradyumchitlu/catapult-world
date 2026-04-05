@@ -14,6 +14,7 @@ import {
   textSecondary,
   gradientText,
 } from '@/lib/styles';
+import { linkWorldWalletWithMiniKit } from '@/lib/minikit';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMiniApp } from '@/contexts/MiniAppContext';
 
@@ -23,13 +24,14 @@ export default function VerifyPage() {
   const { isInWorldApp, isMiniKitReady } = useMiniApp();
   const [error, setError] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isFinalizingWorldWallet, setIsFinalizingWorldWallet] = useState(false);
   const redirectTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!isLoading && user && !isRedirecting) {
+    if (!isLoading && user && !isRedirecting && !isFinalizingWorldWallet) {
       router.replace('/dashboard');
     }
-  }, [user, isLoading, router, isRedirecting]);
+  }, [user, isLoading, router, isRedirecting, isFinalizingWorldWallet]);
 
   useEffect(() => {
     return () => {
@@ -57,9 +59,23 @@ export default function VerifyPage() {
     }
   };
 
-  const handleVerificationSuccess = (result: { user: any; isNewUser: boolean; token: string }) => {
+  const handleVerificationSuccess = async (result: { user: any; isNewUser: boolean; token: string }) => {
     setError(null);
     login(result.token, result.user);
+
+    if (isInWorldApp && isMiniKitReady && !result.user.wallet_address) {
+      setIsFinalizingWorldWallet(true);
+
+      try {
+        const walletResult = await linkWorldWalletWithMiniKit(result.token);
+        login(result.token, walletResult.user);
+      } catch (walletError) {
+        console.warn('Failed to auto-link World wallet after verification:', walletError);
+      } finally {
+        setIsFinalizingWorldWallet(false);
+      }
+    }
+
     navigateAfterVerification(result.isNewUser ? '/onboarding' : '/dashboard');
   };
 
@@ -100,10 +116,12 @@ export default function VerifyPage() {
                 margin: '0',
               }}
             >
-              {isRedirecting
+              {isFinalizingWorldWallet
+                ? 'Verification succeeded. Linking your World wallet so staking and payouts work natively in World App.'
+                : isRedirecting
                 ? 'Verification succeeded. Taking you into Veridex now.'
                 : isInWorldApp && isMiniKitReady
-                  ? 'Continue with your World wallet inside World App, then use Wallet Auth and MiniKit transactions for staking.'
+                  ? 'Verify with World ID inside World App, then Veridex will link your World wallet for native balances, staking, and payouts.'
                   : 'Prove you&apos;re a unique human with World ID. This is the foundation of your trust profile - one person, one identity.'}
             </p>
 
