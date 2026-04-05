@@ -974,8 +974,10 @@ function OnboardingContent() {
                     <label style={fieldLabelStyle}>LinkedIn Profile PDF</label>
                     <input
                       key={linkedinInputKey}
+                      id="linkedin-file-input"
                       type="file"
                       accept=".pdf,.docx,.txt,.md"
+                      style={{ display: 'none' }}
                       onChange={(event) => {
                         const file = event.target.files?.[0] || null;
                         setLinkedinFile(file);
@@ -984,6 +986,40 @@ function OnboardingContent() {
                         );
                       }}
                     />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('linkedin-file-input')?.click()}
+                      style={{
+                        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: colors.primary,
+                        background: 'rgba(37,99,235,0.06)',
+                        border: '1.5px dashed rgba(37,99,235,0.3)',
+                        borderRadius: '10px',
+                        padding: '10px 20px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(37,99,235,0.12)';
+                        e.currentTarget.style.borderColor = 'rgba(37,99,235,0.5)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(37,99,235,0.06)';
+                        e.currentTarget.style.borderColor = 'rgba(37,99,235,0.3)';
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      Choose File
+                    </button>
                     <p style={{ ...textSecondary, fontSize: '12px', marginTop: '8px' }}>
                       Best path for prior work history: upload a LinkedIn PDF export and we&apos;ll deterministically extract experience and skills.
                     </p>
@@ -1003,9 +1039,11 @@ function OnboardingContent() {
                     <label style={fieldLabelStyle}>Supporting Documents</label>
                     <input
                       key={supportingInputKey}
+                      id="supporting-file-input"
                       type="file"
                       multiple
                       accept=".pdf,.docx,.txt,.md"
+                      style={{ display: 'none' }}
                       onChange={(event) => {
                         const files = Array.from(event.target.files || []);
                         setSupportingFiles(files);
@@ -1014,6 +1052,40 @@ function OnboardingContent() {
                         );
                       }}
                     />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('supporting-file-input')?.click()}
+                      style={{
+                        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: colors.primary,
+                        background: 'rgba(37,99,235,0.06)',
+                        border: '1.5px dashed rgba(37,99,235,0.3)',
+                        borderRadius: '10px',
+                        padding: '10px 20px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(37,99,235,0.12)';
+                        e.currentTarget.style.borderColor = 'rgba(37,99,235,0.5)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(37,99,235,0.06)';
+                        e.currentTarget.style.borderColor = 'rgba(37,99,235,0.3)';
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      Choose Files
+                    </button>
                     <p style={{ ...textSecondary, fontSize: '12px', marginTop: '8px' }}>
                       Upload supporting docs for projects, case studies, or proof artifacts.
                     </p>

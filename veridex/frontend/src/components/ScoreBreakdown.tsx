@@ -1,6 +1,7 @@
 'use client';
 
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import GlassCard from '@/components/GlassCard';
 import { sectionLabel, headingSm, colors } from '@/lib/styles';
 import type { ScoreComponents } from '@/types';
 
@@ -46,10 +47,7 @@ export default function ScoreBreakdown({ components }: ScoreBreakdownProps) {
   }));
 
   return (
-    <div
-      className="rounded-2xl border border-white/40 bg-white/30 backdrop-blur-xl shadow-[0_8px_32px_rgba(37,99,235,0.06)]"
-      style={{ padding: '28px' }}
-    >
+    <GlassCard style={{ padding: '28px' }}>
       <span style={sectionLabel}>Score Breakdown</span>
 
       {/* Radar Chart — only render when there is non-zero data.
@@ -138,6 +136,6 @@ export default function ScoreBreakdown({ components }: ScoreBreakdownProps) {
           </div>
         ))}
       </div>
-    </div>
+    </GlassCard>
   );
 }

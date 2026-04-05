@@ -1,5 +1,6 @@
 'use client';
 
+import GlassCard from '@/components/GlassCard';
 import { gradientText, colors } from '@/lib/styles';
 
 interface TrustScoreCardProps {
@@ -36,11 +37,19 @@ export default function TrustScoreCard({ score, size = 'lg', minHeight }: TrustS
   const scoreColor = getScoreColor(score);
 
   return (
-    <div
-      className="rounded-2xl border border-white/40 bg-white/30 backdrop-blur-xl shadow-[0_8px_32px_rgba(37,99,235,0.06)]"
-      style={{ padding: pad, minHeight }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: minHeight ? `calc(${typeof minHeight === 'number' ? `${minHeight}px` : minHeight} - (${pad} * 2))` : undefined, height: '100%' }}>
+    <GlassCard style={{ padding: pad, minHeight }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: minHeight
+            ? `calc(${typeof minHeight === 'number' ? `${minHeight}px` : minHeight} - (${pad} * 2))`
+            : undefined,
+          height: '100%',
+        }}
+      >
         {/* Ring */}
         <div style={{ position: 'relative', width: ring, height: ring, marginBottom: '16px' }}>
           <svg
@@ -122,6 +131,6 @@ export default function TrustScoreCard({ score, size = 'lg', minHeight }: TrustS
           </div>
         </div>
       </div>
-    </div>
+    </GlassCard>
   );
 }
