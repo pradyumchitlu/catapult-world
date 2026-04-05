@@ -1,40 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import GlassCard from './GlassCard';
 import LoadingSpinner from './LoadingSpinner';
 import { createWalletChallenge, getWalletBalances, verifyWalletSignature } from '@/lib/api';
 import { connectInjectedWallet, signWalletMessage } from '@/lib/wallet';
 import { colors, gradientText, sectionLabel, textMuted, textSecondary } from '@/lib/styles';
-import type { TokenBalance, User, WalletBalancesResponse } from '@/types';
+import type { User, WalletBalancesResponse } from '@/types';
 import { useMiniApp } from '@/contexts/MiniAppContext';
 import { linkWorldWalletWithMiniKit } from '@/lib/minikit';
-
-const DEFAULT_MAINNET_TRACKED_TOKENS = [
-  '0x2cfc85d8e48f8eab294be644d9e25c3030863003', // WLD
-  '0x79A02482A880bCE3F13e09Da970dC34db4CD24d1', // USDC
-  '0x4200000000000000000000000000000000000006', // WETH
-  '0x0555E30da8f98308EdB960aa94C0Db47230d2B9c', // WBTC
-  '0x6ecF2133E2C9751C5a7297aB31310EeD6268D5ae', // sDAI
-] as const;
-
-function getTrackedTokenAddresses() {
-  const configured = (
-    process.env.NEXT_PUBLIC_WORLDCHAIN_ERC20_TOKENS ||
-    process.env.NEXT_PUBLIC_WORLDCHAIN_TRACKED_TOKENS ||
-    ''
-  )
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-  if (configured.length > 0) {
-    return configured;
-  }
-
-  const chainEnv = process.env.NEXT_PUBLIC_CHAIN_ENV?.toLowerCase();
-  return chainEnv === 'testnet' ? [] : [...DEFAULT_MAINNET_TRACKED_TOKENS];
-}
 
 interface WalletBalancesCardProps {
   token: string | null;
@@ -72,7 +46,6 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
   const { isInWorldApp, isMiniKitReady } = useMiniApp();
   const isWorldWalletLinked = user.wallet_verification_method === 'world_app_wallet_auth';
   const showWalletAction = !user.wallet_address || !isWorldWalletLinked;
-  const trackedTokens = useMemo(() => getTrackedTokenAddresses(), []);
   const [balances, setBalances] = useState<WalletBalancesResponse | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
@@ -86,7 +59,6 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
     setError(null);
     try {
       const result = await getWalletBalances(token, {
-        tokens: trackedTokens,
         includeNative: true,
       });
       setBalances(result);
@@ -101,7 +73,7 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
     if (!user.wallet_address || !token) return;
     loadBalances();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.wallet_address, token, trackedTokens.join(',')]);
+  }, [user.wallet_address, token]);
 
   const handleConnectWallet = async () => {
     if (!token) return;
@@ -143,11 +115,9 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
     }
   };
 
-  const tokenRows = useMemo(() => balances?.tokens || [], [balances]);
-
   return (
     <GlassCard style={{ padding: '28px' }}>
-      <span style={sectionLabel}>On-chain Balances</span>
+      <span style={sectionLabel}>Wallet Balance</span>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
         <div>
           <div
@@ -237,7 +207,7 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
           <p style={textSecondary}>
             {isInWorldApp && isMiniKitReady
               ? 'After World ID verification, Veridex can link your World wallet through World App Wallet Auth and use it as your native balance and payout address on World Chain.'
-              : 'Veridex will verify wallet ownership with a signed message, then read your on-chain native and ERC-20 balances through backend-owned World Chain RPC.'}
+              : 'Veridex will verify wallet ownership with a signed message, then read your native ETH balance on World Chain through backend-owned RPC.'}
           </p>
         </div>
       )}
@@ -274,54 +244,6 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
                   </div>
                 </div>
               )}
-
-              {balances && !error && tokenRows.length === 0 && (
-                <div
-                  style={{
-                    borderRadius: '14px',
-                    padding: '18px',
-                    background: 'rgba(255,255,255,0.42)',
-                    border: '1px dashed rgba(37,99,235,0.16)',
-                    color: colors.textSecondary,
-                  }}
-                >
-                  {trackedTokens.length > 0
-                    ? 'No tracked ERC-20 balances found for this wallet yet.'
-                    : 'No default ERC-20 token list is configured for this environment.'}
-                </div>
-              )}
-
-              {tokenRows.map((tokenRow: TokenBalance) => (
-                <div
-                  key={tokenRow.token_address}
-                  style={{
-                    borderRadius: '14px',
-                    padding: '18px',
-                    background: 'rgba(255,255,255,0.55)',
-                    border: '1px solid rgba(37,99,235,0.14)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, color: colors.textPrimary }}>
-                        {tokenRow.symbol} {!tokenRow.is_valid && <span style={{ color: colors.rose }}>(Invalid)</span>}
-                      </div>
-                      <div style={textMuted}>{tokenRow.name}</div>
-                      <div style={{ ...textMuted, marginTop: '4px' }}>{tokenRow.token_address}</div>
-                      {tokenRow.error && (
-                        <div style={{ ...textMuted, color: colors.rose, marginTop: '6px' }}>{tokenRow.error}</div>
-                      )}
-                    </div>
-
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 600, color: colors.textPrimary }}>
-                        {tokenRow.formatted_balance !== null ? `${formatBalance(tokenRow.formatted_balance)} ${tokenRow.symbol}` : 'Unavailable'}
-                      </div>
-                      <div style={{ ...textMuted, marginTop: '8px' }}>Tracked ERC-20</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
 
               {balances?.fetched_at && (
                 <p style={textMuted}>Last synced {new Date(balances.fetched_at).toLocaleString()}</p>
