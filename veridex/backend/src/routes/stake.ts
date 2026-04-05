@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import supabase from '../lib/supabase';
+import { syncWorkerReputation } from '../services/reputationIngestion';
 
 const router = Router();
 
@@ -76,6 +77,12 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
         .update({ wld_balance: staker.wld_balance })
         .eq('id', stakerId);
       throw stakeError;
+    }
+
+    try {
+      await syncWorkerReputation(workerId, { refreshGithub: false });
+    } catch (scoreError) {
+      console.error('Score recomputation after stake failed:', scoreError);
     }
 
     return res.json({
@@ -180,6 +187,12 @@ router.post('/withdraw', requireAuth, async (req: AuthenticatedRequest, res: Res
       .from('users')
       .update({ wld_balance: (staker?.wld_balance || 0) + stake.amount })
       .eq('id', stakerId);
+
+    try {
+      await syncWorkerReputation(stake.worker_id, { refreshGithub: false });
+    } catch (scoreError) {
+      console.error('Score recomputation after withdrawal failed:', scoreError);
+    }
 
     return res.json({
       success: true,

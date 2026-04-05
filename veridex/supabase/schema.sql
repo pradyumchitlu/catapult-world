@@ -31,12 +31,18 @@ CREATE TABLE worker_profiles (
   overall_trust_score INTEGER DEFAULT 0,
   score_components JSONB DEFAULT '{}',
   -- score_components shape: {
-  --   developer_competence: number,    (0 if no GitHub connected)
-  --   collaboration: number,
+  --   identity_assurance: number,
+  --   evidence_depth: number,
   --   consistency: number,
-  --   specialization_depth: number,
-  --   activity_recency: number,
-  --   peer_trust: number               (from staked reviews)
+  --   recency: number,
+  --   employer_outcomes: number,
+  --   staking: number,
+  --   grouped_scores: {
+  --     evidence: number,
+  --     employer: number,
+  --     staking: number,
+  --     veridex: number
+  --   }
   -- }
   ingestion_status TEXT DEFAULT 'pending',  -- pending, processing, completed, failed
   created_at TIMESTAMPTZ DEFAULT now(),

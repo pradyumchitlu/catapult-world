@@ -4,6 +4,7 @@ import {
 } from './github';
 import { computeOverallScore, type ScoreResult } from './scoring';
 import { ensureWorkerProfile, type WorkerProfileRecord } from './reputationProfile';
+import { loadReputationScoringInputs } from './reputationScoreInputs';
 
 type JsonRecord = Record<string, any>;
 
@@ -11,6 +12,7 @@ export interface SyncWorkerReputationOptions {
   presetGithubUsername?: string | null;
   presetGithubData?: JsonRecord;
   githubAccessToken?: string;
+  refreshGithub?: boolean;
 }
 
 export interface SyncWorkerReputationResult {
@@ -90,26 +92,24 @@ export async function syncWorkerReputation(
     .eq('id', profile.id);
 
   try {
-    const { data: reviews } = await supabase
-      .from('reviews')
-      .select('*')
-      .eq('worker_id', userId)
-      .eq('status', 'active');
+    const { reviews, stakes, employerReviews } = await loadReputationScoringInputs(userId);
 
     const githubUsername = options.presetGithubUsername !== undefined
       ? options.presetGithubUsername
       : profile.github_username;
+    const shouldRefreshGithub = options.refreshGithub !== false;
 
     const hasManualEvidence =
       hasMeaningfulData(profile.linkedin_data) || hasMeaningfulData(profile.other_platforms);
-    const hasReviewEvidence = (reviews || []).length > 0;
+    const hasReviewEvidence = reviews.length > 0;
+    const hasStakeEvidence = stakes.length > 0;
 
     let githubData = sanitizeGithubData(
       mergeJson(profile.github_data || {}, options.presetGithubData || {})
     );
     let warning: string | null = null;
 
-    if (githubUsername) {
+    if (githubUsername && shouldRefreshGithub) {
       try {
         const { userProfile, contributions, collaboration } = await fetchGitHubSignals(
           githubUsername,
@@ -129,7 +129,7 @@ export async function syncWorkerReputation(
         warning = 'GitHub refresh failed, but the score was recomputed from cached OAuth or manual evidence.';
         console.error('GitHub refresh warning:', githubError);
       }
-    } else if (!hasMeaningfulData(githubData) && !hasManualEvidence && !hasReviewEvidence) {
+    } else if (!hasMeaningfulData(githubData) && !hasManualEvidence && !hasReviewEvidence && !hasStakeEvidence) {
       throw new Error('No reputation evidence found. Connect GitHub or upload LinkedIn/project data first.');
     }
 
@@ -139,7 +139,9 @@ export async function syncWorkerReputation(
         linkedinData: profile.linkedin_data,
         otherPlatforms: profile.other_platforms,
       },
-      reviews || []
+      reviews,
+      stakes,
+      employerReviews
     );
 
     const { data: updatedProfile, error: updateError } = await supabase
@@ -151,7 +153,10 @@ export async function syncWorkerReputation(
         specializations: scoreResult.specializations,
         years_experience: scoreResult.years_experience,
         overall_trust_score: scoreResult.overall,
-        score_components: scoreResult.components,
+        score_components: {
+          ...scoreResult.components,
+          grouped_scores: scoreResult.groupedScores,
+        },
         ingestion_status: 'completed',
         updated_at: new Date().toISOString(),
       })

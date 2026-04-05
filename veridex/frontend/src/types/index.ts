@@ -10,12 +10,18 @@ export interface User {
 }
 
 export interface ScoreComponents {
-  developer_competence: number;
-  collaboration: number;
+  identity_assurance: number;
+  evidence_depth: number;
   consistency: number;
-  specialization_depth: number;
-  activity_recency: number;
-  peer_trust: number;
+  recency: number;
+  employer_outcomes: number;
+  staking: number;
+  grouped_scores?: {
+    evidence: number;
+    employer: number;
+    staking: number;
+    veridex: number;
+  };
 }
 
 export interface WorkerProfile {
@@ -33,6 +39,65 @@ export interface WorkerProfile {
   ingestion_status: 'pending' | 'processing' | 'completed' | 'failed';
   created_at: string;
   updated_at: string;
+}
+
+export interface EvidenceUploadedFile {
+  bucket: string;
+  path: string;
+  file_name: string;
+  original_name: string;
+  content_type: string;
+  size_bytes: number;
+  uploaded_at: string;
+  kind: 'linkedin_pdf' | 'supporting_document';
+}
+
+export interface EvidenceExperience {
+  title?: string;
+  company?: string;
+  start_date?: string;
+  end_date?: string;
+  description?: string;
+  skills?: string[];
+  technologies?: string[];
+}
+
+export interface EvidenceProject {
+  title?: string;
+  role?: string;
+  description?: string;
+  url?: string;
+  proof_urls?: string[];
+  start_date?: string;
+  end_date?: string;
+  updated_at?: string;
+  skills?: string[];
+  technologies?: string[];
+  tags?: string[];
+  source_file?: EvidenceUploadedFile;
+}
+
+export interface EvidenceUploadDraft {
+  linkedin_data: {
+    experiences?: EvidenceExperience[];
+    skills?: string[];
+    top_skills?: string[];
+    specializations?: string[];
+    source_type?: string;
+    source_file?: EvidenceUploadedFile;
+    uploaded_at?: string;
+    raw_text_excerpt?: string;
+    [key: string]: any;
+  };
+  projects: EvidenceProject[];
+  other_platforms: {
+    portfolio?: EvidenceProject[];
+    work_samples?: EvidenceProject[];
+    uploaded_files?: EvidenceUploadedFile[];
+    [key: string]: any;
+  };
+  uploaded_files: EvidenceUploadedFile[];
+  warnings: string[];
 }
 
 export interface Review {

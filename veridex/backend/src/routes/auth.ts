@@ -4,7 +4,6 @@ import { signRequest } from '@worldcoin/idkit-server';
 import supabase from '../lib/supabase';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
 import { syncWorkerReputation } from '../services/reputationIngestion';
-import { ensureWorkerProfile, mergeLinkedInData } from '../services/reputationProfile';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'veridex-dev-secret';
@@ -12,27 +11,7 @@ const WORLD_APP_ID = process.env.WORLD_APP_ID || '';
 const WORLD_RP_ID = process.env.WORLD_RP_ID || '';
 const WORLD_ID_PRIVATE_KEY = process.env.WORLD_ID_PRIVATE_KEY || '';
 
-type OAuthProvider = 'github' | 'linkedin';
-
-interface LinkedInTokenResponse {
-  access_token?: string;
-  expires_in?: number;
-  id_token?: string;
-  error?: string;
-  error_description?: string;
-}
-
-interface LinkedInUserInfo {
-  sub?: string;
-  name?: string;
-  given_name?: string;
-  family_name?: string;
-  picture?: string;
-  locale?: string;
-  email?: string;
-  email_verified?: boolean;
-  [key: string]: any;
-}
+type OAuthProvider = 'github';
 
 function frontendUrl(): string {
   return process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -84,12 +63,6 @@ function redirectOAuthResult(
   }
 
   res.redirect(`${frontendUrl()}/onboarding?${params.toString()}`);
-}
-
-function optionalString(value: unknown): string | null {
-  return typeof value === 'string' && value.trim().length > 0
-    ? value.trim()
-    : null;
 }
 
 /**
@@ -437,138 +410,6 @@ router.get('/github/callback', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('GitHub callback error:', error);
     redirectOAuthResult(res, 'github', 'error');
-  }
-});
-
-/**
- * GET /api/auth/linkedin
- * Initiate LinkedIn OAuth/OIDC flow
- */
-router.get('/linkedin', (req: Request, res: Response) => {
-  const clientId = process.env.LINKEDIN_CLIENT_ID;
-  const redirectUri = process.env.LINKEDIN_CALLBACK_URL || 'http://localhost:8000/api/auth/linkedin/callback';
-  const userToken = req.query.token as string | undefined;
-  const userId = getUserIdFromAppToken(userToken);
-
-  if (!clientId) {
-    return redirectOAuthResult(res, 'linkedin', 'error', 'missing_config');
-  }
-
-  if (!userId) {
-    return redirectOAuthResult(res, 'linkedin', 'error', userToken ? 'invalid_token' : 'missing_token');
-  }
-
-  const scope = 'openid profile email';
-  const state = buildOAuthState(userId, 'linkedin');
-  const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}`;
-
-  res.redirect(authUrl);
-});
-
-/**
- * GET /api/auth/linkedin/callback
- * Handle LinkedIn OIDC callback
- */
-router.get('/linkedin/callback', async (req: Request, res: Response) => {
-  try {
-    const { code, state, error } = req.query;
-    const clientId = process.env.LINKEDIN_CLIENT_ID;
-    const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
-    const redirectUri = process.env.LINKEDIN_CALLBACK_URL || 'http://localhost:8000/api/auth/linkedin/callback';
-
-    if (error) {
-      return redirectOAuthResult(res, 'linkedin', 'error', 'oauth_denied');
-    }
-
-    if (!clientId || !clientSecret) {
-      return redirectOAuthResult(res, 'linkedin', 'error', 'missing_config');
-    }
-
-    if (!code) {
-      return redirectOAuthResult(res, 'linkedin', 'error', 'missing_code');
-    }
-
-    const userId = getUserIdFromOAuthState(state, 'linkedin');
-    if (!userId) {
-      return redirectOAuthResult(res, 'linkedin', 'error', 'missing_state');
-    }
-
-    const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/json',
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: String(code),
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-      }).toString(),
-    });
-
-    const tokenData = (await tokenRes.json()) as LinkedInTokenResponse;
-    if (!tokenRes.ok || tokenData.error || !tokenData.access_token) {
-      console.error('LinkedIn token exchange failed:', tokenData);
-      return redirectOAuthResult(res, 'linkedin', 'error', 'token_exchange');
-    }
-
-    const userInfoRes = await fetch('https://api.linkedin.com/v2/userinfo', {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-        Accept: 'application/json',
-      },
-    });
-
-    const linkedinUser = (await userInfoRes.json()) as LinkedInUserInfo;
-    if (!userInfoRes.ok || !linkedinUser.sub) {
-      console.error('LinkedIn user fetch failed:', linkedinUser);
-      return redirectOAuthResult(res, 'linkedin', 'error', 'user_fetch');
-    }
-
-    const profile = await ensureWorkerProfile(userId);
-    const mergedLinkedInData = mergeLinkedInData(profile.linkedin_data, {
-      provider: 'linkedin_oidc',
-      verification: {
-        provider: 'linkedin',
-        method: 'oidc',
-        basic_profile_verified: true,
-      },
-      sub: linkedinUser.sub,
-      name: optionalString(linkedinUser.name),
-      given_name: optionalString(linkedinUser.given_name),
-      family_name: optionalString(linkedinUser.family_name),
-      email: optionalString(linkedinUser.email),
-      email_verified: typeof linkedinUser.email_verified === 'boolean'
-        ? linkedinUser.email_verified
-        : null,
-      picture: optionalString(linkedinUser.picture),
-      locale: optionalString(linkedinUser.locale),
-      oauth_connected_at: new Date().toISOString(),
-    });
-
-    const { error: updateError } = await supabase
-      .from('worker_profiles')
-      .update({
-        linkedin_data: mergedLinkedInData,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', profile.id);
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    const { warning } = await syncWorkerReputation(userId);
-    if (warning) {
-      console.warn('LinkedIn OAuth sync warning:', warning);
-    }
-
-    redirectOAuthResult(res, 'linkedin', 'connected');
-  } catch (error) {
-    console.error('LinkedIn callback error:', error);
-    redirectOAuthResult(res, 'linkedin', 'error');
   }
 });
 

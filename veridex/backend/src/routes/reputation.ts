@@ -1,3 +1,5 @@
+import path from 'path';
+import multer from 'multer';
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import supabase from '../lib/supabase';
@@ -8,8 +10,19 @@ import {
   mergeOtherPlatforms,
 } from '../services/reputationProfile';
 import { syncWorkerReputation } from '../services/reputationIngestion';
+import { extractEvidenceUploadDraft } from '../services/evidenceExtraction';
+import { storeEvidenceFile } from '../services/evidenceStorage';
+import { loadReputationScoringInputs } from '../services/reputationScoreInputs';
 
 const router = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    files: 6,
+    fileSize: 10 * 1024 * 1024,
+  },
+});
+const SUPPORTED_EVIDENCE_EXTENSIONS = new Set(['.pdf', '.docx', '.txt', '.md']);
 
 function hasMeaningfulData(value: unknown): boolean {
   if (!value) {
@@ -48,6 +61,127 @@ function normalizeGithubUsername(value: unknown): string | null | undefined {
   return trimmed ? trimmed : null;
 }
 
+function parseStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return [...new Set(value.flatMap((entry) => parseStringList(entry)))];
+  }
+
+  if (typeof value !== 'string') {
+    return [];
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return parseStringList(parsed);
+    } catch (error) {
+      // Fall through to newline parsing.
+    }
+  }
+
+  return [...new Set(
+    trimmed
+      .split(/\r?\n|,/)
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+  )];
+}
+
+function ensureAuthorizedUser(req: AuthenticatedRequest, requestedUserId?: unknown): string | null {
+  if (!req.userId) {
+    return null;
+  }
+
+  if (requestedUserId === undefined || requestedUserId === null || requestedUserId === '') {
+    return req.userId;
+  }
+
+  if (typeof requestedUserId !== 'string' || requestedUserId !== req.userId) {
+    return null;
+  }
+
+  return req.userId;
+}
+
+function isSupportedEvidenceFile(file: Express.Multer.File): boolean {
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  return SUPPORTED_EVIDENCE_EXTENSIONS.has(ext);
+}
+
+/**
+ * POST /api/reputation/evidence/upload
+ * Upload files and URLs, extract deterministic evidence, and return a draft payload.
+ */
+router.post(
+  '/evidence/upload',
+  requireAuth,
+  upload.fields([
+    { name: 'linkedin_file', maxCount: 1 },
+    { name: 'supporting_files', maxCount: 5 },
+  ]),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const files = (req.files || {}) as Record<string, Express.Multer.File[]>;
+      const linkedinFile = files.linkedin_file?.[0] || null;
+      const supportingFiles = files.supporting_files || [];
+      const allFiles = [linkedinFile, ...supportingFiles].filter(
+        (file): file is Express.Multer.File => Boolean(file)
+      );
+      const portfolioUrls = parseStringList(req.body.portfolio_urls);
+      const projectUrls = parseStringList(req.body.project_urls);
+
+      if (allFiles.length === 0 && portfolioUrls.length === 0 && projectUrls.length === 0) {
+        return res.status(400).json({ error: 'Provide at least one file or URL to analyze' });
+      }
+
+      const unsupportedFile = allFiles.find((file) => !isSupportedEvidenceFile(file));
+      if (unsupportedFile) {
+        return res.status(400).json({
+          error: `Unsupported file type for ${unsupportedFile.originalname}. Allowed: PDF, DOCX, TXT, MD.`,
+        });
+      }
+
+      const storedLinkedInFile = linkedinFile
+        ? {
+            file: linkedinFile,
+            stored: await storeEvidenceFile(req.userId, linkedinFile, 'linkedin_pdf'),
+          }
+        : null;
+
+      const storedSupportingFiles = await Promise.all(
+        supportingFiles.map(async (file) => ({
+          file,
+          stored: await storeEvidenceFile(req.userId!, file, 'supporting_document'),
+        }))
+      );
+
+      const draft = await extractEvidenceUploadDraft({
+        linkedinFile: storedLinkedInFile,
+        supportingFiles: storedSupportingFiles,
+        portfolioUrls,
+        projectUrls,
+      });
+
+      return res.json({
+        success: true,
+        draft,
+      });
+    } catch (error) {
+      console.error('Evidence upload error:', error);
+      return res.status(500).json({ error: 'Failed to analyze uploaded evidence' });
+    }
+  }
+);
+
 /**
  * POST /api/reputation/evidence
  * Save manual reputation evidence that the scoring engine can use immediately.
@@ -62,8 +196,9 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
       other_platforms,
     } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ error: 'Missing userId' });
+    const targetUserId = ensureAuthorizedUser(req, userId);
+    if (!targetUserId) {
+      return res.status(403).json({ error: 'Evidence can only be saved for the authenticated user' });
     }
 
     const nextGithubUsername = normalizeGithubUsername(github_username);
@@ -77,17 +212,7 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
       return res.status(400).json({ error: 'No evidence payload provided' });
     }
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', userId)
-      .single();
-
-    if (userError || !user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const profile = await ensureWorkerProfile(userId);
+    const profile = await ensureWorkerProfile(targetUserId);
 
     const mergedLinkedInData = linkedin_data !== undefined
       ? mergeLinkedInData(profile.linkedin_data, linkedin_data)
@@ -105,11 +230,7 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
       ? nextGithubUsername
       : profile.github_username;
 
-    const { data: reviews } = await supabase
-      .from('reviews')
-      .select('*')
-      .eq('worker_id', userId)
-      .eq('status', 'active');
+    const { reviews, stakes, employerReviews } = await loadReputationScoringInputs(targetUserId);
 
     const scoreResult = await computeOverallScore(
       {
@@ -117,7 +238,9 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
         linkedinData: mergedLinkedInData,
         otherPlatforms: mergedOtherPlatforms,
       },
-      reviews || []
+      reviews,
+      stakes,
+      employerReviews
     );
 
     const { data: updatedProfile, error: updateError } = await supabase
@@ -130,7 +253,10 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
         specializations: scoreResult.specializations,
         years_experience: scoreResult.years_experience,
         overall_trust_score: scoreResult.overall,
-        score_components: scoreResult.components,
+        score_components: {
+          ...scoreResult.components,
+          grouped_scores: scoreResult.groupedScores,
+        },
         ingestion_status: 'completed',
         updated_at: new Date().toISOString(),
       })
@@ -162,17 +288,20 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
 router.post('/ingest', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { userId } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({ error: 'Missing userId' });
+    const targetUserId = ensureAuthorizedUser(req, userId);
+    if (!targetUserId) {
+      return res.status(403).json({ error: 'Ingestion can only run for the authenticated user' });
     }
 
-    const { scoreResult, warning } = await syncWorkerReputation(userId);
+    const { scoreResult, warning } = await syncWorkerReputation(targetUserId);
 
     return res.json({
       success: true,
       overall_trust_score: scoreResult.overall,
-      score_components: scoreResult.components,
+      score_components: {
+        ...scoreResult.components,
+        grouped_scores: scoreResult.groupedScores,
+      },
       computed_skills: scoreResult.computed_skills,
       specializations: scoreResult.specializations,
       years_experience: scoreResult.years_experience,
@@ -208,7 +337,7 @@ router.get('/:userId', async (req, res) => {
     // Get reviews
     const { data: reviews } = await supabase
       .from('reviews')
-      .select('*, reviewer:reviewer_id(id, display_name, world_id_hash)')
+      .select('*, reviewer:reviewer_id(id, display_name, world_id_hash, roles)')
       .eq('worker_id', userId)
       .eq('status', 'active')
       .order('stake_amount', { ascending: false });

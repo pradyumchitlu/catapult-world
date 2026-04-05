@@ -1,4 +1,12 @@
-import type { ContextualScore, Review, ScoreComponents, User, WorkerProfile } from '@/types';
+import type {
+  ContextualScore,
+  EvidenceProject,
+  EvidenceUploadDraft,
+  Review,
+  ScoreComponents,
+  User,
+  WorkerProfile,
+} from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -36,6 +44,17 @@ interface ReputationResponse {
   stakerCount: number;
 }
 
+interface SaveEvidenceResponse {
+  success: boolean;
+  profile: WorkerProfile;
+  warning?: string | null;
+}
+
+interface EvidenceUploadResponse {
+  success: boolean;
+  draft: EvidenceUploadDraft;
+}
+
 interface FetchOptions extends RequestInit {
   token?: string;
 }
@@ -60,6 +79,27 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
     throw new Error(error.message || `HTTP error ${response.status}`);
+  }
+
+  return response.json();
+}
+
+async function fetchFormApi<T>(endpoint: string, formData: FormData, token?: string): Promise<T> {
+  const headers: HeadersInit = {};
+
+  if (token) {
+    (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    body: formData,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.message || error.error || `HTTP error ${response.status}`);
   }
 
   return response.json();
@@ -95,6 +135,51 @@ export const triggerIngestion = (userId: string, token: string) =>
 
 export const getReputation = (userId: string) =>
   fetchApi<ReputationResponse>(`/api/reputation/${userId}`);
+
+export const saveReputationEvidence = (
+  data: {
+    github_username?: string | null;
+    linkedin_data?: Record<string, any>;
+    projects?: EvidenceProject[];
+    other_platforms?: Record<string, any>;
+  },
+  token: string
+) =>
+  fetchApi<SaveEvidenceResponse>('/api/reputation/evidence', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    token,
+  });
+
+export const uploadEvidenceDraft = (
+  data: {
+    linkedinFile?: File | null;
+    supportingFiles?: File[];
+    portfolioUrls?: string[];
+    projectUrls?: string[];
+  },
+  token: string
+) => {
+  const formData = new FormData();
+
+  if (data.linkedinFile) {
+    formData.append('linkedin_file', data.linkedinFile);
+  }
+
+  for (const file of data.supportingFiles || []) {
+    formData.append('supporting_files', file);
+  }
+
+  if (data.portfolioUrls?.length) {
+    formData.append('portfolio_urls', JSON.stringify(data.portfolioUrls));
+  }
+
+  if (data.projectUrls?.length) {
+    formData.append('project_urls', JSON.stringify(data.projectUrls));
+  }
+
+  return fetchFormApi<EvidenceUploadResponse>('/api/reputation/evidence/upload', formData, token);
+};
 
 // Trust Query
 export const getTrustScore = (veridexId: string) =>

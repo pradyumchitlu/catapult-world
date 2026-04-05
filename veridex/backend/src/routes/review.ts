@@ -1,8 +1,7 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import supabase from '../lib/supabase';
-import { computeOverallScore } from '../services/scoring';
-import { ensureWorkerProfile } from '../services/reputationProfile';
+import { syncWorkerReputation } from '../services/reputationIngestion';
 
 const router = Router();
 
@@ -160,36 +159,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     // Trigger score recomputation for the worker
     // TODO: This should be done asynchronously in production
     try {
-      const workerProfile = await ensureWorkerProfile(worker_id);
-
-      const { data: allReviews } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('worker_id', worker_id)
-        .eq('status', 'active');
-
-      if (workerProfile) {
-        const scoreResult = await computeOverallScore(
-          {
-            githubData: workerProfile.github_data,
-            linkedinData: workerProfile.linkedin_data,
-            otherPlatforms: workerProfile.other_platforms,
-          },
-          allReviews || []
-        );
-
-        await supabase
-          .from('worker_profiles')
-          .update({
-            computed_skills: scoreResult.computed_skills,
-            specializations: scoreResult.specializations,
-            years_experience: scoreResult.years_experience,
-            overall_trust_score: scoreResult.overall,
-            score_components: scoreResult.components,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', worker_id);
-      }
+      await syncWorkerReputation(worker_id, { refreshGithub: false });
     } catch (scoreError) {
       console.error('Score recomputation error:', scoreError);
       // Don't fail the review creation if score recomputation fails

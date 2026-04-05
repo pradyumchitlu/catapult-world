@@ -2,26 +2,34 @@
  * Trust Score Computation Service
  *
  * Score components (each 0-100):
- * - developer_competence: hard-skill depth from GitHub + manual evidence
- * - collaboration: external contributions + work history + team/client signals
+ * - identity_assurance: proof of personhood + cross-platform verification signals
+ * - evidence_depth: independently verifiable work artifacts and experience
  * - consistency: sustained activity over time
- * - specialization_depth: repeated skill evidence across sources
- * - activity_recency: how recently the profile shows meaningful work
- * - peer_trust: staked reviews, weighted by reviewer credibility
+ * - recency: how recently the profile shows meaningful work
+ * - employer_outcomes: employer/project outcome reviews from client-role reviewers
+ * - staking: economic backing weighted by each staker's own verifiability
  */
 
 export interface ScoreComponents {
-  developer_competence: number;
-  collaboration: number;
+  identity_assurance: number;
+  evidence_depth: number;
   consistency: number;
-  specialization_depth: number;
-  activity_recency: number;
-  peer_trust: number;
+  recency: number;
+  employer_outcomes: number;
+  staking: number;
+}
+
+export interface GroupedScores {
+  evidence: number;
+  employer: number;
+  staking: number;
+  veridex: number;
 }
 
 export interface ScoreResult {
   overall: number;
   components: ScoreComponents;
+  groupedScores: GroupedScores;
   computed_skills: string[];
   specializations: string[];
   years_experience: number | null;
@@ -43,6 +51,26 @@ interface Review {
   flag_reason?: string | null;
   job_category: string | null;
   created_at: string;
+  reviewer?: {
+    roles?: string[] | null;
+  } | null;
+}
+
+interface StakeEvidence {
+  amount: number;
+  staker_score?: number | null;
+  created_at?: string;
+  staker?: {
+    worker_profiles?:
+      | { overall_trust_score?: number | null }
+      | Array<{ overall_trust_score?: number | null }>
+      | null;
+  } | null;
+}
+
+interface EmployerReview {
+  outcome?: string | null;
+  created_at?: string;
 }
 
 interface LinkedInExperience {
@@ -90,42 +118,201 @@ interface ManualSignals {
  */
 export async function computeOverallScore(
   profileData: ProfileData,
-  reviews: Review[]
+  reviews: Review[],
+  stakes: StakeEvidence[] = [],
+  employerReviews: EmployerReview[] = []
 ): Promise<ScoreResult> {
   const github = profileData.githubData ?? {};
   const manualSignals = collectManualSignals(profileData, reviews);
-  const hasGitHub = hasGitHubEvidence(github);
-  const hasReviews = reviews.length > 0;
+  const otherPlatforms = profileData.otherPlatforms ?? {};
 
   const components: ScoreComponents = {
-    developer_competence: computeDeveloperCompetence(github, manualSignals),
-    collaboration: computeCollaboration(github, manualSignals, reviews),
+    identity_assurance: computeIdentityAssurance(github, otherPlatforms, manualSignals),
+    evidence_depth: computeEvidenceDepth(github, manualSignals),
     consistency: computeConsistency(github, manualSignals, reviews),
-    specialization_depth: computeSpecialization(github, manualSignals),
-    activity_recency: computeActivityRecency(github, manualSignals, reviews),
-    peer_trust: computePeerTrust(reviews),
+    recency: computeRecency(github, manualSignals, reviews),
+    employer_outcomes: computeEmployerOutcomes(employerReviews),
+    staking: computeStaking(stakes),
   };
 
-  const weights = computeAdaptiveWeights({
-    hasGitHub,
-    hasProfessionalEvidence: manualSignals.hasProfessionalEvidence,
-    hasReviews,
-    hasSkills: manualSignals.totalSkillMentions > 0,
-  });
-
   const overall = Math.round(
-    Object.entries(weights).reduce((sum, [key, weight]) => {
-      return sum + components[key as keyof ScoreComponents] * weight;
-    }, 0)
+    (components.identity_assurance * 0.10) +
+    (components.evidence_depth * 0.10) +
+    (components.consistency * 0.10) +
+    (components.recency * 0.05) +
+    (components.employer_outcomes * 0.25) +
+    (components.staking * 0.40)
   );
+  const clampedOverall = clampScore(overall);
+  const groupedScores: GroupedScores = {
+    evidence: computeEvidenceGroupScore(components),
+    employer: components.employer_outcomes,
+    staking: components.staking,
+    veridex: clampedOverall,
+  };
 
   return {
-    overall: clampScore(overall),
+    overall: clampedOverall,
     components,
+    groupedScores,
     computed_skills: manualSignals.computedSkills,
     specializations: manualSignals.specializations,
     years_experience: manualSignals.yearsExperience,
   };
+}
+
+function computeIdentityAssurance(
+  github: any,
+  otherPlatforms: any,
+  signals: ManualSignals
+): number {
+  let score = 40;
+
+  if (hasGitHubEvidence(github)) {
+    score += 20;
+  }
+
+  if (signals.hasProfessionalEvidence) {
+    score += 15;
+  }
+
+  score += Math.min(10, countExtraPlatformSignals(otherPlatforms) * 5);
+
+  const accountAgeYears = Math.max(
+    github.created_at ? yearsSince(github.created_at) : 0,
+    signals.yearsExperience || 0
+  );
+  score += Math.min(15, accountAgeYears * 3);
+
+  return clampScore(score);
+}
+
+function computeEvidenceDepth(github: any, signals: ManualSignals): number {
+  let score = 0;
+
+  const repoCount = safeArray<any>(github.repos).length;
+  score += Math.min(22, repoCount * 1.6);
+
+  const totalStars = Number(github.total_stars || 0);
+  score += Math.min(12, totalStars);
+
+  const languageCount = safeArray<string>(github.languages).length;
+  score += Math.min(10, languageCount * 3);
+
+  score += Math.min(
+    28,
+    (signals.evidenceBackedProjectCount * 6) + (signals.projectCount * 2)
+  );
+  score += Math.min(16, signals.repeatedSkillCount * 4);
+  score += Math.min(12, (signals.yearsExperience || 0) * 2);
+
+  return clampScore(score);
+}
+
+function computeEmployerOutcomes(employerReviews: EmployerReview[]): number {
+  let score = 50;
+  let positiveCount = 0;
+  let negativeCount = 0;
+  let neutralCount = 0;
+
+  for (const review of employerReviews) {
+    const outcome = (review.outcome || '').toLowerCase();
+
+    if (outcome === 'positive') {
+      score += diminishingSeriesValue(positiveCount, [10, 8, 6, 5, 5, 4, 4]);
+      positiveCount += 1;
+      continue;
+    }
+
+    if (outcome === 'negative') {
+      score -= diminishingSeriesValue(negativeCount, [15, 12, 10, 8, 8, 6, 6]);
+      negativeCount += 1;
+      continue;
+    }
+
+    if (outcome === 'neutral') {
+      score += diminishingSeriesValue(neutralCount, [2, 2, 1, 1, 1]);
+      neutralCount += 1;
+    }
+  }
+
+  return clampScore(score);
+}
+
+function computeEvidenceGroupScore(components: ScoreComponents): number {
+  const weightedEvidenceScore =
+    (components.identity_assurance * 0.10) +
+    (components.evidence_depth * 0.10) +
+    (components.consistency * 0.10) +
+    (components.recency * 0.05);
+
+  return clampScore(weightedEvidenceScore / 0.35);
+}
+
+function computeStaking(stakes: StakeEvidence[]): number {
+  const effectiveStakeTotal = stakes.reduce((sum, stake) => {
+    const amount = Math.max(0, Number(stake.amount || 0));
+    if (amount <= 0) {
+      return sum;
+    }
+
+    const stakerScore = resolveStakerScore(stake);
+    const trustMultiplier = Math.max(stakerScore / 100, 0.10);
+    return sum + (applyStakeTranches(amount) * trustMultiplier);
+  }, 0);
+
+  if (effectiveStakeTotal <= 0) {
+    return 0;
+  }
+
+  return clampScore((effectiveStakeTotal / 500) * 100);
+}
+
+function countExtraPlatformSignals(otherPlatforms: any): number {
+  let count = 0;
+
+  if (safeArray<any>(otherPlatforms.portfolio).length > 0) {
+    count += 1;
+  }
+
+  if (safeArray<any>(otherPlatforms.work_samples).length > 0) {
+    count += 1;
+  }
+
+  if (safeArray<any>(otherPlatforms.certifications).length > 0) {
+    count += 1;
+  }
+
+  if (safeArray<any>(otherPlatforms.skills).length > 0) {
+    count += 1;
+  }
+
+  return count;
+}
+
+function diminishingSeriesValue(index: number, values: number[]): number {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  return values[Math.min(index, values.length - 1)];
+}
+
+function resolveStakerScore(stake: StakeEvidence): number {
+  if (typeof stake.staker_score === 'number') {
+    return stake.staker_score;
+  }
+
+  const workerProfiles = stake.staker?.worker_profiles;
+  if (Array.isArray(workerProfiles)) {
+    return Number(workerProfiles[0]?.overall_trust_score || 0);
+  }
+
+  if (workerProfiles && typeof workerProfiles === 'object') {
+    return Number(workerProfiles.overall_trust_score || 0);
+  }
+
+  return 0;
 }
 
 function computeDeveloperCompetence(github: any, signals: ManualSignals): number {
@@ -205,7 +392,7 @@ function computeSpecialization(github: any, signals: ManualSignals): number {
   return clampScore(score);
 }
 
-function computeActivityRecency(github: any, signals: ManualSignals, reviews: Review[]): number {
+function computeRecency(github: any, signals: ManualSignals, reviews: Review[]): number {
   const sources: Array<{ score: number; weight: number }> = [];
 
   const githubRecency = Number(github.contributions?.recent_activity_score || 0);
@@ -380,33 +567,6 @@ function collectManualSignals(profileData: ProfileData, reviews: Review[]): Manu
     activeManualMonths,
     recentManualActivityScore,
     hasProfessionalEvidence: experiences.length > 0 || projects.length > 0 || hasManualSkillInputs,
-  };
-}
-
-function computeAdaptiveWeights(options: {
-  hasGitHub: boolean;
-  hasProfessionalEvidence: boolean;
-  hasReviews: boolean;
-  hasSkills: boolean;
-}): Record<keyof ScoreComponents, number> {
-  const rawWeights: Record<keyof ScoreComponents, number> = {
-    developer_competence: options.hasGitHub ? 1.2 : options.hasProfessionalEvidence ? 0.95 : 0.35,
-    collaboration: options.hasGitHub || options.hasProfessionalEvidence ? 1 : 0.55,
-    consistency: options.hasGitHub || options.hasProfessionalEvidence ? 1 : 0.6,
-    specialization_depth: options.hasSkills ? 0.95 : 0.4,
-    activity_recency: options.hasGitHub || options.hasProfessionalEvidence || options.hasReviews ? 0.9 : 0.4,
-    peer_trust: options.hasReviews ? 1.2 : 0.2,
-  };
-
-  const totalWeight = Object.values(rawWeights).reduce((sum, weight) => sum + weight, 0);
-
-  return {
-    developer_competence: rawWeights.developer_competence / totalWeight,
-    collaboration: rawWeights.collaboration / totalWeight,
-    consistency: rawWeights.consistency / totalWeight,
-    specialization_depth: rawWeights.specialization_depth / totalWeight,
-    activity_recency: rawWeights.activity_recency / totalWeight,
-    peer_trust: rawWeights.peer_trust / totalWeight,
   };
 }
 
