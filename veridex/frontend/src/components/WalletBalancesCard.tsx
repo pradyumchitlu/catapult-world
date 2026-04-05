@@ -15,7 +15,7 @@ const DEFAULT_MAINNET_TRACKED_TOKENS = [
   '0x79A02482A880bCE3F13e09Da970dC34db4CD24d1', // USDC
   '0x4200000000000000000000000000000000000006', // WETH
   '0x0555E30da8f98308EdB960aa94C0Db47230d2B9c', // WBTC
-  '0x6Ecf2133E2C9751C5A7297AB31310EEd6268d5aE', // sDAI
+  '0x6ecF2133E2C9751C5a7297aB31310EeD6268D5ae', // sDAI
 ] as const;
 
 function getTrackedTokenAddresses() {
@@ -275,7 +275,7 @@ export default function WalletBalancesCard({ token, user, onUserUpdated }: Walle
                 </div>
               )}
 
-              {tokenRows.length === 0 && (
+              {balances && !error && tokenRows.length === 0 && (
                 <div
                   style={{
                     borderRadius: '14px',
