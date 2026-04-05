@@ -1,5 +1,6 @@
 'use client';
 
+import GlassCard from '@/components/GlassCard';
 import { gradientText, colors } from '@/lib/styles';
 
 interface TrustScoreCardProps {
@@ -35,10 +36,7 @@ export default function TrustScoreCard({ score, size = 'lg' }: TrustScoreCardPro
   const scoreColor = getScoreColor(score);
 
   return (
-    <div
-      className="rounded-2xl border border-white/40 bg-white/30 backdrop-blur-xl shadow-[0_8px_32px_rgba(37,99,235,0.06)]"
-      style={{ padding: pad }}
-    >
+    <GlassCard style={{ padding: pad }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {/* Ring */}
         <div style={{ position: 'relative', width: ring, height: ring, marginBottom: '16px' }}>
@@ -121,6 +119,6 @@ export default function TrustScoreCard({ score, size = 'lg' }: TrustScoreCardPro
           </div>
         </div>
       </div>
-    </div>
+    </GlassCard>
   );
 }

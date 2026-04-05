@@ -18,7 +18,8 @@
       "mcp__supabase__list_projects",
       "mcp__supabase__list_tables",
       "mcp__supabase__execute_sql",
-      "Bash(grep -n:*)"
+      "Bash(grep -n:*)",
+      "WebFetch(domain:openclaw.ai)"
     ]
   }
 }

@@ -9,6 +9,7 @@ import ReviewsList from '@/components/ReviewsList';
 import StakeButton from '@/components/StakeButton';
 import ChatPanel from '@/components/ChatPanel';
 import CreateContractModal from '@/components/CreateContractModal';
+import GlassCard from '@/components/GlassCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { createContract, getReputation } from '@/lib/api';
@@ -95,6 +96,49 @@ export default function ProfilePage() {
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">{user.display_name}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+            {user.profession_category && (
+              <span style={{
+                fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                fontSize: '14px',
+                fontWeight: 500,
+                color: '#1E293B',
+                textTransform: 'capitalize',
+              }}>
+                {user.profession_category}
+              </span>
+            )}
+            {user.profession_category && profile.years_experience != null && (
+              <span style={{ color: 'rgba(37,99,235,0.3)', fontSize: '14px' }}>·</span>
+            )}
+            {profile.years_experience != null && (
+              <span style={{
+                fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                fontSize: '14px',
+                color: '#64748B',
+              }}>
+                {profile.years_experience} {profile.years_experience === 1 ? 'year' : 'years'} experience
+              </span>
+            )}
+            {profile.github_username && (
+              <>
+                <span style={{ color: 'rgba(37,99,235,0.3)', fontSize: '14px' }}>·</span>
+                <a
+                  href={`https://github.com/${profile.github_username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                    fontSize: '14px',
+                    color: '#2563EB',
+                    textDecoration: 'none',
+                  }}
+                >
+                  @{profile.github_username}
+                </a>
+              </>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2 mb-4">
             {profile.computed_skills.map((skill) => (
               <span
@@ -113,16 +157,6 @@ export default function ProfilePage() {
               </span>
             ))}
           </div>
-          {profile.github_username && (
-            <a
-              href={`https://github.com/${profile.github_username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-veridex-secondary hover:underline text-sm"
-            >
-              @{profile.github_username} on GitHub
-            </a>
-          )}
         </div>
         <div className="flex gap-3">
           {isEmployer && (
@@ -141,7 +175,7 @@ export default function ProfilePage() {
         {/* Trust Score */}
         <div className="lg:col-span-1">
           <TrustScoreCard score={profile.overall_trust_score} />
-          <div className="glass-card mt-4">
+          <GlassCard className="mt-4">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ fontSize: '14px', color: '#94A3B8' }}>Total Staked</span>
               <span style={{ fontSize: '14px', fontWeight: 600, color: '#2563EB' }}>{totalStaked.toLocaleString()} WLD</span>
@@ -150,7 +184,7 @@ export default function ProfilePage() {
               <span style={{ fontSize: '14px', color: '#94A3B8' }}>Stakers</span>
               <span style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>{stakerCount}</span>
             </div>
-          </div>
+          </GlassCard>
         </div>
 
         {/* Score Breakdown */}
@@ -161,7 +195,7 @@ export default function ProfilePage() {
 
       {/* GitHub Highlights */}
       {profile.github_data.repos && profile.github_data.repos.length > 0 && (
-        <div className="glass-card mb-8">
+        <GlassCard className="mb-8">
           <h2 style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '18px', fontWeight: 600, color: '#1E293B', marginBottom: '16px' }}>GitHub Highlights</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {profile.github_data.repos.slice(0, 4).map((repo: any) => (
@@ -176,11 +210,11 @@ export default function ProfilePage() {
           <div style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: '#94A3B8', marginTop: '16px' }}>
             {profile.github_data.contributions?.total_commits_last_year?.toLocaleString()} commits last year
           </div>
-        </div>
+        </GlassCard>
       )}
 
       {/* AI Chat Panel */}
-      <div className="glass-card mb-8">
+      <GlassCard className="mb-8">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h2 style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '18px', fontWeight: 600, color: '#1E293B' }}>Ask About This Worker</h2>
           <button
@@ -199,13 +233,13 @@ export default function ProfilePage() {
             Chat with our AI to get detailed insights about this worker&apos;s qualifications, grounded in their real data.
           </p>
         )}
-      </div>
+      </GlassCard>
 
       {/* Reviews */}
-      <div className="glass-card">
+      <GlassCard>
         <h2 style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '18px', fontWeight: 600, color: '#1E293B', marginBottom: '16px' }}>Reviews</h2>
         <ReviewsList reviews={reviews} />
-      </div>
+      </GlassCard>
 
       {showHireModal && currentUser && token && (
         <CreateContractModal
