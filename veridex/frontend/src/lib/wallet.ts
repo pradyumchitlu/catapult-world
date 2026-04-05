@@ -1,6 +1,6 @@
 'use client';
 
-import { BrowserProvider, parseEther } from 'ethers';
+import { BrowserProvider, formatEther, parseEther } from 'ethers';
 
 declare global {
   interface Window {
@@ -72,18 +72,28 @@ async function ensureCorrectChain(ethereum: ReturnType<typeof getInjectedEthereu
   }
 }
 
-let cachedSigner: { signer: Awaited<ReturnType<BrowserProvider['getSigner']>>; address: string } | null = null;
+type WalletContext = {
+  provider: BrowserProvider;
+  signer: Awaited<ReturnType<BrowserProvider['getSigner']>>;
+  address: string;
+};
 
-async function getOrCreateSigner(): Promise<{ signer: Awaited<ReturnType<BrowserProvider['getSigner']>>; address: string }> {
-  if (cachedSigner) return cachedSigner;
+function formatEthAmount(amountWei: bigint): string {
+  const amount = Number(formatEther(amountWei));
+  if (!Number.isFinite(amount)) return formatEther(amountWei);
+  if (amount >= 1) return amount.toFixed(4).replace(/\.?0+$/, '');
+  if (amount >= 0.001) return amount.toFixed(6).replace(/\.?0+$/, '');
+  return amount.toFixed(8).replace(/\.?0+$/, '');
+}
+
+async function getOrCreateSigner(): Promise<WalletContext> {
   const ethereum = getInjectedEthereum();
   await ensureCorrectChain(ethereum);
   const provider = new BrowserProvider(ethereum);
   await provider.send('eth_requestAccounts', []);
   const signer = await provider.getSigner();
   const address = await signer.getAddress();
-  cachedSigner = { signer, address };
-  return cachedSigner;
+  return { provider, signer, address };
 }
 
 export async function connectInjectedWallet(): Promise<{ address: string }> {
@@ -97,7 +107,48 @@ export async function signWalletMessage(message: string): Promise<{ address: str
   return { address, signature };
 }
 
+export async function ensureCanSendETH(to: string, amountETH: string): Promise<{
+  balanceEth: string;
+  totalRequiredEth: string;
+  gasEstimateEth: string;
+}> {
+  const { provider, signer, address } = await getOrCreateSigner();
+  const value = parseEther(amountETH);
+  const balance = await provider.getBalance(address);
+
+  let gasLimit = BigInt(21000);
+  try {
+    gasLimit = await signer.estimateGas({ to, value });
+  } catch {
+    // Fall back to the standard ETH transfer gas cost if wallet estimation is flaky.
+  }
+
+  const feeData = await provider.getFeeData();
+  const gasPrice = feeData.maxFeePerGas ?? feeData.gasPrice;
+
+  if (!gasPrice || gasPrice <= BigInt(0)) {
+    throw new Error('Could not estimate the current World Chain gas fee. Please try again in a moment.');
+  }
+
+  const gasEstimate = gasLimit * gasPrice;
+  const totalRequired = value + gasEstimate;
+
+  if (balance < totalRequired) {
+    const shortfall = totalRequired - balance;
+    throw new Error(
+      `Insufficient ETH on World Chain. Need about ${formatEthAmount(totalRequired)} ETH total (${amountETH} ETH + ~${formatEthAmount(gasEstimate)} ETH gas), but this wallet only has ${formatEthAmount(balance)} ETH. Add about ${formatEthAmount(shortfall)} ETH and try again.`
+    );
+  }
+
+  return {
+    balanceEth: formatEther(balance),
+    totalRequiredEth: formatEther(totalRequired),
+    gasEstimateEth: formatEther(gasEstimate),
+  };
+}
+
 export async function sendETHToAddress(to: string, amountETH: string): Promise<{ txHash: string }> {
+  await ensureCanSendETH(to, amountETH);
   const { signer } = await getOrCreateSigner();
   const tx = await signer.sendTransaction({
     to,

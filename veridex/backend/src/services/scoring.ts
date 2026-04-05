@@ -35,6 +35,8 @@ export interface ScoreResult {
   years_experience: number | null;
 }
 
+const DEMO_STAKING_SCORE_MULTIPLIER = 100;
+
 interface ProfileData {
   githubData?: any;
   linkedinData?: any;
@@ -265,7 +267,7 @@ function computeStaking(stakes: StakeEvidence[]): number {
     return 0;
   }
 
-  return clampScore((effectiveStakeTotal / 0.5) * 100);
+  return clampScore(((effectiveStakeTotal / 0.5) * 100) * DEMO_STAKING_SCORE_MULTIPLIER);
 }
 
 function countExtraPlatformSignals(otherPlatforms: any): number {

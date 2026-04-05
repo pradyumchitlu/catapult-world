@@ -4,7 +4,7 @@ import { useState } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
 import { createStake, getPlatformAddress } from '@/lib/api';
-import { sendETHToAddress } from '@/lib/wallet';
+import { ensureCanSendETH, sendETHToAddress } from '@/lib/wallet';
 
 interface StakeButtonProps {
   workerId: string;
@@ -23,6 +23,11 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
   const handleStake = async () => {
     if (amount <= 0 || !token) return;
 
+    if (amount < 0.001) {
+      setError('Minimum stake is 0.001 ETH.');
+      return;
+    }
+
     if (!user?.wallet_address) {
       setError('Please connect your wallet in settings before staking.');
       return;
@@ -34,6 +39,9 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
     try {
       setStakingStatus('Getting platform address...');
       const { address: platformAddress } = await getPlatformAddress();
+
+      setStakingStatus('Checking wallet balance and gas...');
+      await ensureCanSendETH(platformAddress, amount.toString());
 
       setStakingStatus('Confirm the transaction in MetaMask...');
       const { txHash } = await sendETHToAddress(platformAddress, amount.toString());
