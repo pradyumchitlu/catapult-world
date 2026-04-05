@@ -81,6 +81,13 @@ interface EvidenceState {
   warnings: string[];
 }
 
+interface CompanyDetailsState {
+  companyName: string;
+  companyWebsite: string;
+  companyRole: string;
+  companyDescription: string;
+}
+
 interface OnboardingDraft {
   displayName: string;
   selectedRoles: string[];
@@ -93,6 +100,7 @@ interface OnboardingDraft {
   projectUrlsText: string;
   evidence: EvidenceState;
   needsEvidenceAnalysis: boolean;
+  companyDetails: CompanyDetailsState;
 }
 
 const PROFESSION_CATEGORIES = [
@@ -108,8 +116,8 @@ const ROLES = [
   { id: 'client', label: 'Client', description: 'Find and evaluate workers' },
 ];
 
-const WORKER_STEPS = ['Profile', 'Profession', 'Wallet', 'Connect', 'Evidence'];
-const EMPLOYER_STEPS = ['Profile', 'Profession', 'Wallet'];
+const WORKER_STEPS = ['Profession', 'Wallet', 'Connect', 'Evidence'];
+const CLIENT_STEPS = ['Profession', 'Wallet', 'Company details'];
 
 const fieldLabelStyle = {
   ...headingSm,
@@ -195,6 +203,15 @@ function createEmptyEvidenceState(): EvidenceState {
     uploadedAt: '',
     uploadedFiles: [],
     warnings: [],
+  };
+}
+
+function createEmptyCompanyDetails(): CompanyDetailsState {
+  return {
+    companyName: '',
+    companyWebsite: '',
+    companyRole: '',
+    companyDescription: '',
   };
 }
 
@@ -361,6 +378,8 @@ function getDraftStep(
   professionCategory: string | null,
   fallbackStep = 1
 ): number {
+  const maxStep = isClientOnlyRole(selectedRoles) ? 4 : 5;
+
   if (!displayName.trim() || selectedRoles.length === 0) {
     return 1;
   }
@@ -369,7 +388,20 @@ function getDraftStep(
     return 2;
   }
 
-  return Math.max(3, fallbackStep);
+  return Math.min(Math.max(3, fallbackStep), maxStep);
+}
+
+function isClientOnlyRole(selectedRoles: string[]): boolean {
+  return selectedRoles.includes('client') && !selectedRoles.includes('worker');
+}
+
+function hasCompanyDetails(details: CompanyDetailsState): boolean {
+  return Boolean(
+    details.companyName.trim() ||
+    details.companyWebsite.trim() ||
+    details.companyRole.trim() ||
+    details.companyDescription.trim()
+  );
 }
 
 function truncateAddress(address: string): string {
@@ -407,8 +439,8 @@ function OnboardingContent() {
   const [isAnalyzingEvidence, setIsAnalyzingEvidence] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>(['worker']);
-  const isEmployerOnly = selectedRoles.includes('client') && !selectedRoles.includes('worker');
-  const STEPS = isEmployerOnly ? EMPLOYER_STEPS : WORKER_STEPS;
+  const isClientOnly = isClientOnlyRole(selectedRoles);
+  const visibleSteps = isClientOnly ? CLIENT_STEPS : WORKER_STEPS;
   const [professionCategory, setProfessionCategory] = useState<string | null>(null);
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -420,6 +452,7 @@ function OnboardingContent() {
   const [projectUrlsText, setProjectUrlsText] = useState('');
   const [evidence, setEvidence] = useState<EvidenceState>(createEmptyEvidenceState());
   const [needsEvidenceAnalysis, setNeedsEvidenceAnalysis] = useState(false);
+  const [companyDetails, setCompanyDetails] = useState<CompanyDetailsState>(createEmptyCompanyDetails());
   const [evidenceError, setEvidenceError] = useState<string | null>(null);
   const [hasHydratedDraft, setHasHydratedDraft] = useState(false);
   const [linkedinFile, setLinkedinFile] = useState<File | null>(null);
@@ -474,6 +507,10 @@ function OnboardingContent() {
     setProjectUrlsText(typeof draft?.projectUrlsText === 'string' ? draft.projectUrlsText : '');
     setEvidence(normalizeStoredEvidence(draft?.evidence));
     setNeedsEvidenceAnalysis(Boolean(draft?.needsEvidenceAnalysis));
+    setCompanyDetails({
+      ...createEmptyCompanyDetails(),
+      ...(draft?.companyDetails || {}),
+    });
     setStep(getDraftStep(nextDisplayName, nextSelectedRoles, nextProfessionCategory, fallbackStep));
     setHasHydratedDraft(true);
   }, [user, githubStatus, hasHydratedDraft]);
@@ -504,6 +541,7 @@ function OnboardingContent() {
       projectUrlsText,
       evidence,
       needsEvidenceAnalysis,
+      companyDetails,
     };
 
     sessionStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(draft));
@@ -519,6 +557,7 @@ function OnboardingContent() {
     projectUrlsText,
     evidence,
     needsEvidenceAnalysis,
+    companyDetails,
     user,
     hasHydratedDraft,
   ]);
@@ -533,6 +572,13 @@ function OnboardingContent() {
       setStep(1);
     }
   }, [displayName, selectedRoles, professionCategory, step]);
+
+  useEffect(() => {
+    const maxStep = isClientOnly ? 4 : 5;
+    if (step > maxStep) {
+      setStep(maxStep);
+    }
+  }, [isClientOnly, step]);
 
   const toggleRole = (roleId: string) => {
     setSelectedRoles((prev) => {
@@ -693,7 +739,21 @@ function OnboardingContent() {
 
       updateUser(result.user);
 
-      if (hasStructuredEvidence(evidence)) {
+      if (isClientOnly && hasCompanyDetails(companyDetails)) {
+        await saveReputationEvidence(
+          {
+            other_platforms: {
+              client_company_details: compactRecord({
+                company_name: cleanString(companyDetails.companyName),
+                website: cleanString(companyDetails.companyWebsite),
+                role: cleanString(companyDetails.companyRole),
+                description: cleanString(companyDetails.companyDescription),
+              }),
+            },
+          },
+          token
+        );
+      } else if (hasStructuredEvidence(evidence)) {
         const items = evidence.items.map(sanitizeItem);
         const linkedinData = compactRecord({
           source_type: cleanString(evidence.sourceType),
@@ -725,7 +785,7 @@ function OnboardingContent() {
       }
 
       sessionStorage.removeItem(ONBOARDING_DRAFT_KEY);
-      router.push('/dashboard');
+      router.push(isClientOnly ? '/employer' : '/dashboard');
     } catch (error) {
       const message = error instanceof Error
         ? error.message
@@ -742,6 +802,7 @@ function OnboardingContent() {
     !displayName.trim() ||
     selectedRoles.length === 0 ||
     !professionCategory ||
+    (isClientOnly && !companyDetails.companyName.trim()) ||
     (needsEvidenceAnalysis && hasPendingInputs);
 
   return (
@@ -765,67 +826,70 @@ function OnboardingContent() {
             Welcome to Veridex.
           </h1>
           <p style={{ ...textSecondary, maxWidth: '520px' }}>
-            Let&apos;s set up your trust profile, connect GitHub if you want, and add proof-backed evidence without using an LLM.
+            Let&apos;s set up your profile, connect your wallet, and tailor the rest of onboarding to the kind of user you are.
           </p>
         </div>
 
-        <div className="fade-up fade-up-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px', flexWrap: 'wrap' }}>
-          {STEPS.map((label, index) => {
-            const stepNumber = index + 1;
-            const isDone = stepNumber < step;
-            const isActive = stepNumber === step;
+        {step > 1 && (
+          <div className="fade-up fade-up-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px', flexWrap: 'wrap' }}>
+            {visibleSteps.map((label, index) => {
+              const actualStepNumber = index + 2;
+              const displayStepNumber = index + 1;
+              const isDone = actualStepNumber < step;
+              const isActive = actualStepNumber === step;
 
-            return (
-              <div key={stepNumber} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                      background: isDone
-                        ? colors.success
-                        : isActive
-                          ? colors.primary
-                          : 'rgba(37,99,235,0.08)',
-                      color: isDone || isActive ? '#fff' : colors.textMuted,
-                      transition: 'all 0.3s ease',
-                      boxShadow: isActive ? '0 0 0 4px rgba(37,99,235,0.12)' : 'none',
-                    }}
-                  >
-                    {isDone ? '✓' : stepNumber}
+              return (
+                <div key={displayStepNumber} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                        background: isDone
+                          ? colors.success
+                          : isActive
+                            ? colors.primary
+                            : 'rgba(37,99,235,0.08)',
+                        color: isDone || isActive ? '#fff' : colors.textMuted,
+                        transition: 'all 0.3s ease',
+                        boxShadow: isActive ? '0 0 0 4px rgba(37,99,235,0.12)' : 'none',
+                      }}
+                    >
+                      {isDone ? '✓' : displayStepNumber}
+                    </div>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                        fontSize: '13px',
+                        fontWeight: isActive ? 600 : 400,
+                        color: isActive ? colors.primary : colors.textTertiary,
+                      }}
+                    >
+                      {label}
+                    </span>
                   </div>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                      fontSize: '13px',
-                      fontWeight: isActive ? 600 : 400,
-                      color: isActive ? colors.primary : colors.textTertiary,
-                    }}
-                  >
-                    {label}
-                  </span>
+                  {index < visibleSteps.length - 1 && (
+                    <div
+                      style={{
+                        width: '32px',
+                        height: '1px',
+                        background: actualStepNumber < step ? colors.success : 'rgba(37,99,235,0.15)',
+                        transition: 'background 0.3s ease',
+                      }}
+                    />
+                  )}
                 </div>
-                {index < STEPS.length - 1 && (
-                  <div
-                    style={{
-                      width: '32px',
-                      height: '1px',
-                      background: stepNumber < step ? colors.success : 'rgba(37,99,235,0.15)',
-                      transition: 'background 0.3s ease',
-                    }}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         <GlassCard className="fade-up fade-up-3" style={{ padding: '40px' }}>
           {step === 1 && (
@@ -1086,20 +1150,85 @@ function OnboardingContent() {
                   ← Back
                 </button>
                 <button
-                  onClick={() => isEmployerOnly ? handleComplete() : setStep(4)}
-                  disabled={isEmployerOnly && isLoading}
+                  onClick={() => setStep(4)}
                   className="btn-primary"
                   style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
-                  {isEmployerOnly
-                    ? (isLoading ? <LoadingSpinner /> : 'Finish Setup')
-                    : (walletConnected ? 'Continue →' : 'Skip for now →')}
+                  {walletConnected ? 'Continue →' : 'Skip for now →'}
                 </button>
               </div>
             </div>
           )}
 
-          {step === 4 && !isEmployerOnly && (
+          {step === 4 && isClientOnly && (
+            <div>
+              <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>Company details</h2>
+              <p style={{ ...textSecondary, fontSize: '14px', marginBottom: '28px' }}>
+                Tell us a bit about your company so your client profile starts with the right context.
+              </p>
+
+              <div style={{ display: 'grid', gap: '20px', marginBottom: '28px' }}>
+                <div style={reviewCardStyle}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={fieldLabelStyle}>Company Name</label>
+                      <input
+                        value={companyDetails.companyName}
+                        onChange={(event) => setCompanyDetails((prev) => ({ ...prev, companyName: event.target.value }))}
+                        placeholder="Acme Labs"
+                        className="input"
+                      />
+                    </div>
+                    <div>
+                      <label style={fieldLabelStyle}>Company Website</label>
+                      <input
+                        value={companyDetails.companyWebsite}
+                        onChange={(event) => setCompanyDetails((prev) => ({ ...prev, companyWebsite: event.target.value }))}
+                        placeholder="https://acme.com"
+                        className="input"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={fieldLabelStyle}>Your Role</label>
+                    <input
+                      value={companyDetails.companyRole}
+                      onChange={(event) => setCompanyDetails((prev) => ({ ...prev, companyRole: event.target.value }))}
+                      placeholder="Founder, hiring manager, team lead..."
+                      className="input"
+                    />
+                  </div>
+
+                  <div>
+                    <label style={fieldLabelStyle}>What are you hiring for?</label>
+                    <textarea
+                      value={companyDetails.companyDescription}
+                      onChange={(event) => setCompanyDetails((prev) => ({ ...prev, companyDescription: event.target.value }))}
+                      placeholder="Share a short description of your company, hiring needs, or the type of talent you look for."
+                      style={textareaStyle}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={() => setStep(3)} className="btn-secondary" style={{ flex: 1 }}>
+                  ← Back
+                </button>
+                <button
+                  onClick={handleComplete}
+                  disabled={finishDisabled}
+                  className="btn-primary"
+                  style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  {isLoading ? <LoadingSpinner /> : 'Finish Setup'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && !isClientOnly && (
             <div>
               <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>Connect platforms</h2>
               <p style={{ ...textSecondary, fontSize: '14px', marginBottom: '28px' }}>
@@ -1152,7 +1281,7 @@ function OnboardingContent() {
             </div>
           )}
 
-          {step === 5 && !isEmployerOnly && (
+          {step === 5 && !isClientOnly && (
             <div>
               <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>
                 Add evidence
