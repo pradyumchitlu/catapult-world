@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AgentCard from '@/components/AgentCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
@@ -258,6 +259,15 @@ export default function AgentsPage() {
                 {apiResponseExample}
               </pre>
             </div>
+          </div>
+          <div style={{ marginTop: '16px' }}>
+            <Link
+              href="/api-docs"
+              className="btn-secondary"
+              style={{ width: 'fit-content', textDecoration: 'none' }}
+            >
+              Full API Docs
+            </Link>
           </div>
         </GlassCard>
 

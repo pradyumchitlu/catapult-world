@@ -12,6 +12,17 @@ Veridex is designed around three trust problems:
 
 Veridex combines World ID verification, portable worker reputation, staking-style trust signals, and agent credentials. A user can verify as a human, build a profile, connect supporting evidence like GitHub, and expose a public trust surface that clients, stakers, and agent consumers can inspect. Third-party sites can verify an agent credential and trace it back to the verified human behind that automation.
 
+## Public API
+
+Veridex exposes a small public read API for production trust and verification lookups. The product-facing docs live at `/api-docs` in the frontend app.
+
+- `GET /api/trust/:veridexId` returns the current public trust surface for a user.
+- `GET /api/reputation/:userId` returns the public profile payload, active reviews, and stake totals for a user.
+- `GET /api/review/:workerId` returns the standalone public review feed for a worker.
+- `GET /api/agent/:agentId` is live as a beta credential lookup route, but there is not yet a seeded public example credential.
+
+Only the routes above are part of the documented public contract right now. `GET /api/reputation/browse/workers` is intentionally omitted until its route-order bug is fixed.
+
 ## User Types
 
 - Workers verify with World ID, connect GitHub and other evidence sources, and build a trust profile.
