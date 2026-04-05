@@ -105,7 +105,6 @@ const PROFESSION_CATEGORIES = [
 
 const ROLES = [
   { id: 'worker', label: 'Worker', description: 'Build reputation and get hired' },
-  { id: 'staker', label: 'Staker', description: 'Stake ETH on workers you believe in' },
   { id: 'client', label: 'Client', description: 'Find and evaluate workers' },
 ];
 
