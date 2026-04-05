@@ -10,6 +10,7 @@ import ContextualScoreCard from '@/components/ContextualScoreCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
 import WalletBalancesCard from '@/components/WalletBalancesCard';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { useAuth } from '@/contexts/AuthContext';
 import { getReputation, getContextualScore, triggerIngestion } from '@/lib/api';
 import {
@@ -506,32 +507,66 @@ export default function DashboardPage() {
               <span style={sectionLabel}>How It Was Calculated</span>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 {scoreInsights.map((item) => (
-                  <div
-                    key={item.label}
-                    style={{
-                      borderRadius: '14px',
-                      border: '1px solid rgba(37,99,235,0.12)',
-                      background: 'rgba(255,255,255,0.55)',
-                      padding: '16px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                      <span style={{ ...headingSm, fontSize: '14px' }}>{item.label}</span>
-                      <span
+                  <HoverCard key={item.label} openDelay={120} closeDelay={120}>
+                    <HoverCardTrigger asChild>
+                      <button
+                        type="button"
                         style={{
-                          fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                          fontSize: '13px',
-                          fontWeight: 700,
-                          color: item.score >= 60 ? colors.primary : item.score >= 40 ? colors.warning : colors.textTertiary,
+                          borderRadius: '14px',
+                          border: '1px solid rgba(37,99,235,0.12)',
+                          background: 'rgba(255,255,255,0.55)',
+                          padding: '16px',
+                          width: '100%',
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          transition: 'transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease',
+                          boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
                         }}
                       >
-                        {item.score}
-                      </span>
-                    </div>
-                    <p style={{ ...textSecondary, fontSize: '13px', marginTop: '8px' }}>
-                      {item.detail}
-                    </p>
-                  </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', minHeight: '104px' }}>
+                          <span style={{ ...headingSm, fontSize: '14px', textAlign: 'center' }}>{item.label}</span>
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-fraunces), Georgia, serif',
+                              fontSize: '34px',
+                              fontWeight: 700,
+                              lineHeight: 1,
+                              color: item.score >= 60 ? colors.primary : item.score >= 40 ? colors.warning : colors.textTertiary,
+                            }}
+                          >
+                            {item.score}
+                          </span>
+                        </div>
+                      </button>
+                    </HoverCardTrigger>
+                    <HoverCardContent
+                      side="top"
+                      align="start"
+                      style={{
+                        borderRadius: '16px',
+                        border: '1px solid rgba(37,99,235,0.12)',
+                        background: 'rgba(255,255,255,0.95)',
+                        boxShadow: '0 24px 48px rgba(15,23,42,0.14)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                        <span style={{ ...headingSm, fontSize: '14px' }}>{item.label}</span>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            color: item.score >= 60 ? colors.primary : item.score >= 40 ? colors.warning : colors.textTertiary,
+                          }}
+                        >
+                          Score {item.score}
+                        </span>
+                      </div>
+                      <p style={{ ...textSecondary, fontSize: '13px', lineHeight: 1.6, margin: 0 }}>
+                        {item.detail}
+                      </p>
+                    </HoverCardContent>
+                  </HoverCard>
                 ))}
               </div>
             </GlassCard>
