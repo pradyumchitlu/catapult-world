@@ -7,8 +7,16 @@ CREATE TABLE users (
   world_id_hash TEXT UNIQUE NOT NULL,
   display_name TEXT,
   roles TEXT[] DEFAULT '{}',            -- array of: 'worker', 'staker', 'client'
+  -- A user cannot be both a worker and a client (employer)
+  CONSTRAINT roles_worker_client_exclusive CHECK (
+    NOT ('worker' = ANY(roles) AND 'client' = ANY(roles))
+  ),
   profession_category TEXT,             -- 'software', 'writing', 'design', 'trades', 'other'
   wld_balance INTEGER DEFAULT 1000,     -- starting WLD credits
+  wallet_address TEXT,
+  wallet_verified_at TIMESTAMPTZ,
+  wallet_verification_method TEXT DEFAULT 'signature',
+  wallet_last_balance_sync_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -112,6 +120,51 @@ CREATE TABLE chat_sessions (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Contracts
+CREATE TABLE contracts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employer_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  worker_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  payment_amount INTEGER NOT NULL,          -- WLD amount
+  duration_days INTEGER,                    -- estimated duration
+  status TEXT DEFAULT 'draft',              -- draft, active, completed, closed
+  worker_payout INTEGER,                    -- amount paid to worker (set on completion)
+  staker_payout_total INTEGER,              -- total distributed to stakers (set on completion)
+  platform_fee INTEGER DEFAULT 0,
+  completed_at TIMESTAMPTZ,
+  closed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Contract payment ledger (audit trail)
+CREATE TABLE contract_payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  contract_id UUID REFERENCES contracts(id) ON DELETE CASCADE,
+  recipient_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  amount INTEGER NOT NULL,
+  payment_type TEXT NOT NULL,               -- 'worker_payout', 'staker_share', 'platform_fee'
+  stake_id UUID REFERENCES stakes(id),      -- set only for staker_share rows
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Wallet verification challenges
+CREATE TABLE wallet_verification_challenges (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  wallet_address TEXT NOT NULL,
+  nonce TEXT UNIQUE NOT NULL,
+  challenge TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Add contract reference to reviews
+ALTER TABLE reviews ADD COLUMN contract_id UUID REFERENCES contracts(id);
+
 -- Indexes for performance
 CREATE INDEX idx_worker_profiles_user_id ON worker_profiles(user_id);
 CREATE INDEX idx_worker_profiles_trust_score ON worker_profiles(overall_trust_score DESC);
@@ -124,11 +177,20 @@ CREATE INDEX idx_stakes_worker_id ON stakes(worker_id);
 CREATE INDEX idx_stakes_status ON stakes(status);
 CREATE INDEX idx_contextual_scores_worker_id ON contextual_scores(worker_id);
 CREATE INDEX idx_agents_parent_user_id ON agents(parent_user_id);
+CREATE INDEX idx_contracts_employer_id ON contracts(employer_id);
+CREATE INDEX idx_contracts_worker_id ON contracts(worker_id);
+CREATE INDEX idx_contracts_status ON contracts(status);
+CREATE INDEX idx_contract_payments_contract_id ON contract_payments(contract_id);
+CREATE INDEX idx_contract_payments_recipient_id ON contract_payments(recipient_id);
+CREATE INDEX idx_reviews_contract_id ON reviews(contract_id);
 CREATE INDEX idx_query_log_worker_id ON query_log(worker_id);
 CREATE INDEX idx_query_log_created_at ON query_log(created_at DESC);
 CREATE INDEX idx_chat_sessions_client_id ON chat_sessions(client_id);
 CREATE INDEX idx_chat_sessions_worker_id ON chat_sessions(worker_id);
 CREATE INDEX idx_users_world_id_hash ON users(world_id_hash);
+CREATE INDEX idx_users_wallet_address ON users(wallet_address);
+CREATE INDEX idx_wallet_verification_challenges_user_id ON wallet_verification_challenges(user_id);
+CREATE INDEX idx_wallet_verification_challenges_nonce ON wallet_verification_challenges(nonce);
 
 -- Row Level Security (RLS) policies
 -- Enable RLS on all tables
@@ -140,6 +202,25 @@ ALTER TABLE contextual_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE query_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contract_payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wallet_verification_challenges ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Contracts viewable by participants"
+  ON contracts FOR SELECT
+  USING (true);
+
+CREATE POLICY "Employers can create contracts"
+  ON contracts FOR INSERT
+  WITH CHECK (auth.uid() = employer_id);
+
+CREATE POLICY "Employers can update own contracts"
+  ON contracts FOR UPDATE
+  USING (auth.uid() = employer_id);
+
+CREATE POLICY "Payment records viewable by everyone"
+  ON contract_payments FOR SELECT
+  USING (true);
 
 -- Public read policies (for profiles and reviews)
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -165,6 +246,18 @@ CREATE POLICY "Public agents are viewable by everyone"
 CREATE POLICY "Users can update their own profile"
   ON users FOR UPDATE
   USING (auth.uid() = id);
+
+CREATE POLICY "Users can view their own wallet verification challenges"
+  ON wallet_verification_challenges FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create their own wallet verification challenges"
+  ON wallet_verification_challenges FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own wallet verification challenges"
+  ON wallet_verification_challenges FOR UPDATE
+  USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can insert their own worker profile"
   ON worker_profiles FOR INSERT
@@ -219,6 +312,11 @@ CREATE TRIGGER update_users_updated_at
 
 CREATE TRIGGER update_worker_profiles_updated_at
   BEFORE UPDATE ON worker_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_contracts_updated_at
+  BEFORE UPDATE ON contracts
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 

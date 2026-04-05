@@ -67,7 +67,7 @@ export async function fetchUserProfile(username: string): Promise<GitHubUserProf
       .map((repo) => ({
         name: repo.name,
         description: repo.description,
-        language: repo.language,
+        language: repo.language ?? null,
         stars: repo.stargazers_count || 0,
         forks: repo.forks_count || 0,
         topics: repo.topics || [],

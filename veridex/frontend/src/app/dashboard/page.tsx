@@ -9,6 +9,7 @@ import JobDescriptionInput from '@/components/JobDescriptionInput';
 import ContextualScoreCard from '@/components/ContextualScoreCard';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
+import WalletBalancesCard from '@/components/WalletBalancesCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { getReputation, getContextualScore } from '@/lib/api';
 import {
@@ -27,7 +28,7 @@ import type { WorkerProfile, Review, ContextualScoreBreakdown } from '@/types';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, token, isLoading: authLoading } = useAuth();
+  const { user, token, isLoading: authLoading, updateUser } = useAuth();
 
   const [profile, setProfile] = useState<WorkerProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -82,7 +83,7 @@ export default function DashboardPage() {
       const result = await getContextualScore(user.id, jobDescription, token || undefined) as any;
       setContextualScore({
         fit_score: result.fit_score,
-        breakdown: result.score_breakdown,
+        breakdown: result.breakdown,
       });
     } catch (error) {
       console.error('Failed to evaluate fit:', error);
@@ -215,8 +216,16 @@ export default function DashboardPage() {
               >
                 {(user?.wld_balance || 0).toLocaleString()} WLD
               </div>
-              <div style={textMuted}>available</div>
+              <div style={textMuted}>Veridex Credits</div>
             </GlassCard>
+
+            {user && token && (
+              <WalletBalancesCard
+                token={token}
+                user={user}
+                onUserUpdated={updateUser}
+              />
+            )}
           </div>
 
           {/* Right column: radar + skills */}

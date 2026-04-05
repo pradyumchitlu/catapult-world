@@ -17,6 +17,8 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ error: 'Invalid stake data' });
     }
 
+    // This route still uses internal Veridex credits until on-chain staking is introduced.
+    // Wallet balances are read-only in the current phase.
     // Get staker's balance
     const { data: staker, error: stakerError } = await supabase
       .from('users')

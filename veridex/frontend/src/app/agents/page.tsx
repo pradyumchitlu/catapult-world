@@ -35,6 +35,10 @@ export default function AgentsPage() {
               roles: ['worker'],
               profession_category: 'software',
               wld_balance: 1000,
+              wallet_address: null,
+              wallet_verified_at: null,
+              wallet_verification_method: null,
+              wallet_last_balance_sync_at: null,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
               worker_profile: {

@@ -5,8 +5,58 @@ export interface User {
   roles: ('worker' | 'staker' | 'client')[];
   profession_category: string | null;
   wld_balance: number;
+  wallet_address: string | null;
+  wallet_verified_at: string | null;
+  wallet_verification_method: string | null;
+  wallet_last_balance_sync_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface WalletInfo {
+  wallet_address: string | null;
+  wallet_verified_at: string | null;
+  wallet_verification_method: string | null;
+  wallet_last_balance_sync_at: string | null;
+}
+
+export interface NativeBalance {
+  symbol: string;
+  decimals: number;
+  raw_balance: string;
+  formatted_balance: string;
+}
+
+export interface TokenBalance {
+  token_address: string;
+  symbol: string;
+  name: string;
+  decimals: number | null;
+  is_valid: boolean;
+  raw_balance: string | null;
+  formatted_balance: string | null;
+  error?: string;
+}
+
+export interface WalletBalancesResponse {
+  wallet_address: string;
+  chain_id: number;
+  chain_name: string;
+  native_balance: NativeBalance | null;
+  tokens: TokenBalance[];
+  fetched_at: string;
+}
+
+export interface WalletChallengeResponse {
+  challenge: string;
+  nonce: string;
+  expires_at: string;
+}
+
+export interface WorldAppWalletAuthPrepareResponse {
+  nonce: string;
+  statement: string;
+  expires_at: string;
 }
 
 export interface ScoreComponents {

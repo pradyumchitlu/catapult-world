@@ -22,6 +22,8 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
 
     const stakeAmount = stake_amount || 0;
 
+    // Reviews still stake internal Veridex credits in this phase.
+    // On-chain wallet balances are displayed separately and are not spent here.
     // Get reviewer's balance and trust score
     const { data: reviewer, error: reviewerError } = await supabase
       .from('users')

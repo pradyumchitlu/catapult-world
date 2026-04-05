@@ -12,6 +12,7 @@ import reviewRoutes from './routes/review';
 import contextualRoutes from './routes/contextual';
 import agentRoutes from './routes/agent';
 import chatRoutes from './routes/chat';
+import walletRoutes from './routes/wallet';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -37,6 +38,7 @@ app.use('/api/review', reviewRoutes);
 app.use('/api', contextualRoutes); // /api/contextual-score
 app.use('/api/agent', agentRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

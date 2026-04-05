@@ -3,6 +3,13 @@ import jwt from 'jsonwebtoken';
 import { signRequest } from '@worldcoin/idkit-server';
 import supabase from '../lib/supabase';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import {
+  createWalletChallenge,
+  getWalletInfo,
+  isValidAddress,
+  normalizeAddress,
+  verifyWalletChallenge,
+} from '../services/wallet';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'veridex-dev-secret';
@@ -185,6 +192,71 @@ router.post('/verify', async (req: Request, res: Response) => {
  */
 router.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   return res.json({ user: req.user });
+});
+
+/**
+ * POST /api/auth/wallet/challenge
+ * Create a short-lived message that the authenticated user can sign.
+ */
+router.post('/wallet/challenge', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const walletAddress = typeof req.body?.wallet_address === 'string'
+      ? req.body.wallet_address.trim()
+      : '';
+
+    if (!walletAddress || !isValidAddress(walletAddress)) {
+      return res.status(400).json({ error: 'A valid wallet_address is required' });
+    }
+
+    const challenge = await createWalletChallenge(req.userId!, normalizeAddress(walletAddress));
+    return res.json(challenge);
+  } catch (error) {
+    console.error('Wallet challenge error:', error);
+    return res.status(500).json({ error: 'Failed to create wallet challenge' });
+  }
+});
+
+/**
+ * POST /api/auth/wallet/verify
+ * Verify ownership of an EVM wallet via signed challenge.
+ */
+router.post('/wallet/verify', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const walletAddress = typeof req.body?.wallet_address === 'string'
+      ? req.body.wallet_address.trim()
+      : '';
+    const message = typeof req.body?.message === 'string' ? req.body.message : '';
+    const signature = typeof req.body?.signature === 'string' ? req.body.signature : '';
+    const nonce = typeof req.body?.nonce === 'string' ? req.body.nonce : '';
+
+    if (!walletAddress || !message || !signature || !nonce) {
+      return res.status(400).json({ error: 'wallet_address, message, signature, and nonce are required' });
+    }
+
+    if (!isValidAddress(walletAddress)) {
+      return res.status(400).json({ error: 'Invalid wallet_address' });
+    }
+
+    const result = await verifyWalletChallenge({
+      userId: req.userId!,
+      walletAddress,
+      message,
+      signature,
+      nonce,
+    });
+
+    return res.json({
+      success: true,
+      wallet_address: result.wallet_address,
+      verified_at: result.verified_at,
+      wallet: getWalletInfo(result.user),
+      user: result.user,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Wallet verification failed';
+    console.error('Wallet verify error:', error);
+    return res.status(400).json({ error: message });
+  }
 });
 
 /**

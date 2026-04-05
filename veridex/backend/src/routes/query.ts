@@ -40,9 +40,10 @@ router.get('/trust/:veridexId', optionalAuth, async (req: AuthenticatedRequest, 
       .eq('status', 'active');
 
     const totalStaked = stakes?.reduce((sum, s) => sum + s.amount, 0) || 0;
-    const reviewCount = reviews?.length || 0;
+    const safeReviews = reviews || [];
+    const reviewCount = safeReviews.length || 0;
     const avgRating = reviewCount > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+      ? safeReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
       : 0;
 
     // Log the query
