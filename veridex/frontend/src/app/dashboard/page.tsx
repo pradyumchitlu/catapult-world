@@ -256,21 +256,22 @@ export default function DashboardPage() {
   const manualEvidenceUrls = manualEvidenceEntries.flatMap((entry) => [entry?.url, ...(Array.isArray(entry?.proof_urls) ? entry.proof_urls : [])]).filter((value, index, array): value is string => typeof value === 'string' && value.trim().length > 0 && array.indexOf(value) === index).slice(0, 4);
   const hasManualEvidence = linkedinExperiences.length > 0 || manualEvidenceEntries.length > 0 || uploadedFiles.length > 0;
   const clientReviewCount = reviews.filter((review) => Array.isArray(review.reviewer?.roles) && review.reviewer.roles.includes('client')).length;
+  const githubEvidenceNote = 'These GitHub signals are public-only. Derived activity, language, and collaboration metrics use fetched public repos plus search results, so they may not exactly match GitHub, especially for private repos or very large accounts.';
   const scoreInsights = [
     { label: 'Identity', score: scoreComponents.identity_assurance, detail: `World ID verified · ${profile.github_username ? 'GitHub connected' : 'GitHub not connected'} · ${hasManualEvidence ? 'manual evidence present' : 'no manual evidence yet'}` },
-    { label: 'Evidence', score: scoreComponents.evidence_depth, detail: `${githubData.significant_repo_count ?? githubData.repos?.length ?? 0} notable repos · ${manualProofBackedCount} proof-backed manual entries · ${profile.years_experience ?? 0}y experience` },
-    { label: 'Consistency', score: scoreComponents.consistency, detail: `${githubContributions.total_commits_last_year ?? 0} commits last year · ${githubContributions.active_months ?? 0} active months · ${linkedinExperiences.length + manualEvidenceEntries.length} saved evidence records` },
-    { label: 'Recency', score: scoreComponents.recency, detail: `${githubContributions.commits_last_30_days ?? 0} commits / 30d · ${githubContributions.commits_last_90_days ?? 0} commits / 90d · ${reviews.length} active reviews` },
+    { label: 'Evidence', score: scoreComponents.evidence_depth, detail: `${githubData.significant_repo_count ?? githubData.repos?.length ?? 0} notable public repos · ${manualProofBackedCount} proof-backed manual entries · ${profile.years_experience ?? 0}y experience` },
+    { label: 'Consistency', score: scoreComponents.consistency, detail: `${githubContributions.total_commits_last_year ?? 0} estimated commits last year · ${githubContributions.active_months ?? 0} estimated active months · ${linkedinExperiences.length + manualEvidenceEntries.length} saved evidence records` },
+    { label: 'Recency', score: scoreComponents.recency, detail: `${githubContributions.commits_last_30_days ?? 0} estimated commits / 30d · ${githubContributions.commits_last_90_days ?? 0} estimated commits / 90d · ${reviews.length} active reviews` },
     { label: 'Employer Reviews', score: scoreComponents.employer_outcomes, detail: `${clientReviewCount} client review${clientReviewCount !== 1 ? 's' : ''} currently affect employer outcomes; rating 4-5 is positive, 3 is neutral, 1-2 is negative.` },
     { label: 'Staking', score: scoreComponents.staking, detail: `${totalStaked.toLocaleString()} WLD across ${stakerCount} active stake${stakerCount !== 1 ? 's' : ''}, weighted by each staker's current trust score` },
   ];
   const githubEvidence = [
-    { label: 'Repos', value: githubData.public_repos ?? githubData.profile?.public_repos ?? '—' },
-    { label: 'Stars', value: githubData.total_stars ?? '—' },
+    { label: 'Public Repos', value: githubData.public_repos ?? githubData.profile?.public_repos ?? '—' },
+    { label: 'Repo Stars (Fetched)', value: githubData.total_stars ?? '—' },
     { label: 'Followers', value: githubData.followers ?? githubData.profile?.followers ?? '—' },
-    { label: 'Commits / Year', value: githubContributions.total_commits_last_year ?? '—' },
-    { label: 'Active Months', value: githubContributions.active_months ?? '—' },
-    { label: 'External Repos', value: githubCollaboration.repos_contributed_to ?? '—' },
+    { label: 'Est. Commits / Year', value: githubContributions.total_commits_last_year ?? '—' },
+    { label: 'Est. Active Months', value: githubContributions.active_months ?? '—' },
+    { label: 'External Repos (Search)', value: githubCollaboration.repos_contributed_to ?? '—' },
   ];
   const isSyncing = profile.ingestion_status === 'processing' || profile.ingestion_status === 'pending';
   const profileName = user?.display_name || (typeof githubData.name === 'string' && githubData.name.trim()) || (profile.github_username ? `@${profile.github_username}` : 'Your Profile');
@@ -485,6 +486,9 @@ export default function DashboardPage() {
               {profile.github_username && (
                 <GlassCard style={{ padding: '28px' }}>
                   <span style={sectionLabel}>GitHub Evidence Used</span>
+                  <p style={{ ...textSecondary, fontSize: '13px', marginTop: '8px', marginBottom: '16px' }}>
+                    {githubEvidenceNote}
+                  </p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '16px' }}>
                     {githubEvidence.map(({ label, value }) => (
                       <div key={label} style={{ textAlign: 'center' }}>
@@ -497,7 +501,7 @@ export default function DashboardPage() {
                   {topLanguages.length > 0 && (
                     <>
                       <div style={separator} />
-                      <span style={sectionLabel}>Top Languages</span>
+                      <span style={sectionLabel}>Top Languages (Fetched Public Repos)</span>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {topLanguages.map((language) => (
                           <span key={language} style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', fontWeight: 500, color: colors.primary, background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: '8px', padding: '4px 12px' }}>

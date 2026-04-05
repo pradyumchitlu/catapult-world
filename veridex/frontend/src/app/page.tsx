@@ -95,7 +95,7 @@ export default function LandingPage() {
             }}
           >
             A World ID-powered reputation layer where every review, every score,
-            and every agent has real skin in the game.
+            and every credentialed agent has a real human behind it.
           </p>
 
           <Link href="/verify" className="btn-primary">
@@ -191,11 +191,11 @@ export default function LandingPage() {
                 },
                 {
                   title: 'Agent Delegation',
-                  body: 'Spawn AI agents that inherit 70% of your trust score with full traceability.',
+                  body: 'Issue traceable agent credentials with delegated trust, bounded access, and clear human liability.',
                 },
                 {
                   title: 'Open Protocol',
-                  body: 'External APIs let any platform query trust scores and agent identities.',
+                  body: 'External APIs let any platform verify trust scores, agent credentials, and the human behind an automated action.',
                 },
               ].map((feature) => (
                 <div key={feature.title}>

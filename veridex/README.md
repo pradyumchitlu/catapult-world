@@ -1,6 +1,6 @@
 # Veridex
 
-A decentralized trust platform where verified humans build portable reputation, stake WLD on each other's integrity, and register agent credentials that bind AI agents to human identity and reputation. Powered by World ID proof-of-personhood.
+A decentralized trust platform where verified humans build portable reputation, stake WLD on each other's integrity, and register traceable agent credentials that bind AI activity to human identity, delegated reputation, and liability. Powered by World ID proof-of-personhood.
 
 ## Overview
 
@@ -10,7 +10,7 @@ Veridex is designed around three trust problems:
 - Reputation is trapped. People rebuild credibility from zero on every new service.
 - AI agents are unaccountable. Nobody knows who is behind the bot.
 
-Veridex combines World ID verification, portable worker reputation, staking-style trust signals, and agent identity. A user can verify as a human, build a profile, connect supporting evidence like GitHub, and expose a public trust surface that clients, stakers, and agent consumers can inspect.
+Veridex combines World ID verification, portable worker reputation, staking-style trust signals, and agent credentials. A user can verify as a human, build a profile, connect supporting evidence like GitHub, and expose a public trust surface that clients, stakers, and agent consumers can inspect. Third-party sites can verify an agent credential and trace it back to the verified human behind that automation.
 
 ## User Types
 
