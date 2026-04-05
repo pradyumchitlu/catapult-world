@@ -34,7 +34,7 @@ router.get('/trust/:veridexId', optionalAuth, async (req: AuthenticatedRequest, 
     // Get total stakes
     const { data: stakes } = await supabase
       .from('stakes')
-      .select('amount')
+      .select('amount_eth')
       .eq('worker_id', veridexId)
       .eq('status', 'active');
 
@@ -45,7 +45,7 @@ router.get('/trust/:veridexId', optionalAuth, async (req: AuthenticatedRequest, 
       .eq('worker_id', veridexId)
       .eq('status', 'active');
 
-    const totalStaked = stakes?.reduce((sum, s) => sum + s.amount, 0) || 0;
+    const totalStaked = stakes?.reduce((sum, s) => sum + Number(s.amount_eth || 0), 0) || 0;
     const safeReviews = reviews || [];
     const reviewCount = safeReviews.length || 0;
     const avgRating = reviewCount > 0

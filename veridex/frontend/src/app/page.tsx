@@ -257,8 +257,8 @@ export default function LandingPage() {
               detected and flagged.
             </p>
             <p style={{ ...textSecondary, fontSize: '14px', lineHeight: '1.7' }}>
-              Stake concentration has diminishing returns — the first 100 ETH from
-              one staker counts fully, but each additional 100 ETH is worth
+              Stake concentration has diminishing returns — the first 0.1 ETH from
+              one staker counts fully, but each additional 0.1 ETH is worth
               progressively less. No single actor can inflate a score.
             </p>
           </GlassCard>

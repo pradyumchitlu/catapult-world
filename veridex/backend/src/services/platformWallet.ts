@@ -1,10 +1,5 @@
 import { JsonRpcProvider, Wallet, parseEther, formatEther } from 'ethers';
-
-const DEFAULT_RPC_URL = 'https://worldchain-mainnet.g.alchemy.com/public';
-
-function getRpcUrl(): string {
-  return process.env.WORLDCHAIN_RPC_URL || process.env.WORLD_CHAIN_RPC_URL || DEFAULT_RPC_URL;
-}
+import { getChainConfig } from '../lib/chainConfig';
 
 let _wallet: Wallet | null = null;
 
@@ -16,7 +11,8 @@ export function getPlatformWallet(): Wallet {
     throw new Error('PLATFORM_WALLET_PRIVATE_KEY is not configured');
   }
 
-  const provider = new JsonRpcProvider(getRpcUrl());
+  const chain = getChainConfig();
+  const provider = new JsonRpcProvider(chain.rpcUrl);
   _wallet = new Wallet(privateKey, provider);
   return _wallet;
 }

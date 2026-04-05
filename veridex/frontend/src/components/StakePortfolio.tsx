@@ -4,7 +4,10 @@ import Link from 'next/link';
 import type { Stake, User, WorkerProfile } from '@/types';
 
 interface StakeWithWorker extends Stake {
-  worker: User & { worker_profile: WorkerProfile };
+  worker: User & {
+    worker_profile?: WorkerProfile;
+    worker_profiles?: WorkerProfile | WorkerProfile[];
+  };
   scoreTrend: 'up' | 'down' | 'stable';
   yieldEarned: number;
 }
@@ -33,33 +36,51 @@ export default function StakePortfolio({ stakes }: StakePortfolioProps) {
     }
   };
 
+  const getWorkerScore = (stake: StakeWithWorker) => {
+    const directProfile = stake.worker.worker_profile;
+    if (directProfile?.overall_trust_score !== undefined) {
+      return directProfile.overall_trust_score;
+    }
+
+    const joinedProfiles = stake.worker.worker_profiles;
+    if (Array.isArray(joinedProfiles)) {
+      return joinedProfiles[0]?.overall_trust_score ?? null;
+    }
+
+    return joinedProfiles?.overall_trust_score ?? null;
+  };
+
   return (
     <div className="space-y-4">
-      {stakes.map((stake) => (
-        <div
-          key={stake.id}
-          className="p-4 bg-veridex-gray-700/50 rounded-lg flex items-center justify-between"
-        >
-          <div className="flex items-center gap-4">
-            <Link href={`/profile/${stake.worker_id}`} className="hover:underline">
-              <div className="font-medium">{stake.worker.display_name}</div>
-              <div className="text-sm text-veridex-gray-400">
-                Score: {stake.worker.worker_profile.overall_trust_score}
-                {' '}{getTrendIcon(stake.scoreTrend)}
-              </div>
-            </Link>
-          </div>
+      {stakes.map((stake) => {
+        const workerScore = getWorkerScore(stake);
 
-          <div className="text-right">
-            <div className="font-semibold text-veridex-primary">
-              {stake.amount.toLocaleString()} ETH
+        return (
+          <div
+            key={stake.id}
+            className="p-4 bg-veridex-gray-700/50 rounded-lg flex items-center justify-between"
+          >
+            <div className="flex items-center gap-4">
+              <Link href={`/profile/${stake.worker_id}`} className="hover:underline">
+                <div className="font-medium">{stake.worker.display_name}</div>
+                <div className="text-sm text-veridex-gray-400">
+                  Score: {workerScore ?? 'N/A'}
+                  {' '}{getTrendIcon(stake.scoreTrend)}
+                </div>
+              </Link>
             </div>
-            <div className={`text-sm ${stake.yieldEarned >= 0 ? 'text-veridex-success' : 'text-veridex-error'}`}>
-              {stake.yieldEarned >= 0 ? '+' : ''}{stake.yieldEarned} ETH yield
+
+            <div className="text-right">
+              <div className="font-semibold text-veridex-primary">
+                {stake.amount_eth.toLocaleString()} ETH
+              </div>
+              <div className={`text-sm ${stake.yieldEarned >= 0 ? 'text-veridex-success' : 'text-veridex-error'}`}>
+                {stake.yieldEarned >= 0 ? '+' : ''}{stake.yieldEarned} ETH yield
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

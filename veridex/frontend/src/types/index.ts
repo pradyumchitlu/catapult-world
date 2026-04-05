@@ -172,11 +172,9 @@ export interface Stake {
   id: string;
   staker_id: string;
   worker_id: string;
-  amount: number;
-  amount_wei?: string;
-  amount_eth?: number;
-  tx_hash?: string;
-  withdrawal_tx_hash?: string;
+  amount_eth: number;
+  transaction_id?: string | null;
+  withdrawal_transaction_id?: string | null;
   status: 'active' | 'withdrawn';
   created_at: string;
   // joined fields

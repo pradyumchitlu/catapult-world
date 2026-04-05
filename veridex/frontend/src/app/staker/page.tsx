@@ -74,7 +74,7 @@ export default function StakerPage() {
     );
   }
 
-  const totalStaked = stakes.reduce((sum, s) => sum + (s.amount_eth || s.amount), 0);
+  const totalStaked = stakes.reduce((sum, s) => sum + s.amount_eth, 0);
 
   return (
     <div style={{ minHeight: '100vh' }}>

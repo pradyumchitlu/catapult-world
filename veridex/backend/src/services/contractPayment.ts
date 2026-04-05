@@ -2,7 +2,7 @@ import supabase from '../lib/supabase';
 
 const PLATFORM_FEE_RATE = 0.03;        // 3% of salary
 const MAX_STAKER_REWARD_RATE = 0.15;   // up to 15% of salary
-const STAKER_SCALE_DENOMINATOR = 10000; // total staked at which staker reward hits max
+const STAKER_SCALE_DENOMINATOR = 0.5;   // total ETH staked at which staker reward hits max
 
 export interface BuyInBreakdown {
   salary: number;
@@ -23,12 +23,12 @@ export interface BuyInBreakdown {
 export async function calculateBuyIn(workerId: string, salary: number): Promise<BuyInBreakdown> {
   const { data: stakes } = await supabase
     .from('stakes')
-    .select('amount')
+    .select('amount_eth')
     .eq('worker_id', workerId)
     .eq('status', 'active');
 
-  const totalStakedOnWorker = (stakes || []).reduce((sum, s) => sum + s.amount, 0);
-  const stakerRewardRate = Math.min(totalStakedOnWorker / STAKER_SCALE_DENOMINATOR, MAX_STAKER_REWARD_RATE);
+  const totalStakedOnWorker = (stakes || []).reduce((sum, s) => sum + Number(s.amount_eth || 0), 0);
+  const stakerRewardRate = Math.min(totalStakedOnWorker / STAKER_SCALE_DENOMINATOR, 1) * MAX_STAKER_REWARD_RATE;
   const stakerReward = Math.floor(salary * stakerRewardRate);
   const platformFee = Math.floor(salary * PLATFORM_FEE_RATE);
   const totalBuyIn = salary + stakerReward + platformFee;
@@ -69,12 +69,12 @@ export async function processCompletion(contractId: string): Promise<PaymentResu
   // Fetch active stakes on this worker
   const { data: stakes } = await supabase
     .from('stakes')
-    .select('id, staker_id, amount')
+    .select('id, staker_id, amount_eth')
     .eq('worker_id', contract.worker_id)
     .eq('status', 'active');
 
   const activeStakes = stakes || [];
-  const totalStaked = activeStakes.reduce((sum, s) => sum + s.amount, 0);
+  const totalStaked = activeStakes.reduce((sum, s) => sum + Number(s.amount_eth || 0), 0);
 
   const stakerBreakdown: PaymentResult['stakerBreakdown'] = [];
 
@@ -82,10 +82,11 @@ export async function processCompletion(contractId: string): Promise<PaymentResu
     let distributed = 0;
     for (let i = 0; i < activeStakes.length; i++) {
       const stake = activeStakes[i];
+      const stakeAmountEth = Number(stake.amount_eth || 0);
       const isLast = i === activeStakes.length - 1;
       const share = isLast
         ? stakerPool - distributed
-        : Math.floor(stakerPool * (stake.amount / totalStaked));
+        : Math.floor(stakerPool * (stakeAmountEth / totalStaked));
 
       if (share > 0) {
         stakerBreakdown.push({

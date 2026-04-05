@@ -151,11 +151,10 @@ CREATE TABLE stakes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   staker_id UUID REFERENCES users(id) ON DELETE CASCADE,
   worker_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  amount INTEGER NOT NULL,              -- kept for scoring compatibility
-  amount_wei TEXT,                      -- precise wei amount as string
-  amount_eth NUMERIC,                   -- human-readable ETH amount
-  tx_hash TEXT,                         -- on-chain deposit transaction hash
-  withdrawal_tx_hash TEXT,              -- on-chain withdrawal transaction hash
+  amount_eth NUMERIC NOT NULL,          -- canonical ETH stake amount
+  transaction_id TEXT,                  -- on-chain deposit transaction hash
+  payment_method TEXT DEFAULT 'wallet_transfer',
+  withdrawal_transaction_id TEXT,       -- on-chain withdrawal transaction hash
   status TEXT DEFAULT 'active',         -- active, withdrawn
   created_at TIMESTAMPTZ DEFAULT now()
 );

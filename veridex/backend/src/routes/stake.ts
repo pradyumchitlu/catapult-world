@@ -1,16 +1,20 @@
 import { Router, Response } from 'express';
-import { JsonRpcProvider, formatEther, parseEther } from 'ethers';
+import { JsonRpcProvider, parseEther } from 'ethers';
 import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import supabase from '../lib/supabase';
+import { getChainConfig } from '../lib/chainConfig';
 import { syncWorkerReputation } from '../services/reputationIngestion';
 import { getPlatformAddress, sendETH } from '../services/platformWallet';
 
 const router = Router();
 
-const DEFAULT_RPC_URL = 'https://worldchain-mainnet.g.alchemy.com/public';
+function getStakeAmountEth(stake: Record<string, any>): number {
+  return Number(stake.amount_eth || 0);
+}
 
-function getRpcUrl(): string {
-  return process.env.WORLDCHAIN_RPC_URL || process.env.WORLD_CHAIN_RPC_URL || DEFAULT_RPC_URL;
+function isMissingColumnError(error: any, column: string): boolean {
+  const message = typeof error?.message === 'string' ? error.message : '';
+  return (error?.code === '42703' || error?.code === 'PGRST204') && message.includes(column);
 }
 
 /**
@@ -30,22 +34,22 @@ router.get('/platform-address', (_req, res: Response) => {
 /**
  * POST /api/stake
  * Stake ETH on a worker. User sends ETH to platform wallet via MetaMask,
- * then submits the tx_hash here for on-chain verification.
+ * then submits the transaction_id here for on-chain verification.
  */
 router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { workerId, amount, tx_hash } = req.body;
+    const { workerId, amount_eth, transaction_id } = req.body;
     const stakerId = req.userId!;
+    const amountEth = Number(amount_eth);
 
-    if (!workerId || !amount || amount <= 0) {
+    if (!workerId || !Number.isFinite(amountEth) || amountEth <= 0) {
       return res.status(400).json({ error: 'Invalid stake data' });
     }
 
-    if (!tx_hash) {
+    if (!transaction_id) {
       return res.status(400).json({ error: 'Transaction hash is required' });
     }
 
-    // Verify staker has a connected wallet
     const { data: staker, error: stakerError } = await supabase
       .from('users')
       .select('wallet_address')
@@ -60,7 +64,6 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ error: 'You must connect a wallet before staking' });
     }
 
-    // Verify worker exists
     const { data: worker, error: workerError } = await supabase
       .from('users')
       .select('id')
@@ -71,15 +74,15 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       return res.status(404).json({ error: 'Worker not found' });
     }
 
-    // Verify the transaction on-chain
-    const provider = new JsonRpcProvider(getRpcUrl());
-    const receipt = await provider.getTransactionReceipt(tx_hash);
+    const chain = getChainConfig();
+    const provider = new JsonRpcProvider(chain.rpcUrl);
+    const receipt = await provider.getTransactionReceipt(transaction_id);
 
     if (!receipt || receipt.status !== 1) {
       return res.status(400).json({ error: 'Transaction not confirmed or failed' });
     }
 
-    const tx = await provider.getTransaction(tx_hash);
+    const tx = await provider.getTransaction(transaction_id);
     if (!tx) {
       return res.status(400).json({ error: 'Transaction not found' });
     }
@@ -93,36 +96,50 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ error: 'Transaction sender does not match your wallet' });
     }
 
-    const amountWei = parseEther(amount.toString());
-    if (tx.value < amountWei) {
+    if (tx.value < parseEther(amountEth.toString())) {
       return res.status(400).json({ error: 'Transaction value is less than the stated stake amount' });
     }
 
-    // Check for duplicate tx_hash
-    const { data: existing } = await supabase
+    const { data: existing, error: duplicateError } = await supabase
       .from('stakes')
       .select('id')
-      .eq('tx_hash', tx_hash)
-      .single();
+      .eq('transaction_id', transaction_id)
+      .maybeSingle();
+
+    if (duplicateError) {
+      throw duplicateError;
+    }
 
     if (existing) {
       return res.status(400).json({ error: 'This transaction has already been used for a stake' });
     }
 
-    // Create stake record
-    const { data: stake, error: stakeError } = await supabase
+    const baseInsert = {
+      staker_id: stakerId,
+      worker_id: workerId,
+      amount_eth: amountEth,
+      transaction_id,
+      payment_method: 'wallet_transfer',
+      status: 'active',
+    };
+
+    let { data: stake, error: stakeError } = await supabase
       .from('stakes')
-      .insert({
-        staker_id: stakerId,
-        worker_id: workerId,
-        amount: Math.round(amount),
-        amount_wei: amountWei.toString(),
-        amount_eth: amount,
-        tx_hash,
-        status: 'active',
-      })
+      .insert(baseInsert)
       .select()
       .single();
+
+    // Compatibility fallback for the current remote schema until the amount column is dropped.
+    if (stakeError && /null value in column "amount"/i.test(stakeError.message || '')) {
+      ({ data: stake, error: stakeError } = await supabase
+        .from('stakes')
+        .insert({
+          ...baseInsert,
+          amount: 0,
+        })
+        .select()
+        .single());
+    }
 
     if (stakeError) {
       throw stakeError;
@@ -134,7 +151,14 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       console.error('Score recomputation after stake failed:', scoreError);
     }
 
-    return res.json({ success: true, stake });
+    return res.json({
+      success: true,
+      stake: {
+        ...stake,
+        amount_eth: getStakeAmountEth(stake),
+        transaction_id: stake?.transaction_id || transaction_id,
+      },
+    });
   } catch (error) {
     console.error('Stake error:', error);
     return res.status(500).json({ error: 'Staking failed' });
@@ -169,8 +193,9 @@ router.get('/:userId', requireAuth, async (req: AuthenticatedRequest, res: Respo
 
     const stakesWithYield = (stakes || []).map((stake) => ({
       ...stake,
-      yield_earned: 0, // TODO: Calculate based on score change since stake
-      score_trend: 'stable', // TODO: Calculate based on recent score history
+      amount_eth: getStakeAmountEth(stake),
+      yield_earned: 0,
+      score_trend: 'stable',
     }));
 
     return res.json({ stakes: stakesWithYield });
@@ -182,7 +207,7 @@ router.get('/:userId', requireAuth, async (req: AuthenticatedRequest, res: Respo
 
 /**
  * POST /api/stake/withdraw
- * Withdraw a stake — sends ETH back to the staker's wallet
+ * Withdraw a stake — sends ETH back to the staker's wallet.
  */
 router.post('/withdraw', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -193,7 +218,6 @@ router.post('/withdraw', requireAuth, async (req: AuthenticatedRequest, res: Res
       return res.status(400).json({ error: 'Missing stakeId' });
     }
 
-    // Get stake
     const { data: stake, error: stakeError } = await supabase
       .from('stakes')
       .select('*')
@@ -206,7 +230,11 @@ router.post('/withdraw', requireAuth, async (req: AuthenticatedRequest, res: Res
       return res.status(404).json({ error: 'Stake not found' });
     }
 
-    // Get staker's wallet address
+    const amountEth = getStakeAmountEth(stake);
+    if (!Number.isFinite(amountEth) || amountEth <= 0) {
+      return res.status(400).json({ error: 'Stake amount is invalid' });
+    }
+
     const { data: staker } = await supabase
       .from('users')
       .select('wallet_address')
@@ -217,15 +245,34 @@ router.post('/withdraw', requireAuth, async (req: AuthenticatedRequest, res: Res
       return res.status(400).json({ error: 'No wallet address on file' });
     }
 
-    // Send ETH back to staker via platform wallet
-    const amountWei = stake.amount_wei ? BigInt(stake.amount_wei) : parseEther(stake.amount.toString());
-    const withdrawalTxHash = await sendETH(staker.wallet_address, amountWei);
+    const withdrawalTransactionId = await sendETH(
+      staker.wallet_address,
+      parseEther(amountEth.toString())
+    );
 
-    // Mark stake as withdrawn
-    await supabase
-      .from('stakes')
-      .update({ status: 'withdrawn', withdrawal_tx_hash: withdrawalTxHash })
-      .eq('id', stakeId);
+    let updateError = (
+      await supabase
+        .from('stakes')
+        .update({
+          status: 'withdrawn',
+          withdrawal_transaction_id: withdrawalTransactionId,
+        })
+        .eq('id', stakeId)
+    ).error;
+
+    // Compatibility fallback while the remote schema is missing the new column.
+    if (updateError && isMissingColumnError(updateError, 'withdrawal_transaction_id')) {
+      updateError = (
+        await supabase
+          .from('stakes')
+          .update({ status: 'withdrawn' })
+          .eq('id', stakeId)
+      ).error;
+    }
+
+    if (updateError) {
+      throw updateError;
+    }
 
     try {
       await syncWorkerReputation(stake.worker_id, { refreshGithub: false });
@@ -235,8 +282,8 @@ router.post('/withdraw', requireAuth, async (req: AuthenticatedRequest, res: Res
 
     return res.json({
       success: true,
-      returned_amount: stake.amount_eth || stake.amount,
-      withdrawal_tx_hash: withdrawalTxHash,
+      returned_amount: amountEth,
+      withdrawal_transaction_id: withdrawalTransactionId,
     });
   } catch (error) {
     console.error('Withdraw stake error:', error);
