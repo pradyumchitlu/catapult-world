@@ -21,9 +21,10 @@ import {
 } from '@/lib/api';
 import {
   createWorldChainPublicClient,
+  getMiniKitTransactionErrorMessage,
   getWorldAppApiBaseUrl,
   linkWorldWalletWithMiniKit,
-  sendMiniKitEthTransfers,
+  sendMiniKitAssetTransfers,
 } from '@/lib/minikit';
 import {
   col,
@@ -35,7 +36,7 @@ import {
   gradientText,
   colors,
 } from '@/lib/styles';
-import type { Contract, ContractStatus } from '@/types';
+import type { Contract, ContractStatus, PaymentAsset } from '@/types';
 
 const worldChainClient = createWorldChainPublicClient();
 
@@ -63,6 +64,7 @@ export default function EmployerPage() {
   const [reviewingContract, setReviewingContract] = useState<Contract | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [contractPaymentAssets, setContractPaymentAssets] = useState<Record<string, PaymentAsset>>({});
 
   // Auth guard
   useEffect(() => {
@@ -108,6 +110,7 @@ export default function EmployerPage() {
     if (!token) return;
     setActionLoading(id);
     setActionError(null);
+    const paymentAsset = contractPaymentAssets[id] || 'ETH';
     try {
       setActionMessage('Preparing the payout plan...');
       const { settlement } = await getContractSettlement(id, token);
@@ -128,12 +131,13 @@ export default function EmployerPage() {
         throw new Error('Link a World wallet before approving payouts.');
       }
 
-      setActionMessage(`Requesting a ${settlement.total_amount.toLocaleString()} ETH payout in World App...`);
-      const txResult = await sendMiniKitEthTransfers(
+      setActionMessage(`Requesting a ${settlement.total_amount.toLocaleString()} ${paymentAsset} payout in World App...`);
+      const txResult = await sendMiniKitAssetTransfers(
         settlement.transfers.map((transfer) => ({
           to: transfer.wallet_address,
           amountEth: transfer.amount.toString(),
-        }))
+        })),
+        paymentAsset
       );
 
       if (txResult.executedWith === 'fallback') {
@@ -144,7 +148,7 @@ export default function EmployerPage() {
         throw new Error('World App used a different wallet than the one linked to this Veridex account.');
       }
 
-      setActionMessage('Waiting for the payout to confirm on World Chain...');
+      setActionMessage(`Waiting for the ${paymentAsset} payout to confirm on World Chain...`);
       const { transactionHash } = await pollUserOperation(txResult.data.userOpHash);
 
       setActionMessage('Finalizing the payout in Veridex...');
@@ -158,11 +162,11 @@ export default function EmployerPage() {
         token
       );
 
-      setActionMessage('Contract payout confirmed and recorded.');
+      setActionMessage(`Contract payout confirmed and recorded in ${paymentAsset}.`);
       await fetchContracts();
     } catch (error) {
       console.error('Complete failed:', error);
-      setActionError(error instanceof Error ? error.message : 'Complete failed');
+      setActionError(getMiniKitTransactionErrorMessage(error, { feature: 'contract', asset: paymentAsset }));
     } finally {
       setActionLoading(null);
     }
@@ -322,6 +326,13 @@ export default function EmployerPage() {
                 contract={contract}
                 onActivate={handleActivate}
                 onComplete={handleComplete}
+                paymentAsset={contractPaymentAssets[contract.id] || 'ETH'}
+                onPaymentAssetChange={(asset) =>
+                  setContractPaymentAssets((current) => ({
+                    ...current,
+                    [contract.id]: asset,
+                  }))
+                }
                 onReview={(id) => setReviewingContract(contracts.find((c) => c.id === id) || null)}
                 onClose={handleClose}
                 isLoading={actionLoading === contract.id}

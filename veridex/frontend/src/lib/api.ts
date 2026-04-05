@@ -7,9 +7,14 @@ import type {
   OAuthApp,
   OAuthAuthorizeCompletionResponse,
   OAuthAuthorizeValidationResponse,
+  PublicAgentLookupResponse,
+  RegisterAgentParams,
+  ReputationResponse,
   Review,
+  ReviewListResponse,
   ScoreComponents,
   ContractSettlementPlan,
+  TrustQueryResponse,
   User,
   WorkerProfile,
 } from '@/types';
@@ -40,14 +45,6 @@ interface IngestionResponse {
   specializations: string[];
   years_experience: number | null;
   warning?: string | null;
-}
-
-interface ReputationResponse {
-  user: User;
-  profile: WorkerProfile | null;
-  reviews: Review[];
-  totalStaked: number;
-  stakerCount: number;
 }
 
 interface SaveEvidenceResponse {
@@ -413,10 +410,10 @@ export const resolveWalletTokens = (tokenAddresses: string[], token: string) =>
 
 // Trust Query
 export const getTrustScore = (veridexId: string) =>
-  fetchApi(`/api/trust/${veridexId}`);
+  fetchApi<TrustQueryResponse>(`/api/trust/${veridexId}`);
 
 export const getAgent = (agentId: string) =>
-  fetchApi(`/api/agent/${agentId}`);
+  fetchApi<PublicAgentLookupResponse>(`/api/agent/${agentId}`);
 
 // Stakes
 export const getPlatformAddress = () =>
@@ -455,7 +452,7 @@ export const createReview = (
   });
 
 export const getReviews = (workerId: string) =>
-  fetchApi(`/api/review/${workerId}`);
+  fetchApi<ReviewListResponse>(`/api/review/${workerId}`);
 
 // Contextual Score
 export const getContextualScore = (workerId: string, jobDescription: string, token?: string) =>
@@ -467,13 +464,7 @@ export const getContextualScore = (workerId: string, jobDescription: string, tok
 
 // Agents (Agent Credential registration)
 export const spawnAgent = (
-  params: {
-    name: string;
-    identifier: string;
-    identifier_type?: string;
-    deployment_surface?: string;
-    inheritance_fraction?: number;
-  },
+  params: RegisterAgentParams,
   token: string
 ) =>
   fetchApi('/api/agent/spawn', {

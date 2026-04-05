@@ -26,7 +26,7 @@ beforeEach(() => {
 });
 
 describe('POST /api/agent/spawn', () => {
-  it('should register an agent with lightweight demo fields', async () => {
+  it('should register an agent with full credential fields', async () => {
     __setMockResponse('agents', 'select', { data: [], error: null });
     __setMockResponse('worker_profiles', 'select', {
       data: { overall_trust_score: 85 },
@@ -38,9 +38,12 @@ describe('POST /api/agent/spawn', () => {
         id: 'new-id',
         name: 'My Bot',
         identifier: 'demo://my-bot',
+        identifier_type: 'api_endpoint',
         deployment_surface: 'api',
         derived_score: 26,
         inheritance_fraction: 0.3,
+        authorized_domains: ['defi', 'negotiation'],
+        stake_amount: 0.25,
       },
       error: null,
     });
@@ -51,13 +54,19 @@ describe('POST /api/agent/spawn', () => {
       .send({
         name: 'My Bot',
         identifier: 'demo://my-bot',
+        identifier_type: 'api_endpoint',
         deployment_surface: 'api',
         inheritance_fraction: 0.3,
+        authorized_domains: ['DeFi', 'Negotiation'],
+        stake_amount: 0.25,
       });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.agent.name).toBe('My Bot');
+    expect(res.body.agent.identifier_type).toBe('api_endpoint');
+    expect(res.body.agent.authorized_domains).toEqual(['defi', 'negotiation']);
+    expect(res.body.agent.stake_amount).toBe(0.25);
     expect(res.body.agent.agent_score).toBe(100);
     expect(res.body.agent.max_penalty_points).toBe(26);
   });
@@ -89,6 +98,23 @@ describe('POST /api/agent/spawn', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/100%/);
+  });
+
+  it('should reject negative stake amounts', async () => {
+    __setMockResponse('agents', 'select', { data: [], error: null });
+
+    const res = await request(app)
+      .post('/api/agent/spawn')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Negative Stake Bot',
+        identifier: 'demo://negative-stake',
+        inheritance_fraction: 0.1,
+        stake_amount: -1,
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/stake_amount/i);
   });
 });
 

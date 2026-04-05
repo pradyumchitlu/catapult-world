@@ -14,6 +14,25 @@ import {
 const router = Router();
 
 const ALLOWED_ACTION_TYPES = ['no_issue', 'warning', 'failure', 'severe_failure'] as const;
+const ALLOWED_IDENTIFIER_TYPES = ['signing_key', 'api_endpoint', 'wallet', 'other'] as const;
+
+function parseAuthorizedDomains(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  return [];
+}
 
 /**
  * POST /api/agent/spawn
@@ -27,6 +46,8 @@ router.post('/spawn', requireAuth, async (req: AuthenticatedRequest, res: Respon
       identifier_type,
       deployment_surface,
       inheritance_fraction,
+      authorized_domains,
+      stake_amount,
     } = req.body;
     const userId = req.userId!;
 
@@ -36,6 +57,12 @@ router.post('/spawn', requireAuth, async (req: AuthenticatedRequest, res: Respon
 
     if (!identifier || typeof identifier !== 'string' || identifier.trim().length === 0) {
       return res.status(400).json({ error: 'Agent identifier is required' });
+    }
+
+    if (identifier_type !== undefined && !ALLOWED_IDENTIFIER_TYPES.includes(identifier_type)) {
+      return res.status(400).json({
+        error: `identifier_type must be one of ${ALLOWED_IDENTIFIER_TYPES.join(', ')}`,
+      });
     }
 
     // Validate inheritance_fraction if provided
@@ -54,6 +81,15 @@ router.post('/spawn', requireAuth, async (req: AuthenticatedRequest, res: Respon
       return res.status(400).json({
         error: `Total active agent reputation cannot exceed 100%. You have ${(currentAllocation * 100).toFixed(0)}% already allocated.`,
       });
+    }
+
+    const normalizedDomains = parseAuthorizedDomains(authorized_domains);
+    const requestedStakeAmount = stake_amount !== undefined
+      ? Number(stake_amount)
+      : 0;
+
+    if (!Number.isFinite(requestedStakeAmount) || requestedStakeAmount < 0) {
+      return res.status(400).json({ error: 'stake_amount must be a non-negative number' });
     }
 
     // Get user's worker profile for trust score
@@ -76,6 +112,8 @@ router.post('/spawn', requireAuth, async (req: AuthenticatedRequest, res: Respon
       identifier_type,
       deployment_surface,
       inheritance_fraction: requestedFraction,
+      authorized_domains: normalizedDomains,
+      stake_amount: requestedStakeAmount,
     });
 
     return res.json({

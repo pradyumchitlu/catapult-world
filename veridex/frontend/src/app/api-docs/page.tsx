@@ -204,7 +204,7 @@ const endpointDocs: EndpointDoc[] = [
     path: '/api/agent/:agentId',
     auth: 'None',
     purpose:
-      'Resolve an agent credential back to its parent human, including the delegated score snapshot used for public verification.',
+      'Resolve an agent credential back to its parent human, including the delegated score snapshot, domain restrictions, and public verification status.',
     status: 'Beta',
     params: [
       {
@@ -213,30 +213,44 @@ const endpointDocs: EndpointDoc[] = [
       },
     ],
     successShape: [
-      '`agent_id`, `agent_name`, `derived_score`, and `created_at`',
-      'Nested `parent` object containing `veridex_id`, `display_name`, `is_verified_human`, `overall_trust_score`, and `roles`',
+      'Top-level `is_verified` plus nested `agent` and `parent` objects',
+      '`agent` includes identifier metadata, `inheritance_fraction`, `authorized_domains`, `stake_amount`, penalty state, and timestamps',
+      '`parent` includes the current effective trust score plus the underlying base score and active agent penalty total',
     ],
     errors: [
-      '`404` with `{ "error": "Agent not found" }` when the credential does not exist',
+      '`404` with `{ "error": "Agent not found", "is_verified": false }` when the credential does not exist',
       '`500` with `{ "error": "Lookup failed" }` if the lookup fails server-side',
     ],
     curl: 'curl <base-url>/api/agent/<agent-id>',
     responseExample: `{
-  "agent_id": "agent-uuid",
-  "agent_name": "Shopping Agent",
-  "derived_score": 59,
-  "created_at": "2026-04-05T01:23:45.000Z",
+  "is_verified": true,
+  "agent": {
+    "id": "agent-uuid",
+    "name": "Shopping Agent",
+    "identifier": "https://demo-agent.app",
+    "identifier_type": "api_endpoint",
+    "deployment_surface": "api",
+    "agent_score": 100,
+    "derived_score": 59,
+    "current_penalty_points": 0,
+    "max_penalty_points": 59,
+    "inheritance_fraction": 0.7,
+    "authorized_domains": ["payments", "negotiation"],
+    "stake_amount": 0.5,
+    "status": "active",
+    "dispute_count": 0,
+    "created_at": "2026-04-05T01:23:45.000Z"
+  },
   "parent": {
-    "veridex_id": "user-uuid",
     "display_name": "Verified Human",
-    "is_verified_human": true,
-    "overall_trust_score": 85,
-    "roles": ["worker"]
+    "base_overall_trust_score": 85,
+    "agent_penalty_score": 0,
+    "trust_score": 85
   }
 }`,
     notes: [
-      'This route is live, but there is currently no seeded public example credential in the dataset.',
-      'Treat this endpoint as beta until live agent credentials are being issued in production.',
+      'The live route already returns the beta verification shape above; the example is sanitized, but the field names match production.',
+      'Use this route for counterparty checks before letting an agent act on a user’s behalf.',
     ],
   },
 ];
@@ -518,14 +532,15 @@ export default function ApiDocsPage() {
             <blockquote className={styles.noteBlock}>
               <p>
                 <InlineCode>GET /api/reputation/browse/workers</InlineCode> is intentionally excluded from the public
-                contract. The current route order allows <InlineCode>GET /api/reputation/:userId</InlineCode> to shadow
-                it, so it stays undocumented until that behavior is fixed.
+                contract. It currently exists as an app-oriented browse feed rather than a stable external integration
+                surface, so it stays undocumented even though the route is live.
               </p>
             </blockquote>
             <p className={styles.closingCopy}>
-              The product-facing route for docs is <InlineCode>/api-docs</InlineCode>. Legacy <InlineCode>/query-demo</InlineCode>
-              still redirects here for compatibility, while <InlineCode>/developers/apps</InlineCode> now hosts the
-              standalone management experience.
+              The product-facing route for this page is <InlineCode>/api-docs</InlineCode>. Use
+              <InlineCode>/query-demo</InlineCode> for the live explorer that exercises these public endpoints from
+              inside the app, and <InlineCode>/developers/apps</InlineCode> for the standalone embedded-login app
+              management experience.
             </p>
           </section>
         </main>

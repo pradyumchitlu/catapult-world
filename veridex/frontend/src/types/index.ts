@@ -212,6 +212,42 @@ export interface ContextualScoreApiResponse {
   overall_trust_score?: number;
 }
 
+export interface TrustQueryResponse {
+  veridex_id: string;
+  display_name: string | null;
+  is_verified_human: boolean;
+  veridex_score: number;
+  overall_trust_score: number;
+  base_overall_trust_score: number;
+  agent_penalty_score: number;
+  score_summary: {
+    evidence: number;
+    employer: number;
+    staking: number;
+    veridex: number;
+  };
+  score_components: ScoreComponents;
+  total_staked: number;
+  review_count: number;
+  avg_rating: number;
+  profession_category: string | null;
+  skills: string[];
+  specializations: string[];
+  years_experience: number | null;
+}
+
+export interface ReputationResponse {
+  user: User;
+  profile: WorkerProfile | null;
+  reviews: Review[];
+  totalStaked: number;
+  stakerCount: number;
+}
+
+export interface ReviewListResponse {
+  reviews: Review[];
+}
+
 export interface Agent {
   id: string;
   parent_user_id: string;
@@ -303,6 +339,36 @@ export interface AgentListResponse {
   recent_actions: AgentActionEvent[];
 }
 
+export interface PublicAgentLookupResponse {
+  is_verified: boolean;
+  agent: Pick<
+    Agent,
+    | 'id'
+    | 'name'
+    | 'identifier'
+    | 'identifier_type'
+    | 'deployment_surface'
+    | 'agent_score'
+    | 'derived_score'
+    | 'current_penalty_points'
+    | 'max_penalty_points'
+    | 'inheritance_fraction'
+    | 'authorized_domains'
+    | 'stake_amount'
+    | 'status'
+    | 'dispute_count'
+    | 'created_at'
+  >;
+  parent: {
+    display_name: string | null;
+    base_overall_trust_score: number;
+    agent_penalty_score: number;
+    trust_score: number;
+  };
+}
+
+export type PaymentAsset = 'ETH' | 'WETH';
+
 export type ContractStatus = 'draft' | 'active' | 'submitted' | 'completed' | 'closed';
 
 export interface Contract {
@@ -362,8 +428,9 @@ export interface ContractPayment {
 
 export interface RegisterAgentParams {
   name: string;
-  identifier?: string;
+  identifier: string;
   identifier_type?: string;
+  deployment_surface?: string;
   inheritance_fraction?: number;
   authorized_domains?: string[];
   stake_amount?: number;

@@ -35,6 +35,8 @@ const DEPLOYMENT_SURFACES = [
   { value: 'automation', label: 'Automation' },
 ];
 
+const DOMAIN_OPTIONS = ['defi', 'payments', 'negotiation', 'content', 'research', 'automation'];
+
 const ACTION_LABELS: Record<AgentActionType, string> = {
   no_issue: 'No issue logged',
   warning: 'Warning recorded',
@@ -64,6 +66,17 @@ function formatActionDate(value: string): string {
   });
 }
 
+function parseDomainInput(value: string): string[] {
+  return Array.from(
+    new Set(
+      value
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+}
+
 const EMPTY_SUMMARY: AgentSummary = {
   base_user_score: 0,
   effective_user_score: 0,
@@ -90,6 +103,8 @@ export default function AgentsPage() {
   const [identifierType, setIdentifierType] = useState('other');
   const [deploymentSurface, setDeploymentSurface] = useState('custom');
   const [inheritanceFraction, setInheritanceFraction] = useState(0.3);
+  const [authorizedDomainsInput, setAuthorizedDomainsInput] = useState('');
+  const [stakeAmount, setStakeAmount] = useState('0');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -137,9 +152,16 @@ export default function AgentsPage() {
   }, [inheritanceFraction, summary.base_user_score, summary.remaining_fraction]);
 
   const usedAgents = agents.filter((agent) => agent.action_count > 0);
+  const selectedDomains = parseDomainInput(authorizedDomainsInput);
 
   const handleCreateAgent = async () => {
     if (!newAgentName.trim() || !identifier.trim() || !token) return;
+
+    const parsedStakeAmount = stakeAmount.trim() ? Number(stakeAmount) : 0;
+    if (!Number.isFinite(parsedStakeAmount) || parsedStakeAmount < 0) {
+      setError('Stake backing must be a non-negative number.');
+      return;
+    }
 
     setIsCreating(true);
     setError(null);
@@ -151,18 +173,30 @@ export default function AgentsPage() {
         identifier_type: identifierType,
         deployment_surface: deploymentSurface,
         inheritance_fraction: inheritanceFraction,
+        authorized_domains: selectedDomains,
+        stake_amount: parsedStakeAmount,
       }, token);
       setNewAgentName('');
       setIdentifier('');
       setIdentifierType('other');
       setDeploymentSurface('custom');
       setInheritanceFraction(0.3);
+      setAuthorizedDomainsInput('');
+      setStakeAmount('0');
       await refreshAgents();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to register agent');
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const toggleDomain = (domain: string) => {
+    const nextDomains = selectedDomains.includes(domain)
+      ? selectedDomains.filter((item) => item !== domain)
+      : [...selectedDomains, domain];
+
+    setAuthorizedDomainsInput(nextDomains.join(', '));
   };
 
   const handleAgentAction = async (
@@ -244,7 +278,7 @@ export default function AgentsPage() {
 
         <GlassCard className="fade-up fade-up-3" style={{ marginBottom: '24px' }}>
           <span style={sectionLabel}>Register New Agent</span>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '14px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '16px' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <span style={{ ...textMuted, fontSize: '12px' }}>Agent Name</span>
               <input
@@ -291,6 +325,57 @@ export default function AgentsPage() {
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
+            </label>
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ ...textMuted, fontSize: '12px' }}>Authorized Domains</span>
+              <input
+                type="text"
+                placeholder="defi, payments, negotiation"
+                value={authorizedDomainsInput}
+                onChange={(e) => setAuthorizedDomainsInput(e.target.value)}
+                className="input"
+              />
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {DOMAIN_OPTIONS.map((domain) => {
+                  const selected = selectedDomains.includes(domain);
+                  return (
+                    <button
+                      key={domain}
+                      type="button"
+                      onClick={() => toggleDomain(domain)}
+                      style={{
+                        borderRadius: '999px',
+                        border: selected ? '1px solid rgba(37,99,235,0.22)' : '1px solid rgba(148,163,184,0.22)',
+                        background: selected ? 'rgba(37,99,235,0.1)' : 'rgba(255,255,255,0.55)',
+                        color: selected ? colors.primary : colors.textSecondary,
+                        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        padding: '6px 10px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {domain}
+                    </button>
+                  );
+                })}
+              </div>
+            </label>
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ ...textMuted, fontSize: '12px' }}>Stake Backing (ETH)</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={stakeAmount}
+                onChange={(e) => setStakeAmount(e.target.value)}
+                className="input"
+              />
+              <span style={{ ...textMuted, fontSize: '11px' }}>
+                Recorded on the credential for verification today. This is not yet a locked on-chain collateral flow.
+              </span>
             </label>
           </div>
 

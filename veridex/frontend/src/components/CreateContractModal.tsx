@@ -99,7 +99,7 @@ export default function CreateContractModal({
             Hire {workerName}
           </h2>
           <p style={{ ...textMuted, marginBottom: '24px' }}>
-            Payment happens when you approve submitted work from your linked wallet in World App.
+            This creates a draft contract for the worker. You will activate it from the employer dashboard, and payment only happens later when you approve submitted work from your linked wallet in World App.
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

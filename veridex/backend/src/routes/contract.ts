@@ -6,6 +6,10 @@ import { getWorldUserOperationStatus } from '../services/worldUserOperation';
 
 const router = Router();
 
+function hasRole(req: AuthenticatedRequest, role: 'client' | 'worker'): boolean {
+  return Array.isArray(req.user?.roles) && req.user.roles.includes(role);
+}
+
 /**
  * GET /api/contract/estimate
  * Preview buy-in cost for hiring a worker at a given salary.
@@ -13,6 +17,10 @@ const router = Router();
  */
 router.get('/estimate', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasRole(req, 'client')) {
+      return res.status(403).json({ error: 'Only clients can estimate contract buy-in' });
+    }
+
     const workerId = req.query.worker_id as string;
     const salary = parseInt(req.query.salary as string);
 
@@ -37,19 +45,31 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     const { worker_id, title, description, payment_amount, duration_days } = req.body;
     const employerId = req.userId!;
 
+    if (!hasRole(req, 'client')) {
+      return res.status(403).json({ error: 'Only clients can create contracts' });
+    }
+
     if (!worker_id || !title || !payment_amount || payment_amount <= 0) {
       return res.status(400).json({ error: 'Missing required fields: worker_id, title, payment_amount' });
+    }
+
+    if (worker_id === employerId) {
+      return res.status(400).json({ error: 'You cannot create a contract for your own account' });
     }
 
     // Verify worker exists
     const { data: worker, error: workerError } = await supabase
       .from('users')
-      .select('id')
+      .select('id, roles')
       .eq('id', worker_id)
       .single();
 
     if (workerError || !worker) {
       return res.status(404).json({ error: 'Worker not found' });
+    }
+
+    if (!Array.isArray(worker.roles) || !worker.roles.includes('worker')) {
+      return res.status(400).json({ error: 'Contracts can only be sent to worker accounts' });
     }
 
     // Calculate buy-in so employer can see cost before activating
@@ -85,6 +105,10 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
  */
 router.put('/:id/activate', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasRole(req, 'client')) {
+      return res.status(403).json({ error: 'Only clients can activate contracts' });
+    }
+
     const { id } = req.params;
     const employerId = req.userId!;
 
@@ -137,6 +161,10 @@ router.put('/:id/activate', requireAuth, async (req: AuthenticatedRequest, res: 
  */
 router.put('/:id/submit', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasRole(req, 'worker')) {
+      return res.status(403).json({ error: 'Only workers can submit contract work' });
+    }
+
     const { id } = req.params;
     const workerId = req.userId!;
 
@@ -177,6 +205,10 @@ router.put('/:id/submit', requireAuth, async (req: AuthenticatedRequest, res: Re
  */
 router.get('/:id/settlement', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasRole(req, 'client')) {
+      return res.status(403).json({ error: 'Only clients can prepare contract settlement' });
+    }
+
     const { id } = req.params;
     const employerId = req.userId!;
 
@@ -210,6 +242,10 @@ router.get('/:id/settlement', requireAuth, async (req: AuthenticatedRequest, res
  */
 router.put('/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasRole(req, 'client')) {
+      return res.status(403).json({ error: 'Only clients can approve and pay contracts' });
+    }
+
     const { id } = req.params;
     const employerId = req.userId!;
     const userWalletAddress = typeof req.user?.wallet_address === 'string' ? req.user.wallet_address.trim() : '';
@@ -295,6 +331,10 @@ router.put('/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: 
  */
 router.put('/:id/close', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasRole(req, 'client')) {
+      return res.status(403).json({ error: 'Only clients can close contracts' });
+    }
+
     const { id } = req.params;
     const employerId = req.userId!;
 
@@ -335,6 +375,10 @@ router.put('/:id/close', requireAuth, async (req: AuthenticatedRequest, res: Res
  */
 router.get('/employer', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasRole(req, 'client')) {
+      return res.status(403).json({ error: 'Only clients can view employer contracts' });
+    }
+
     const employerId = req.userId!;
 
     const { data: contracts, error } = await supabase
@@ -377,6 +421,10 @@ router.get('/employer', requireAuth, async (req: AuthenticatedRequest, res: Resp
  */
 router.get('/worker', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!hasRole(req, 'worker')) {
+      return res.status(403).json({ error: 'Only workers can view worker contracts' });
+    }
+
     const workerId = req.userId!;
 
     const { data: contracts, error } = await supabase

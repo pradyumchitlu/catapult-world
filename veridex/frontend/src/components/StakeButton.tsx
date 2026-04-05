@@ -10,6 +10,7 @@ import { colors } from '@/lib/styles';
 import { useMiniApp } from '@/contexts/MiniAppContext';
 import {
   createWorldChainPublicClient,
+  getMiniKitTransactionErrorMessage,
   getWorldAppApiBaseUrl,
   linkWorldWalletWithMiniKit,
   sendMiniKitStakeTransaction,
@@ -56,7 +57,7 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
     setError(null);
 
     try {
-      setStakingStatus('Getting platform address...');
+      setStakingStatus('Getting Veridex platform stake wallet...');
       const { address: platformAddress } = await getPlatformAddress();
 
       let txHash = '';
@@ -114,7 +115,7 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
       setAmount(0.01);
       setStakingStatus('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to stake');
+      setError(getMiniKitTransactionErrorMessage(err, { feature: 'stake', asset: 'ETH' }));
       setStakingStatus('');
     } finally {
       setIsStaking(false);
@@ -174,8 +175,8 @@ export default function StakeButton({ workerId, workerName, onStake }: StakeButt
 
             <p className="mb-6 text-sm" style={{ color: colors.textSecondary, lineHeight: 1.7 }}>
               {preferMiniKit
-                ? 'Use your World wallet inside World App to back this worker with a tiny ETH stake on World Chain.'
-                : 'Stake ETH to show you believe in this worker. Your stake affects their Veridex score.'}
+                ? 'Use your World wallet inside World App to send ETH into the Veridex platform stake wallet on World Chain. It is recorded as backing for this worker, not paid to them directly.'
+                : 'Stake ETH to show you believe in this worker. The ETH goes to the Veridex platform stake wallet, not directly to the worker, and it affects their Veridex score.'}
             </p>
 
             <div className="mb-6">

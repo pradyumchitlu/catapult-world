@@ -45,6 +45,7 @@ export default function AgentCard({ agent, isBusy = false, onAction, onReset }: 
 
   const statusColor = agent.status === 'active' ? colors.primary : '#64748B';
   const identifierPreview = agent.identifier || 'No identifier saved';
+  const hasDomains = agent.authorized_domains.length > 0;
 
   return (
     <div
@@ -139,6 +140,10 @@ export default function AgentCard({ agent, isBusy = false, onAction, onReset }: 
             <div style={{ ...textSecondary, fontSize: '13px' }}>{formatPercent(agent.inheritance_fraction)}</div>
           </div>
           <div>
+            <div style={{ ...textMuted, fontSize: '11px', marginBottom: '4px' }}>Stake Backing</div>
+            <div style={{ ...textSecondary, fontSize: '13px' }}>{agent.stake_amount} ETH</div>
+          </div>
+          <div>
             <div style={{ ...textMuted, fontSize: '11px', marginBottom: '4px' }}>Current Penalty</div>
             <div style={{ ...textSecondary, fontSize: '13px' }}>{agent.current_penalty_points} pts</div>
           </div>
@@ -158,6 +163,34 @@ export default function AgentCard({ agent, isBusy = false, onAction, onReset }: 
             <div style={{ ...textMuted, fontSize: '11px', marginBottom: '4px' }}>Last Activity</div>
             <div style={{ ...textSecondary, fontSize: '13px' }}>{lastActionDate || 'No actions yet'}</div>
           </div>
+        </div>
+
+        <div style={{ marginBottom: '14px' }}>
+          <div style={{ ...textMuted, fontSize: '11px', marginBottom: '6px' }}>Authorized Domains</div>
+          {hasDomains ? (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {agent.authorized_domains.map((domain) => (
+                <span
+                  key={domain}
+                  style={{
+                    borderRadius: '999px',
+                    border: '1px solid rgba(37,99,235,0.14)',
+                    background: 'rgba(37,99,235,0.08)',
+                    color: colors.primary,
+                    fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    padding: '6px 10px',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {domain}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div style={{ ...textSecondary, fontSize: '13px' }}>No domain restrictions listed</div>
+          )}
         </div>
 
         {(onAction || onReset) && (

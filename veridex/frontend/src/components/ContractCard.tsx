@@ -2,7 +2,7 @@
 
 import GlassCard from '@/components/GlassCard';
 import { headingSm, textSecondary, textMuted, gradientText, colors } from '@/lib/styles';
-import type { Contract } from '@/types';
+import type { Contract, PaymentAsset } from '@/types';
 
 const STATUS_STYLES: Record<string, { color: string; bg: string; border: string; label: string }> = {
   draft: { color: colors.textTertiary, bg: 'rgba(100,116,139,0.08)', border: 'rgba(100,116,139,0.2)', label: 'Draft' },
@@ -17,6 +17,8 @@ interface ContractCardProps {
   onActivate?: (id: string) => void;
   onSubmit?: (id: string) => void;
   onComplete?: (id: string) => void;
+  paymentAsset?: PaymentAsset;
+  onPaymentAssetChange?: (asset: PaymentAsset) => void;
   onReview?: (id: string) => void;
   onClose?: (id: string) => void;
   isLoading?: boolean;
@@ -27,6 +29,8 @@ export default function ContractCard({
   onActivate,
   onSubmit,
   onComplete,
+  paymentAsset = 'ETH',
+  onPaymentAssetChange,
   onReview,
   onClose,
   isLoading,
@@ -151,6 +155,11 @@ export default function ContractCard({
             Activate Contract
           </button>
         )}
+        {contract.status === 'draft' && !onActivate && (
+          <span style={{ fontSize: '13px', color: colors.textMuted, padding: '8px 0' }}>
+            Draft received. Waiting for employer activation.
+          </span>
+        )}
         {contract.status === 'active' && onSubmit && (
           <button
             onClick={() => onSubmit(contract.id)}
@@ -167,14 +176,45 @@ export default function ContractCard({
           </span>
         )}
         {contract.status === 'submitted' && onComplete && (
-          <button
-            onClick={() => onComplete(contract.id)}
-            disabled={isLoading}
-            className="btn-primary"
-            style={{ fontSize: '13px', padding: '8px 20px' }}
-          >
-            Approve & Pay in World App
-          </button>
+          <>
+            {onPaymentAssetChange && (
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                  fontSize: '13px',
+                  color: colors.textSecondary,
+                }}
+              >
+                <span>Asset</span>
+                <select
+                  value={paymentAsset}
+                  onChange={(event) => onPaymentAssetChange(event.target.value as PaymentAsset)}
+                  disabled={isLoading}
+                  style={{
+                    borderRadius: '10px',
+                    border: '1px solid rgba(37,99,235,0.16)',
+                    background: 'rgba(255,255,255,0.75)',
+                    color: colors.textPrimary,
+                    padding: '8px 10px',
+                  }}
+                >
+                  <option value="ETH">ETH</option>
+                  <option value="WETH">WETH</option>
+                </select>
+              </label>
+            )}
+            <button
+              onClick={() => onComplete(contract.id)}
+              disabled={isLoading}
+              className="btn-primary"
+              style={{ fontSize: '13px', padding: '8px 20px' }}
+            >
+              Approve & Pay in World App
+            </button>
+          </>
         )}
         {contract.status === 'submitted' && !onComplete && (
           <span style={{ fontSize: '13px', color: '#8B5CF6', padding: '8px 0' }}>

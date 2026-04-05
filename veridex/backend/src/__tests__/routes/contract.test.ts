@@ -18,6 +18,7 @@ const WORKER_WALLET = '0x1111111111111111111111111111111111111111';
 const STAKER_WALLET = '0x3333333333333333333333333333333333333333';
 const STAKER_ID = '33333333-3333-3333-3333-333333333333';
 const CONTRACT_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+const NON_WORKER_ID = '44444444-4444-4444-4444-444444444444';
 
 const employerUser = {
   ...fakeUser2,
@@ -56,6 +57,49 @@ beforeEach(() => {
 });
 
 describe('Contract payout routes', () => {
+  it('rejects contract creation from non-client accounts', async () => {
+    const workerToken = makeTestToken(TEST_USER_ID);
+
+    __setMockResponse('users', 'select', [{ data: fakeUser, error: null }]);
+
+    const res = await request(app)
+      .post('/api/contract')
+      .set('Authorization', `Bearer ${workerToken}`)
+      .send({
+        worker_id: TEST_USER_ID_2,
+        title: 'Invalid contract',
+        payment_amount: 10,
+      });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/only clients/i);
+  });
+
+  it('rejects contract creation for accounts that are not workers', async () => {
+    __setMockResponse('users', 'select', [
+      { data: employerUser, error: null },
+      {
+        data: {
+          id: NON_WORKER_ID,
+          roles: ['client'],
+        },
+        error: null,
+      },
+    ]);
+
+    const res = await request(app)
+      .post('/api/contract')
+      .set('Authorization', `Bearer ${employerToken}`)
+      .send({
+        worker_id: NON_WORKER_ID,
+        title: 'Invalid target',
+        payment_amount: 10,
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/worker accounts/i);
+  });
+
   it('builds a wallet-address settlement plan for submitted contracts', async () => {
     __setMockResponse('users', 'select', [
       { data: employerUser, error: null },
