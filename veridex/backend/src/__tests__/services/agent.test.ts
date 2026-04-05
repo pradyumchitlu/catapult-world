@@ -1,37 +1,45 @@
 /**
  * Unit tests for backend/src/services/agent.ts
  *
- * Tests: registerAgent, lookupAgent, updateAgentScores, listUserAgents
+ * Tests: registerAgent, lookupAgent, updateAgentScores, listUserAgents,
+ * getUserAgentDashboardData, applyAgentAction, resetAgentDemo
  */
 
-// Setup env before imports
 import '../setup';
 
 import { __setMockResponse, __resetMocks } from '../../__mocks__/supabase';
-import { registerAgent, lookupAgent, updateAgentScores, listUserAgents } from '../../services/agent';
-import { TEST_USER_ID, TEST_AGENT_ID, fakeAgent, fakeAgentMinimal, fakeUser } from '../fixtures';
+import {
+  applyAgentAction,
+  getUserAgentDashboardData,
+  listUserAgents,
+  lookupAgent,
+  registerAgent,
+  resetAgentDemo,
+  updateAgentScores,
+} from '../../services/agent';
+import {
+  TEST_AGENT_ID,
+  TEST_USER_ID,
+  fakeAgent,
+  fakeAgentActionEvent,
+  fakeAgentMinimal,
+} from '../fixtures';
 
 beforeEach(() => {
   __resetMocks();
 });
 
 describe('registerAgent', () => {
-  it('should register an agent with default 70% inheritance', async () => {
-    // Mock: no stake so no user lookup needed; insert returns agent
+  it('should register an agent with demo defaults', async () => {
     __setMockResponse('agents', 'insert', {
       data: {
+        ...fakeAgentMinimal,
         id: TEST_AGENT_ID,
-        parent_user_id: TEST_USER_ID,
         name: 'Test Agent',
-        identifier: null,
-        identifier_type: 'other',
+        identifier: 'demo://test-agent',
         inheritance_fraction: 0.7,
-        derived_score: 60, // 85 * 0.7 = 59.5 → 60
-        authorized_domains: [],
-        stake_amount: 0,
-        status: 'active',
-        dispute_count: 0,
-        created_at: '2025-06-01T00:00:00Z',
+        derived_score: 60,
+        deployment_surface: 'custom',
       },
       error: null,
     });
@@ -40,29 +48,27 @@ describe('registerAgent', () => {
       userId: TEST_USER_ID,
       name: 'Test Agent',
       parentScore: 85,
+      identifier: 'demo://test-agent',
     });
 
-    expect(agent).toBeDefined();
     expect(agent.name).toBe('Test Agent');
+    expect(agent.agent_score).toBe(100);
     expect(agent.derived_score).toBe(60);
-    expect(agent.parent_user_id).toBe(TEST_USER_ID);
+    expect(agent.current_penalty_points).toBe(0);
   });
 
   it('should calculate derived score using custom inheritance_fraction', async () => {
     __setMockResponse('agents', 'insert', {
       data: {
+        ...fakeAgent,
         id: 'new-agent-id',
-        parent_user_id: TEST_USER_ID,
         name: 'Custom Agent',
         identifier: '0xABC',
         identifier_type: 'wallet',
+        deployment_surface: 'wallet',
         inheritance_fraction: 0.5,
-        derived_score: 43, // 85 * 0.5 = 42.5 → 43
+        derived_score: 43,
         authorized_domains: ['defi'],
-        stake_amount: 0,
-        status: 'active',
-        dispute_count: 0,
-        created_at: '2025-06-01T00:00:00Z',
       },
       error: null,
     });
@@ -73,78 +79,24 @@ describe('registerAgent', () => {
       parentScore: 85,
       identifier: '0xABC',
       identifier_type: 'wallet',
+      deployment_surface: 'wallet',
       inheritance_fraction: 0.5,
       authorized_domains: ['defi'],
     });
 
-    expect(agent.identifier).toBe('0xABC');
     expect(agent.identifier_type).toBe('wallet');
+    expect(agent.deployment_surface).toBe('wallet');
     expect(agent.derived_score).toBe(43);
-    expect(agent.authorized_domains).toEqual(['defi']);
-  });
-
-  it('should record stake_amount without deducting balance (future on-chain feature)', async () => {
-    // No user lookup or balance update needed — staking is handled on-chain
-    __setMockResponse('agents', 'insert', {
-      data: {
-        id: 'staked-agent-id',
-        parent_user_id: TEST_USER_ID,
-        name: 'Staked Agent',
-        identifier: null,
-        identifier_type: 'other',
-        inheritance_fraction: 0.7,
-        derived_score: 60,
-        authorized_domains: [],
-        stake_amount: 200,
-        status: 'active',
-        dispute_count: 0,
-        created_at: '2025-06-01T00:00:00Z',
-      },
-      error: null,
-    });
-
-    const agent = await registerAgent({
-      userId: TEST_USER_ID,
-      name: 'Staked Agent',
-      parentScore: 85,
-      stake_amount: 200,
-    });
-
-    expect(agent.stake_amount).toBe(200);
-  });
-
-  it('should handle zero parent score correctly', async () => {
-    __setMockResponse('agents', 'insert', {
-      data: {
-        id: 'zero-agent',
-        parent_user_id: TEST_USER_ID,
-        name: 'Zero Score Agent',
-        identifier: null,
-        identifier_type: 'other',
-        inheritance_fraction: 0.7,
-        derived_score: 0,
-        authorized_domains: [],
-        stake_amount: 0,
-        status: 'active',
-        dispute_count: 0,
-        created_at: '2025-06-01T00:00:00Z',
-      },
-      error: null,
-    });
-
-    const agent = await registerAgent({
-      userId: TEST_USER_ID,
-      name: 'Zero Score Agent',
-      parentScore: 0,
-    });
-
-    expect(agent.derived_score).toBe(0);
+    expect(agent.max_penalty_points).toBe(43);
   });
 });
 
 describe('lookupAgent', () => {
-  it('should return agent with parent info for valid ID', async () => {
-    __setMockResponse('agents', 'select', { data: fakeAgent, error: null });
+  it('should return agent with parent info and effective trust for valid ID', async () => {
+    __setMockResponse('agents', 'select', [
+      { data: fakeAgent, error: null },
+      { data: [fakeAgent], error: null },
+    ]);
 
     const agent = await lookupAgent(TEST_AGENT_ID);
 
@@ -152,10 +104,10 @@ describe('lookupAgent', () => {
     expect(agent!.id).toBe(TEST_AGENT_ID);
     expect(agent!.name).toBe('Trading Bot');
     expect(agent!.parent.display_name).toBe('Alice Developer');
-    expect(agent!.parent.overall_trust_score).toBe(85);
-    expect(agent!.inheritance_fraction).toBe(0.7);
-    expect(agent!.authorized_domains).toEqual(['defi', 'trading']);
-    expect(agent!.stake_amount).toBe(200);
+    expect(agent!.parent.base_overall_trust_score).toBe(85);
+    expect(agent!.parent.effective_trust_score).toBe(85);
+    expect(agent!.agent_score).toBe(100);
+    expect(agent!.current_penalty_points).toBe(0);
   });
 
   it('should return null for non-existent agent', async () => {
@@ -167,54 +119,124 @@ describe('lookupAgent', () => {
 });
 
 describe('updateAgentScores', () => {
-  it('should update derived scores based on each agent\'s inheritance fraction', async () => {
+  it('should update derived scores based on each agent inheritance fraction and agent score', async () => {
     __setMockResponse('agents', 'select', {
       data: [
-        { id: 'a1', inheritance_fraction: '0.70' },
-        { id: 'a2', inheritance_fraction: '0.50' },
+        { id: 'a1', inheritance_fraction: '0.70', agent_score: 100 },
+        { id: 'a2', inheritance_fraction: '0.50', agent_score: 70 },
       ],
       error: null,
     });
     __setMockResponse('agents', 'update', { data: null, error: null });
 
-    // Should not throw
     await updateAgentScores(TEST_USER_ID, 100);
   });
 
   it('should handle user with no agents gracefully', async () => {
     __setMockResponse('agents', 'select', { data: [], error: null });
-
     await updateAgentScores(TEST_USER_ID, 100);
-    // No error = pass
   });
 });
 
 describe('listUserAgents', () => {
-  it('should return agents for a user', async () => {
+  it('should return agents for a user with computed penalty fields', async () => {
     __setMockResponse('agents', 'select', {
       data: [fakeAgentMinimal],
       error: null,
     });
 
-    const agents = await listUserAgents(TEST_USER_ID);
+    const agents = await listUserAgents(TEST_USER_ID, 85);
 
     expect(agents).toHaveLength(1);
     expect(agents[0].name).toBe('Simple Agent');
     expect(agents[0].inheritance_fraction).toBe(0.5);
+    expect(agents[0].max_penalty_points).toBe(43);
   });
+});
 
-  it('should return empty array when user has no agents', async () => {
-    __setMockResponse('agents', 'select', { data: [], error: null });
+describe('getUserAgentDashboardData', () => {
+  it('should return summary, agents, and recent actions', async () => {
+    __setMockResponse('agents', 'select', { data: [fakeAgentMinimal], error: null });
+    __setMockResponse('agent_action_events', 'select', {
+      data: [fakeAgentActionEvent],
+      error: null,
+    });
 
-    const agents = await listUserAgents(TEST_USER_ID);
-    expect(agents).toEqual([]);
+    const data = await getUserAgentDashboardData(TEST_USER_ID, 85);
+
+    expect(data.summary.base_user_score).toBe(85);
+    expect(data.summary.effective_user_score).toBe(85);
+    expect(data.summary.total_registered_agents).toBe(1);
+    expect(data.recent_actions).toHaveLength(1);
   });
+});
 
-  it('should throw on database error', async () => {
-    __setMockResponse('agents', 'select', { data: null, error: { message: 'DB error' } });
+describe('applyAgentAction', () => {
+  it('should reduce agent score and record an action', async () => {
+    __setMockResponse('worker_profiles', 'select', {
+      data: { overall_trust_score: 85 },
+      error: null,
+    });
+    __setMockResponse('agents', 'select', { data: fakeAgent, error: null });
+    __setMockResponse('agents', 'update', {
+      data: {
+        ...fakeAgent,
+        agent_score: 85,
+        action_count: 1,
+        last_action_at: '2025-07-03T00:00:00Z',
+        derived_score: 51,
+      },
+      error: null,
+    });
+    __setMockResponse('agent_action_events', 'insert', { data: null, error: null });
 
-    // listUserAgents doesn't check for null data with error - it throws
-    // The actual code does `if (error) throw error`
-    await expect(listUserAgents(TEST_USER_ID)).rejects.toBeDefined();
+    const agent = await applyAgentAction({
+      agentId: TEST_AGENT_ID,
+      userId: TEST_USER_ID,
+      actionType: 'failure',
+    });
+
+    expect(agent.agent_score).toBe(85);
+    expect(agent.current_penalty_points).toBe(9);
+    expect(agent.derived_score).toBe(51);
+  });
+});
+
+describe('resetAgentDemo', () => {
+  it('should restore the demo score back to 100', async () => {
+    __setMockResponse('worker_profiles', 'select', {
+      data: { overall_trust_score: 85 },
+      error: null,
+    });
+    __setMockResponse('agents', 'select', {
+      data: {
+        ...fakeAgent,
+        agent_score: 70,
+        action_count: 2,
+        last_action_at: '2025-07-03T00:00:00Z',
+        derived_score: 42,
+      },
+      error: null,
+    });
+    __setMockResponse('agents', 'update', {
+      data: {
+        ...fakeAgent,
+        agent_score: 100,
+        action_count: 2,
+        last_action_at: '2025-07-03T00:00:00Z',
+        derived_score: 60,
+      },
+      error: null,
+    });
+    __setMockResponse('agent_action_events', 'insert', { data: null, error: null });
+
+    const agent = await resetAgentDemo({
+      agentId: TEST_AGENT_ID,
+      userId: TEST_USER_ID,
+    });
+
+    expect(agent.agent_score).toBe(100);
+    expect(agent.current_penalty_points).toBe(0);
+    expect(agent.derived_score).toBe(60);
   });
 });

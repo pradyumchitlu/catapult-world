@@ -42,7 +42,7 @@ app.get('/health', (req, res) => {
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reputation', reputationRoutes);
-app.use('/api', queryRoutes); // /api/trust/:veridexId, /api/agent/:agentId
+app.use('/api', queryRoutes); // /api/trust/:veridexId
 app.use('/api/stake', stakeRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api', contextualRoutes); // /api/contextual-score
@@ -57,9 +57,11 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Veridex API server running on port ${PORT}`);
-});
+// Start server only outside tests so supertest can import the app without opening a socket.
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`Veridex API server running on port ${PORT}`);
+  });
+}
 
 export default app;

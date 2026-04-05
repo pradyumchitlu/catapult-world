@@ -271,12 +271,13 @@ export default function LandingPage() {
             <span style={sectionLabel}>Get Started</span>
 
             <h2 style={{ ...headingMd, margin: '0 0 16px 0' }}>
-              Build your portable trust profile today.
+              Bring the wallet you already use.
             </h2>
 
             <p style={{ ...textSecondary, maxWidth: '420px', margin: '0 0 28px 0' }}>
-              Verify with World ID, connect your credentials, and start building
-              reputation that belongs to you. Every verified user starts with 1,000 ETH.
+              Connect MetaMask or the World App wallet, verify with World ID,
+              and start building portable trust that stays with you across
+              platforms, teams, and agents.
             </p>
 
             <Link
@@ -302,11 +303,113 @@ export default function LandingPage() {
         <GlassCard style={{ marginBottom: '64px' }}>
           <div
             style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '32px',
+            }}
+          >
+            <div>
+              <span style={sectionLabel}>Developer API</span>
+              <h2 style={{ ...headingMd, margin: '0 0 16px 0', maxWidth: '420px' }}>
+                Public trust surfaces for profiles, reviews, and delegated agents.
+              </h2>
+              <p style={{ ...textSecondary, maxWidth: '480px', margin: '0 0 28px 0' }}>
+                Query Veridex users, inspect reputation context, read active
+                reviews, and verify which human stands behind a delegated agent.
+                The documented routes are public read-only GET endpoints built
+                for straightforward integrations.
+              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '18px',
+                }}
+              >
+                <Link href="/api-docs" className="btn-primary">
+                  Open API Docs
+                </Link>
+                <Link
+                  href="/api-docs"
+                  style={{
+                    fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    color: '#2563EB',
+                    textDecoration: 'none',
+                    borderBottom: '1.5px solid rgba(37,99,235,0.4)',
+                    paddingBottom: '2px',
+                    transition: 'border-color 0.15s ease',
+                  }}
+                >
+                  Explore Endpoints →
+                </Link>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '18px',
+                alignContent: 'start',
+              }}
+            >
+              {[
+                {
+                  title: 'Trust Profiles',
+                  body: 'Resolve public trust surfaces with Veridex scores, summaries, staking totals, and profile metadata.',
+                },
+                {
+                  title: 'Reputation Context',
+                  body: 'Pull broader worker profile payloads, review context, and aggregated stake totals for public lookups.',
+                },
+                {
+                  title: 'Review Feeds',
+                  body: 'Read active worker reviews in a clean JSON shape with reviewer display metadata attached.',
+                },
+                {
+                  title: 'Agent Verification',
+                  body: 'Follow a delegated agent credential back to its parent human and current derived score snapshot.',
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  style={{
+                    padding: '18px 18px 20px',
+                    borderRadius: '18px',
+                    background: 'rgba(255,255,255,0.34)',
+                    border: '1px solid rgba(255,255,255,0.5)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
+                  }}
+                >
+                  <p style={{ ...headingSm, fontSize: '14px', margin: '0 0 8px 0' }}>
+                    {item.title}
+                  </p>
+                  <p style={{ ...textSecondary, fontSize: '13px', lineHeight: '1.65', margin: 0 }}>
+                    {item.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div
+            style={{
+              ...separator,
+              margin: '28px 0 0 0',
+            }}
+          />
+
+          <div
+            style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
+              gap: '12px',
               flexWrap: 'wrap',
-              gap: '16px',
+              paddingTop: '18px',
             }}
           >
             <span
@@ -320,47 +423,6 @@ export default function LandingPage() {
             >
               Veridex
             </span>
-
-            <nav
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0',
-                flexWrap: 'wrap',
-              }}
-            >
-              {['Protocol', 'Browse', 'Dashboard', 'API', 'Agents'].map(
-                (item, i) => (
-                  <span
-                    key={item}
-                    style={{ display: 'flex', alignItems: 'center' }}
-                  >
-                    {i > 0 && (
-                      <span
-                        style={{
-                          color: 'rgba(37,99,235,0.2)',
-                          margin: '0 10px',
-                        }}
-                      >
-                        ·
-                      </span>
-                    )}
-                    <a
-                      href="#"
-                      style={{
-                        fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                        fontSize: '13px',
-                        color: '#64748B',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      {item}
-                    </a>
-                  </span>
-                )
-              )}
-            </nav>
-
             <span style={textMuted}>Powered by World ID</span>
           </div>
         </GlassCard>

@@ -13,7 +13,7 @@ import ContractCard from '@/components/ContractCard';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { getReputation, getWorkerContracts, submitContract, triggerIngestion } from '@/lib/api';
+import { getReputation, getWorkerContracts, listAgents, submitContract, triggerIngestion } from '@/lib/api';
 import {
   col,
   headingLg,
@@ -26,7 +26,7 @@ import {
   gradientText,
   colors,
 } from '@/lib/styles';
-import type { Contract, Review, ScoreComponents, WorkerProfile } from '@/types';
+import type { Agent, AgentSummary, Contract, Review, ScoreComponents, WorkerProfile } from '@/types';
 
 const EMPTY_SCORE_COMPONENTS: ScoreComponents = {
   identity_assurance: 0,
@@ -102,6 +102,8 @@ function DashboardContent() {
   const [workerContracts, setWorkerContracts] = useState<Contract[]>([]);
   const [contractActionLoading, setContractActionLoading] = useState<string | null>(null);
   const [showEvidenceModal, setShowEvidenceModal] = useState(false);
+  const [agentSummary, setAgentSummary] = useState<AgentSummary | null>(null);
+  const [recentAgents, setRecentAgents] = useState<Agent[]>([]);
 
   const applyReputationSnapshot = (data: {
     profile: WorkerProfile | null;
@@ -191,6 +193,17 @@ function DashboardContent() {
     if (!token) return;
     getWorkerContracts(token).then((data) => setWorkerContracts(data.contracts || [])).catch(() => {});
   }, [token]);
+
+  useEffect(() => {
+    if (!user || !token) return;
+
+    listAgents(user.id, token)
+      .then((data) => {
+        setAgentSummary(data.summary || null);
+        setRecentAgents((data.agents || []).slice(0, 3));
+      })
+      .catch(() => {});
+  }, [user, token]);
 
   const handleSubmitContract = async (id: string) => {
     if (!token) return;
@@ -297,6 +310,66 @@ function DashboardContent() {
     </GlassCard>
   );
 
+  const renderAgentSummary = () => {
+    if (!agentSummary) {
+      return null;
+    }
+
+    return (
+      <GlassCard style={{ padding: '28px' }}>
+        <span style={sectionLabel}>Your Agents</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '18px' }}>
+          {[
+            { label: 'Registered', value: agentSummary.total_registered_agents },
+            { label: 'Reputation Exposed', value: `${Math.round(agentSummary.allocated_fraction * 100)}%` },
+            { label: 'Current Penalty', value: `${agentSummary.agent_penalty_score} pts` },
+            { label: 'Effective Score', value: agentSummary.effective_user_score },
+          ].map((item) => (
+            <div key={item.label} style={{ borderRadius: '14px', border: '1px solid rgba(37,99,235,0.12)', background: 'rgba(255,255,255,0.55)', padding: '16px' }}>
+              <div style={{ ...textMuted, fontSize: '11px', marginBottom: '4px' }}>{item.label}</div>
+              <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '26px', fontWeight: 700, ...gradientText }}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {recentAgents.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {recentAgents.map((agent) => (
+              <div
+                key={agent.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '12px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(37,99,235,0.12)',
+                  background: 'rgba(255,255,255,0.55)',
+                  padding: '14px 16px',
+                }}
+              >
+                <div>
+                  <div style={{ ...textSecondary, fontSize: '14px', fontWeight: 600 }}>{agent.name}</div>
+                  <div style={{ ...textMuted, fontSize: '12px', marginTop: '4px' }}>
+                    {Math.round(agent.inheritance_fraction * 100)}% at risk · penalty {agent.current_penalty_points} pts
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '24px', fontWeight: 700, color: agent.agent_score < 70 ? colors.warning : colors.primary }}>
+                    {agent.agent_score}
+                  </div>
+                  <div style={{ ...textMuted, fontSize: '11px' }}>Agent score</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ ...textSecondary, margin: 0 }}>Register an agent to show demo exposure and penalty impact here.</p>
+        )}
+      </GlassCard>
+    );
+  };
+
   return (
     <div style={{ minHeight: '100vh' }}>
       <div style={{ ...col, maxWidth: '1100px' }}>
@@ -360,6 +433,7 @@ function DashboardContent() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '24px' }}>
               {renderHowCalculated()}
+              {renderAgentSummary()}
 
               {(profile.computed_skills?.length > 0 || profile.specializations?.length > 0) && (
                 <GlassCard style={{ padding: '28px' }}>

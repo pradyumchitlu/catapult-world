@@ -88,6 +88,8 @@ export interface WorkerProfile {
   specializations: string[];
   years_experience: number | null;
   overall_trust_score: number;
+  base_overall_trust_score?: number;
+  agent_penalty_score?: number;
   score_components: ScoreComponents;
   ingestion_status: 'pending' | 'processing' | 'completed' | 'failed';
   created_at: string;
@@ -216,15 +218,58 @@ export interface Agent {
   name: string;
   identifier: string | null;
   identifier_type: string;
+  deployment_surface: string;
   inheritance_fraction: number;
   derived_score: number;
   authorized_domains: string[];
   stake_amount: number;
+  agent_score: number;
+  action_count: number;
+  last_action_at: string | null;
   status: 'active' | 'suspended' | 'revoked';
   dispute_count: number;
   created_at: string;
+  updated_at?: string | null;
+  current_penalty_points: number;
+  max_penalty_points: number;
   // joined fields
   parent?: User & { worker_profile?: WorkerProfile };
+}
+
+export type AgentActionType =
+  | 'no_issue'
+  | 'warning'
+  | 'failure'
+  | 'severe_failure'
+  | 'reset_demo';
+
+export interface AgentActionEvent {
+  id: string;
+  agent_id: string;
+  parent_user_id: string;
+  action_type: AgentActionType;
+  score_delta: number;
+  note: string | null;
+  created_at: string;
+  agent_name?: string;
+}
+
+export interface AgentSummary {
+  base_user_score: number;
+  effective_user_score: number;
+  agent_penalty_score: number;
+  total_registered_agents: number;
+  active_agents_count: number;
+  used_agents_count: number;
+  allocated_fraction: number;
+  remaining_fraction: number;
+  recent_actions_count: number;
+}
+
+export interface AgentListResponse {
+  summary: AgentSummary;
+  agents: Agent[];
+  recent_actions: AgentActionEvent[];
 }
 
 export type ContractStatus = 'draft' | 'active' | 'submitted' | 'completed' | 'closed';

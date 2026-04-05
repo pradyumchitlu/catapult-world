@@ -17,6 +17,7 @@ import {
 } from '../services/evidenceRepository';
 import { storeEvidenceFile } from '../services/evidenceStorage';
 import { loadReputationScoringInputs } from '../services/reputationScoreInputs';
+import { getUserAgentDashboardData, updateAgentScores } from '../services/agent';
 
 const router = Router();
 const upload = multer({
@@ -286,13 +287,22 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
       throw updateError || new Error('Failed to update worker profile');
     }
 
+    await updateAgentScores(targetUserId, scoreResult.overall);
+    const agentData = await getUserAgentDashboardData(targetUserId, scoreResult.overall);
+
     return res.json({
       success: true,
       profile: {
         ...updatedProfile,
         linkedin_data: normalizedEvidenceSnapshot.linkedinData,
         other_platforms: normalizedEvidenceSnapshot.otherPlatforms,
+        base_overall_trust_score: scoreResult.overall,
+        agent_penalty_score: agentData.summary.agent_penalty_score,
+        overall_trust_score: agentData.summary.effective_user_score,
       },
+      base_overall_trust_score: scoreResult.overall,
+      agent_penalty_score: agentData.summary.agent_penalty_score,
+      overall_trust_score: agentData.summary.effective_user_score,
       warning: githubUsernameToStore && !hasMeaningfulData(profile.github_data)
         ? 'GitHub username saved. Trigger /api/reputation/ingest after OAuth completes to sync repository data.'
         : null,
@@ -380,16 +390,29 @@ router.get('/:userId', async (req, res) => {
           other_platforms: snapshot.otherPlatforms,
         }))
       : null;
+    const baseOverallTrustScore = Number(workerProfile?.overall_trust_score || 0);
+    const agentData = await getUserAgentDashboardData(userId, baseOverallTrustScore);
+    const effectiveProfile = workerProfile
+      ? {
+          ...workerProfile,
+          base_overall_trust_score: baseOverallTrustScore,
+          agent_penalty_score: agentData.summary.agent_penalty_score,
+          overall_trust_score: agentData.summary.effective_user_score,
+        }
+      : null;
 
     // Separate worker_profiles from the user object
     const { worker_profiles, ...userData } = user as any;
 
     return res.json({
       user: userData,
-      profile: worker_profiles || null,
+      profile: effectiveProfile,
       reviews: reviews || [],
       totalStaked,
       stakerCount,
+      base_overall_trust_score: baseOverallTrustScore,
+      agent_penalty_score: agentData.summary.agent_penalty_score,
+      overall_trust_score: agentData.summary.effective_user_score,
     });
   } catch (error) {
     console.error('Get reputation error:', error);

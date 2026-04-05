@@ -1,6 +1,7 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import supabase from '../lib/supabase';
 import { optionalAuth, AuthenticatedRequest } from '../middleware/auth';
+import { getUserAgentDashboardData } from '../services/agent';
 
 const router = Router();
 
@@ -24,11 +25,13 @@ router.get('/trust/:veridexId', optionalAuth, async (req: AuthenticatedRequest, 
     }
 
     const profile = (user as any).worker_profiles;
+    const baseOverallTrustScore = Number(profile?.overall_trust_score || 0);
+    const agentData = await getUserAgentDashboardData(veridexId, baseOverallTrustScore);
     const groupedScores = profile?.score_components?.grouped_scores || {
       evidence: 0,
       employer: 0,
       staking: 0,
-      veridex: profile?.overall_trust_score || 0,
+      veridex: agentData.summary.effective_user_score,
     };
 
     // Get total stakes
@@ -64,8 +67,10 @@ router.get('/trust/:veridexId', optionalAuth, async (req: AuthenticatedRequest, 
       veridex_id: veridexId,
       display_name: user.display_name,
       is_verified_human: true, // Always true if they have an account
-      veridex_score: profile?.overall_trust_score || 0,
-      overall_trust_score: profile?.overall_trust_score || 0,
+      veridex_score: agentData.summary.effective_user_score,
+      overall_trust_score: agentData.summary.effective_user_score,
+      base_overall_trust_score: baseOverallTrustScore,
+      agent_penalty_score: agentData.summary.agent_penalty_score,
       score_summary: groupedScores,
       score_components: profile?.score_components || {},
       total_staked: totalStaked,
@@ -79,56 +84,6 @@ router.get('/trust/:veridexId', optionalAuth, async (req: AuthenticatedRequest, 
   } catch (error) {
     console.error('Trust query error:', error);
     return res.status(500).json({ error: 'Query failed' });
-  }
-});
-
-/**
- * GET /api/agent/:agentId
- * External API to lookup an agent and its parent human
- */
-router.get('/agent/:agentId', async (req: Request, res: Response) => {
-  try {
-    const { agentId } = req.params;
-
-    // Get agent with parent user
-    const { data: agent, error } = await supabase
-      .from('agents')
-      .select(`
-        *,
-        parent:parent_user_id(
-          id,
-          display_name,
-          world_id_hash,
-          roles,
-          worker_profiles(overall_trust_score, score_components)
-        )
-      `)
-      .eq('id', agentId)
-      .single();
-
-    if (error || !agent) {
-      return res.status(404).json({ error: 'Agent not found' });
-    }
-
-    const parent = agent.parent as any;
-    const parentProfile = parent?.worker_profiles;
-
-    return res.json({
-      agent_id: agent.id,
-      agent_name: agent.name,
-      derived_score: agent.derived_score,
-      created_at: agent.created_at,
-      parent: {
-        veridex_id: parent.id,
-        display_name: parent.display_name,
-        is_verified_human: true,
-        overall_trust_score: parentProfile?.overall_trust_score || 0,
-        roles: parent.roles,
-      },
-    });
-  } catch (error) {
-    console.error('Agent lookup error:', error);
-    return res.status(500).json({ error: 'Lookup failed' });
   }
 });
 

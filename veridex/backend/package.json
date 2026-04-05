@@ -2,6 +2,9 @@
   "name": "veridex-backend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.18.1"
+  },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
@@ -24,6 +27,7 @@
     "multer": "^2.1.1",
     "octokit": "^3.1.0",
     "pdf-parse": "^2.4.5",
+    "viem": "^2.47.10",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
