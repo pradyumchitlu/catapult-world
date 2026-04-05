@@ -8,13 +8,24 @@ interface ScoreBreakdownProps {
   components: ScoreComponents;
 }
 
-const COMPONENT_LABELS: Record<keyof ScoreComponents, string> = {
-  developer_competence: 'Dev Skills',
-  collaboration: 'Collaboration',
+const COMPONENT_KEYS = [
+  'identity_assurance',
+  'evidence_depth',
+  'consistency',
+  'recency',
+  'employer_outcomes',
+  'staking',
+] as const;
+
+type FlatScoreKey = typeof COMPONENT_KEYS[number];
+
+const COMPONENT_LABELS: Record<FlatScoreKey, string> = {
+  identity_assurance: 'Identity',
+  evidence_depth: 'Evidence',
   consistency: 'Consistency',
-  specialization_depth: 'Specialization',
-  activity_recency: 'Activity',
-  peer_trust: 'Peer Trust',
+  recency: 'Recency',
+  employer_outcomes: 'Employer Reviews',
+  staking: 'Staking',
 };
 
 function getBarColor(value: number): string {
@@ -25,7 +36,7 @@ function getBarColor(value: number): string {
 }
 
 export default function ScoreBreakdown({ components }: ScoreBreakdownProps) {
-  const entries = Object.entries(components) as [keyof ScoreComponents, number][];
+  const entries = COMPONENT_KEYS.map((key) => [key, components[key] ?? 0] as const);
   const hasData = entries.some(([, v]) => v > 0);
 
   const chartData = entries.map(([key, value]) => ({
@@ -75,7 +86,7 @@ export default function ScoreBreakdown({ components }: ScoreBreakdownProps) {
               <span style={{ fontSize: '28px', opacity: 0.4 }}>📊</span>
             </div>
             <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: colors.textMuted, margin: 0 }}>
-              Score components will appear after GitHub sync
+              Score components will appear after the verification pipeline runs
             </p>
           </div>
         )}
@@ -83,7 +94,7 @@ export default function ScoreBreakdown({ components }: ScoreBreakdownProps) {
 
       {/* Component bars */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-        {Object.entries(components).map(([key, value]) => (
+        {entries.map(([key, value]) => (
           <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span
@@ -93,7 +104,7 @@ export default function ScoreBreakdown({ components }: ScoreBreakdownProps) {
                   color: colors.textTertiary,
                 }}
               >
-                {COMPONENT_LABELS[key as keyof ScoreComponents]}
+                {COMPONENT_LABELS[key]}
               </span>
               <span
                 style={{

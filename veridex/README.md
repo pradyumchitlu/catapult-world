@@ -1,69 +1,108 @@
 # Veridex
 
-A decentralized trust platform where verified humans build portable reputation, stake WLD on each other's integrity, and register **Agent Credentials** that bind AI agents to human identity and reputation. Powered by World ID proof-of-personhood.
+A decentralized trust platform where verified humans build portable reputation, stake WLD on each other's integrity, and register agent credentials that bind AI agents to human identity and reputation. Powered by World ID proof-of-personhood.
 
 ## Overview
 
-Veridex solves three problems:
-- **Identity is fake** — bots and sybils poison every platform
-- **Reputation is trapped** — you rebuild credibility from zero on every new service
-- **AI agents are unaccountable** — no one knows who's behind the bot
+Veridex is designed around three trust problems:
 
-**Agent Credentials:** Humans register an agent with an identifier (key, endpoint, wallet, etc.); Veridex mints an on-chain credential linking that agent to the human’s World ID and trust score, with configurable inheritance, authorized domains, and optional stake. Third parties **verify** agents via the API; **disputes** can slash stake and reduce the human’s score; one human can run a **hierarchy** of agents with different risk and stake profiles.
+- Identity is fake. Bots and sybils poison every platform.
+- Reputation is trapped. People rebuild credibility from zero on every new service.
+- AI agents are unaccountable. Nobody knows who is behind the bot.
+
+Veridex combines World ID verification, portable worker reputation, staking-style trust signals, and agent identity. A user can verify as a human, build a profile, connect supporting evidence like GitHub, and expose a public trust surface that clients, stakers, and agent consumers can inspect.
 
 ## User Types
 
-- **Workers** — verify with World ID, connect GitHub (and optionally other platforms), get a trust profile built automatically
-- **Stakers** — browse worker profiles, stake WLD credits on workers they believe in, earn/lose based on worker performance
-- **Clients** — browse workers, evaluate them via an AI chatbot, leave staked reviews after working with someone
+- Workers verify with World ID, connect GitHub and other evidence sources, and build a trust profile.
+- Stakers browse worker profiles and stake internal Veridex credits on workers they believe in.
+- Clients evaluate workers, leave reviews, and inspect public trust signals.
 
 ## Monorepo Structure
 
-```
+```text
 veridex/
-├── frontend/       # Next.js 14+ App Router
-├── backend/        # Express + TypeScript API
-└── supabase/       # Database schema
+|-- frontend/       # Next.js 14 App Router
+|-- backend/        # Express + TypeScript API
+`-- supabase/       # Database schema and migrations
 ```
 
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - npm or yarn
-- Supabase account
+- Supabase project
 - World ID app credentials
+- World Developer Portal Mini App entry for hackathon demos
 - GitHub OAuth app
 - Gemini API key
 
 ### Installation
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   cd frontend && npm install
-   cd ../backend && npm install
-   ```
+1. Install dependencies.
 
-3. Set up environment variables (see `.env.example`)
+```bash
+cd frontend && npm install
+cd ../backend && npm install
+```
 
-4. Run the Supabase schema in your Supabase SQL editor
+2. Configure environment variables in:
 
-5. Start development servers:
-   ```bash
-   # Terminal 1 - Frontend
-   cd frontend && npm run dev
+- [frontend/.env.local](/C:/Users/navneeth/Desktop/NavneethThings/Projects/catapult-world/veridex/frontend/.env.local)
+- [backend/.env](/C:/Users/navneeth/Desktop/NavneethThings/Projects/catapult-world/veridex/backend/.env)
 
-   # Terminal 2 - Backend
-   cd backend && npm run dev
-   ```
+3. Run the base Supabase schema, then apply the wallet migration for existing deployments.
+
+```sql
+-- veridex/supabase/schema.sql
+-- veridex/supabase/wallet_migration.sql
+```
+
+4. Make sure the following values are configured:
+
+```bash
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_WORLD_APP_ID=your_world_app_id
+
+# Backend
+WORLDCHAIN_RPC_URL=https://worldchain-mainnet.g.alchemy.com/public
+FRONTEND_URL=http://localhost:3000
+```
+
+5. Start the local apps.
+
+```bash
+# Terminal 1
+cd frontend && npm run dev
+
+# Terminal 2
+cd backend && npm run dev
+```
+
+## Wallet Demo Flow
+
+Veridex supports a browser wallet demo path:
+
+1. Open Veridex in a normal desktop browser.
+2. Verify identity.
+3. Finish onboarding.
+4. Open the dashboard and click `Connect Wallet`.
+5. Approve account access in your injected EVM wallet.
+6. Sign the Veridex challenge message.
+7. View live World Chain balances on the dashboard.
+
+Balances are read from World Chain through backend RPC once the wallet address is linked to the user account.
 
 ## Tech Stack
 
-- **Frontend:** Next.js 14+, TypeScript, Tailwind CSS, Recharts
-- **Backend:** Express, TypeScript, Supabase, Gemini API
-- **Database:** Supabase (PostgreSQL)
-- **Auth:** World ID (MiniKit)
+- Frontend: Next.js 14, TypeScript, Tailwind CSS, Recharts
+- Backend: Express, TypeScript, Supabase, Gemini API
+- Wallet reads: Browser signature verification plus World Chain RPC balance reads
+- Database: Supabase PostgreSQL
+- Auth: World ID
 
 ## License
 

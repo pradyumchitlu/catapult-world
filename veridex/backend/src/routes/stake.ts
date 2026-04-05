@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import supabase from '../lib/supabase';
+import { syncWorkerReputation } from '../services/reputationIngestion';
 
 const router = Router();
 
@@ -17,6 +18,8 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ error: 'Invalid stake data' });
     }
 
+    // This route still uses internal Veridex credits until on-chain staking is introduced.
+    // Wallet balances are read-only in the current phase.
     // Get staker's balance
     const { data: staker, error: stakerError } = await supabase
       .from('users')
@@ -76,6 +79,12 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
         .update({ wld_balance: staker.wld_balance })
         .eq('id', stakerId);
       throw stakeError;
+    }
+
+    try {
+      await syncWorkerReputation(workerId, { refreshGithub: false });
+    } catch (scoreError) {
+      console.error('Score recomputation after stake failed:', scoreError);
     }
 
     return res.json({
@@ -180,6 +189,12 @@ router.post('/withdraw', requireAuth, async (req: AuthenticatedRequest, res: Res
       .from('users')
       .update({ wld_balance: (staker?.wld_balance || 0) + stake.amount })
       .eq('id', stakerId);
+
+    try {
+      await syncWorkerReputation(stake.worker_id, { refreshGithub: false });
+    } catch (scoreError) {
+      console.error('Score recomputation after withdrawal failed:', scoreError);
+    }
 
     return res.json({
       success: true,

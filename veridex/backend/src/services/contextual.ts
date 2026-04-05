@@ -91,11 +91,11 @@ function matchHardSkills(
   };
 
   const workerSkills = new Set<string>(
-    (profile.computed_skills || []).map((s: string) => s.toLowerCase())
+    ((profile.computed_skills || []) as string[]).map((s: string) => s.toLowerCase())
   );
 
   const githubLanguages = new Set<string>(
-    (profile.github_data?.languages || []).map((l: string) => l.toLowerCase())
+    ((profile.github_data?.languages || []) as string[]).map((l: string) => l.toLowerCase())
   );
 
   // Check required skills

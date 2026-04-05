@@ -245,8 +245,7 @@ cd ../backend && npm install
 
 ### 3. Configure Environment Variables
 
-**Frontend** (`frontend/.env.local`):
-
+**Frontend** (`frontend/.env`):
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
@@ -325,12 +324,18 @@ backend/
 backend/
 ├── src/services/
 │   ├── github.ts                    # GitHub API data fetching
-│   └── scoring.ts                   # Trust score computation
+│   ├── scoring.ts                   # Veridex score computation
+│   ├── reputationIngestion.ts       # Shared full-pipeline rerun path
+│   ├── reputationProfile.ts         # Worker profile merge helpers
+│   ├── evidenceExtraction.ts        # LinkedIn PDF / portfolio extraction
+│   ├── evidenceStorage.ts           # Supabase Storage wrapper for uploads
+│   └── reputationScoreInputs.ts     # Review/stake/employer score inputs loader
 │
 ├── src/routes/
 │   ├── reputation.ts                # Ingest + get profile
 │   ├── stake.ts                     # Stake/withdraw WLD
-│   └── review.ts                    # Create/get reviews
+│   ├── review.ts                    # Create/get reviews
+│   └── query.ts                     # Public trust API
 ```
 
 **Key tasks:**
@@ -345,55 +350,166 @@ backend/
 - [ ] Trigger score recomputation on new reviews
 
 **API Endpoints:**
-
+- `POST /api/reputation/evidence/upload` - Upload LinkedIn PDFs / files / URLs and return extracted draft evidence
 - `POST /api/reputation/evidence` - Save manual LinkedIn/project evidence and recompute score
-- `POST /api/reputation/ingest` - Fetch GitHub data, compute scores
+- `POST /api/reputation/ingest` - Re-run the full verification pipeline with latest GitHub + saved evidence + reviews + stakes
 - `GET /api/reputation/:userId` - Get full profile
 - `POST /api/stake` - Stake WLD on worker
 - `POST /api/stake/withdraw` - Withdraw stake
 - `POST /api/review` - Leave staked review
 - `GET /api/review/:workerId` - Get reviews
+- `GET /api/trust/:veridexId` - Public trust query for Veridex score and profile summary
 
 **Score Components (0-100 each):**
+1. `identity_assurance` - World ID + cross-platform presence + account age signals
+2. `evidence_depth` - Repos, proof-backed projects, skills, years of evidence
+3. `consistency` - Sustained activity over time
+4. `recency` - How fresh the work evidence is
+5. `employer_outcomes` - Client/employer review outcomes
+6. `staking` - Economic backing weighted by staker verifiability
 
-1. `developer_competence` - Repo quality, stars, languages
-2. `collaboration` - External PRs, issues, contributions
-3. `consistency` - Commit frequency, active months
-4. `specialization_depth` - Language focus, topics
-5. `activity_recency` - Recent commits
-6. `peer_trust` - Weighted reviews
+**Person 2 Handoff Note (Apr 5 - Evidence Ingestion + Final Veridex Score):**
 
-**Person 2 Handoff Note (Apr 4):**
+**What changed at a high level**
 
-- Base reputation scoring is still algorithmic in `veridex/backend/src/services/scoring.ts`; it does not use an LLM for `overall_trust_score`.
-- The scorer now uses 3 evidence buckets: GitHub data, manual professional evidence (`linkedin_data` + `other_platforms.projects`), and staked reviews.
-- `veridex/backend/src/services/reputationIngestion.ts` is now the shared sync path for reputation updates. Both `POST /api/reputation/ingest` and the GitHub OAuth callback use it, so GitHub connect and manual re-ingest now hit the same scoring pipeline.
-- `veridex/backend/src/services/github.ts` was upgraded from the weak public-events heuristic to stronger public GitHub signals:
-  - per-repo language aggregation
-  - authored commit sampling across recent public repos
-  - GitHub search for external PR / issue collaboration
-- This materially improves `consistency`, `activity_recency`, and `computed_skills` quality for real users. Example dry-run on `pradyumchitlu` moved the score from `29` to `45` with the stronger GitHub signals.
-- GitHub OAuth is now least-privilege: `GET /api/auth/github` only requests `read:user`, and the callback no longer persists GitHub access tokens in `worker_profiles.github_data`.
-- `POST /api/reputation/evidence` is ready for frontend wiring. It accepts `userId` plus optional `github_username`, `linkedin_data`, `projects`, and `other_platforms`, then recomputes `computed_skills`, `specializations`, `years_experience`, and score fields.
-- `POST /api/reputation/ingest` still works even if GitHub is not connected yet, as long as manual evidence or reviews exist.
-- Review creation still triggers score recomputation, so manual evidence, GitHub evidence, and reviews all affect the updated worker score.
+- Reputation scoring is still algorithmic for the stored Veridex score. No LLM is used to compute `overall_trust_score`.
+- LinkedIn OAuth was intentionally removed. Professional-history ingestion now uses uploaded LinkedIn PDFs plus other user-supplied evidence.
+- The backend now supports a full evidence-ingestion flow: upload files and URLs, extract deterministic signals, let the user review/edit them on onboarding, save them into `worker_profiles`, and recompute the final score.
+- The score contract was rewritten to the rubric model. The worker profile now stores the final Veridex score plus raw rubric factors and grouped score summaries.
+- The dashboard now exposes a user-facing `Re-run Pipeline` action so workers can refresh GitHub data and recompute the latest score on demand.
 
-**Notes For Other People:**
+**Current score storage contract**
 
-- `Person 1`: preserve the current GitHub OAuth contract. Do not reintroduce broad repo scopes or store GitHub access tokens. The callback already auto-syncs the worker reputation through `syncWorkerReputation(...)`, so a successful GitHub connect should update `github_username`, `github_data`, score fields, and skills without a separate frontend ingest call.
-- `Person 3`: a successful GitHub connect should now update the worker profile automatically after the OAuth redirect. For non-GitHub/manual profile building, send structured data to `POST /api/reputation/evidence`. No GitHub private repo permission is needed for the current product.
-- `Person 4`: contextual scoring and agent logic can rely more heavily on `worker_profiles.computed_skills`, `specializations`, `years_experience`, and `github_data.{languages, contributions, collaboration}` because those fields are now populated from better GitHub-derived signals.
+- `worker_profiles.overall_trust_score` is the final Veridex score that other systems can treat as the canonical public score.
+- `worker_profiles.score_components` now stores the raw 6 rubric factors:
+  - `identity_assurance`
+  - `evidence_depth`
+  - `consistency`
+  - `recency`
+  - `employer_outcomes`
+  - `staking`
+- `worker_profiles.score_components.grouped_scores` also stores the 4 top-level grouped scores used for handoff / product logic:
+  - `evidence`
+  - `employer`
+  - `staking`
+  - `veridex`
+- `worker_profiles.computed_skills`, `specializations`, and `years_experience` are still populated and should be treated as reusable profile metadata for UI, contextual scoring, and later LLM queries.
 
-**Files Modified By Person 2 So Far:**
+**How the final score works now**
 
-- `veridex/backend/src/routes/auth.ts` - GitHub OAuth now uses least privilege and auto-syncs the reputation layer
-- `veridex/backend/src/routes/reputation.ts` - shared ingest path for GitHub/manual evidence
-- `veridex/backend/src/routes/review.ts` - recomputes worker score after reviews
-- `veridex/backend/src/services/github.ts` - stronger public GitHub signal extraction
-- `veridex/backend/src/services/scoring.ts` - adaptive reputation scoring engine
-- `veridex/backend/src/services/reputationIngestion.ts` - shared GitHub/manual sync pipeline
-- `veridex/backend/src/services/reputationProfile.ts` - worker profile ensure/merge helpers
-- `veridex/backend/src/routes/query.ts` and `veridex/backend/src/services/contextual.ts` - minor TypeScript/build fixes
+- The final score is computed directly in `veridex/backend/src/services/scoring.ts` using the rubric weights:
+  - 10% `identity_assurance`
+  - 10% `evidence_depth`
+  - 10% `consistency`
+  - 5% `recency`
+  - 25% `employer_outcomes`
+  - 40% `staking`
+- `employer_outcomes` is live right now without adding a separate `employer_reviews` table yet:
+  - only reviews left by users with the `client` role count toward employer outcomes
+  - ratings `4-5` are treated as positive
+  - rating `3` is neutral
+  - ratings `1-2` are negative
+- `staking` is now computed from the real `stakes` table, weighted by each staker's current worker-profile score with diminishing returns.
+
+**Evidence ingestion that was added**
+
+- `POST /api/reputation/evidence/upload` accepts:
+  - one LinkedIn PDF / DOCX / TXT / MD file
+  - optional supporting files
+  - portfolio URLs
+  - project URLs / proof links
+- Uploaded files are stored in Supabase Storage through `veridex/backend/src/services/evidenceStorage.ts`.
+- Deterministic extraction happens in `veridex/backend/src/services/evidenceExtraction.ts`:
+  - LinkedIn-style PDF section parsing for experience + skills
+  - portfolio/project URL fetch + proof-link discovery
+  - work-sample text extraction from uploaded docs
+- Frontend onboarding now has an `Evidence` step in `veridex/frontend/src/app/onboarding/page.tsx` where users can:
+  - upload LinkedIn PDFs
+  - upload supporting project docs
+  - add portfolio URLs and project URLs
+  - review and edit extracted experiences and project cards before save
+
+**How recomputation works now**
+
+- `veridex/backend/src/services/reputationIngestion.ts` is the shared pipeline rerun path for score recomputation.
+- It pulls the latest GitHub signals, latest saved manual evidence, latest reviews, and latest stakes, then writes fresh score outputs back to `worker_profiles`.
+- Score recomputation is triggered by:
+  - successful GitHub OAuth completion
+  - `POST /api/reputation/evidence`
+  - `POST /api/reputation/ingest`
+  - new reviews
+  - new stakes
+  - stake withdrawals
+- The dashboard rerun button is the intended manual recovery path if a user updates GitHub and wants their score refreshed immediately.
+
+**Public API shape**
+
+- `GET /api/trust/:veridexId` now returns more than just the final score.
+- It exposes:
+  - `veridex_score`
+  - `overall_trust_score`
+  - `score_summary` (`evidence`, `employer`, `staking`, `veridex`)
+  - `score_components`
+  - `skills`
+  - `specializations`
+  - `years_experience`
+- This means external consumers can use only the final score if they want, but can also inspect skill and profile metadata for richer trust/product use cases.
+
+**Important implementation notes for the rest of the team**
+
+- `Person 1`
+  - Keep the current least-privilege GitHub OAuth contract.
+  - Do not reintroduce broad repo scopes or persist GitHub access tokens in `worker_profiles.github_data`.
+  - The callback already plugs into the shared reputation sync path, so a successful GitHub connect should refresh the worker profile automatically.
+
+- `Person 3`
+  - The onboarding flow is no longer just profile/profession/connect; it now includes a full evidence-review step.
+  - If you touch onboarding or dashboard, preserve:
+    - draft persistence in `sessionStorage`
+    - the evidence review UX
+    - the dashboard `Re-run Pipeline` button
+  - Do not reintroduce the deleted `LinkedInConnectButton` component; LinkedIn is file-based now, not OAuth-based.
+
+- `Person 4`
+  - Prefer the structured metadata already stored on the worker profile for contextual or LLM-powered reasoning:
+    - `computed_skills`
+    - `specializations`
+    - `years_experience`
+    - `linkedin_data.experiences`
+    - `other_platforms.projects`
+    - `other_platforms.portfolio`
+    - `github_data`
+  - The final Veridex score is available, but the richer structured metadata is the better input for nuanced employer queries.
+
+**Files modified by Person 2 in this pass**
+
+- `veridex/backend/package.json`
+- `veridex/backend/package-lock.json`
+- `veridex/backend/src/routes/query.ts`
+- `veridex/backend/src/routes/reputation.ts`
+- `veridex/backend/src/routes/review.ts`
+- `veridex/backend/src/routes/stake.ts`
+- `veridex/backend/src/services/reputationIngestion.ts`
+- `veridex/backend/src/services/reputationProfile.ts`
+- `veridex/backend/src/services/reputationScoreInputs.ts`
+- `veridex/backend/src/services/scoring.ts`
+- `veridex/backend/src/services/evidenceExtraction.ts`
+- `veridex/backend/src/services/evidenceStorage.ts`
+- `veridex/backend/rubric.md`
+- `veridex/frontend/src/app/onboarding/page.tsx`
+- `veridex/frontend/src/app/dashboard/page.tsx`
+- `veridex/frontend/src/components/ScoreBreakdown.tsx`
+- `veridex/frontend/src/lib/api.ts`
+- `veridex/frontend/src/types/index.ts`
+- `veridex/frontend/src/components/LinkedInConnectButton.tsx` was removed
+- `veridex/frontend/.env.local.example` was replaced with `veridex/frontend/.env.example`
+- `veridex/supabase/schema.sql` comments were updated to reflect the new stored score shape
+
+**What still remains if the team wants to go further**
+
+- Add a first-class `employer_reviews` table if we want employer outcomes to be separated from generic staked reviews at the schema level.
+- Add explicit re-fetch / re-crawl for previously saved portfolio URLs during pipeline reruns. Right now rerun uses the latest saved extracted evidence plus latest GitHub/review/stake data.
+- Remove mock data from remaining frontend pages as Person 3 and Person 4 finish their workstreams.
 
 ---
 
@@ -516,6 +632,8 @@ GET  /api/review/:workerId     # Get reviews for worker
 
 ```
 POST /api/auth/verify          # Verify World ID
+POST /api/reputation/evidence/upload  # Upload files/URLs and extract draft evidence
+POST /api/reputation/evidence  # Save reviewed evidence and recompute score
 POST /api/reputation/ingest    # Trigger GitHub ingestion
 POST /api/stake                # Stake WLD on worker
 POST /api/stake/withdraw       # Withdraw stake
@@ -619,8 +737,7 @@ GEMINI_SCORING_API_KEY=...
 GEMINI_CHATBOT_API_KEY=...
 ```
 
-**Frontend `frontend/.env.local`** — create this file (not committed):
-
+**Frontend `frontend/.env`** — create this file (not committed):
 ```env
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
