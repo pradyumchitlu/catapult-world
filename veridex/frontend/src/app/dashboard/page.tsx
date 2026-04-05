@@ -11,7 +11,8 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
 import WalletBalancesCard from '@/components/WalletBalancesCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { getReputation, getContextualScore, triggerIngestion } from '@/lib/api';
+import ContractCard from '@/components/ContractCard';
+import { getReputation, getContextualScore, triggerIngestion, getWorkerContracts, submitContract } from '@/lib/api';
 import {
   col,
   headingLg,
@@ -24,7 +25,7 @@ import {
   gradientText,
   colors,
 } from '@/lib/styles';
-import type { WorkerProfile, Review, ContextualScoreBreakdown, ScoreComponents } from '@/types';
+import type { WorkerProfile, Review, ContextualScoreBreakdown, ScoreComponents, Contract } from '@/types';
 
 const EMPTY_SCORE_COMPONENTS: ScoreComponents = {
   identity_assurance: 0,
@@ -110,6 +111,8 @@ export default function DashboardPage() {
     breakdown: ContextualScoreBreakdown;
   } | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const [workerContracts, setWorkerContracts] = useState<Contract[]>([]);
+  const [contractActionLoading, setContractActionLoading] = useState<string | null>(null);
 
   const applyReputationSnapshot = (data: {
     profile: WorkerProfile | null;
@@ -192,6 +195,28 @@ export default function DashboardPage() {
       if (pollTimer) clearTimeout(pollTimer);
     };
   }, [user, token]);
+
+  // Fetch worker contracts
+  useEffect(() => {
+    if (!token) return;
+    getWorkerContracts(token)
+      .then((data) => setWorkerContracts(data.contracts || []))
+      .catch(() => {});
+  }, [token]);
+
+  const handleSubmitContract = async (id: string) => {
+    if (!token) return;
+    setContractActionLoading(id);
+    try {
+      await submitContract(id, token);
+      const data = await getWorkerContracts(token);
+      setWorkerContracts(data.contracts || []);
+    } catch (error) {
+      console.error('Submit contract error:', error);
+    } finally {
+      setContractActionLoading(null);
+    }
+  };
 
   const handleEvaluateFit = async (jobDescription: string) => {
     if (!user) return;
@@ -773,6 +798,24 @@ export default function DashboardPage() {
             </div>
           )}
         </GlassCard>
+
+        {/* ── Contracts ── */}
+        {workerContracts.length > 0 && (
+          <GlassCard className="fade-up fade-up-4" style={{ padding: '40px', marginBottom: '24px' }}>
+            <span style={sectionLabel}>Contracts</span>
+            <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '24px' }}>
+              Your Contracts
+            </h2>
+            {workerContracts.map((contract) => (
+              <ContractCard
+                key={contract.id}
+                contract={contract}
+                onSubmit={handleSubmitContract}
+                isLoading={contractActionLoading === contract.id}
+              />
+            ))}
+          </GlassCard>
+        )}
 
         {/* ── Reviews ── */}
         <GlassCard className="fade-up fade-up-4" style={{ padding: '40px', marginBottom: '24px' }}>

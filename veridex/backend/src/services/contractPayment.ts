@@ -65,8 +65,8 @@ export async function processCompletion(contractId: string): Promise<PaymentResu
     throw new Error('Contract not found');
   }
 
-  if (contract.status !== 'active') {
-    throw new Error(`Contract is ${contract.status}, expected active`);
+  if (contract.status !== 'submitted') {
+    throw new Error(`Contract is ${contract.status}, expected submitted`);
   }
 
   const workerPayout = contract.payment_amount; // salary goes to worker

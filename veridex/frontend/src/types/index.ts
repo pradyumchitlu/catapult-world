@@ -215,7 +215,7 @@ export interface Agent {
   parent?: User & { worker_profile?: WorkerProfile };
 }
 
-export type ContractStatus = 'draft' | 'active' | 'completed' | 'closed';
+export type ContractStatus = 'draft' | 'active' | 'submitted' | 'completed' | 'closed';
 
 export interface Contract {
   id: string;

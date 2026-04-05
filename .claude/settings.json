@@ -17,7 +17,8 @@
       "Bash(curl -v -X POST http://localhost:8000/api/contract -H \"Content-Type: application/json\" -H \"Authorization: Bearer fake\" -d '{\"worker_id\":\"test\",\"title\":\"test\",\"payment_amount\":100}')",
       "mcp__supabase__list_projects",
       "mcp__supabase__list_tables",
-      "mcp__supabase__execute_sql"
+      "mcp__supabase__execute_sql",
+      "Bash(grep -n:*)"
     ]
   }
 }

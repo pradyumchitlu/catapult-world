@@ -165,8 +165,48 @@ router.put('/:id/activate', requireAuth, async (req: AuthenticatedRequest, res: 
 });
 
 /**
+ * PUT /api/contract/:id/submit
+ * Worker marks their work as done — moves contract to 'submitted'
+ */
+router.put('/:id/submit', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const workerId = req.userId!;
+
+    const { data: contract, error: fetchError } = await supabase
+      .from('contracts')
+      .select('*')
+      .eq('id', id)
+      .eq('worker_id', workerId)
+      .single();
+
+    if (fetchError || !contract) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+
+    if (contract.status !== 'active') {
+      return res.status(400).json({ error: `Contract is ${contract.status}, expected active` });
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from('contracts')
+      .update({ status: 'submitted' })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    return res.json({ success: true, contract: updated });
+  } catch (error) {
+    console.error('Submit contract error:', error);
+    return res.status(500).json({ error: 'Failed to submit contract' });
+  }
+});
+
+/**
  * PUT /api/contract/:id/complete
- * Complete a contract — distributes escrowed funds to worker + stakers
+ * Employer approves submitted work — distributes escrowed funds to worker + stakers
  */
 router.put('/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -184,8 +224,8 @@ router.put('/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: 
       return res.status(404).json({ error: 'Contract not found' });
     }
 
-    if (contract.status !== 'active') {
-      return res.status(400).json({ error: `Contract is ${contract.status}, expected active` });
+    if (contract.status !== 'submitted') {
+      return res.status(400).json({ error: `Contract is ${contract.status}, expected submitted` });
     }
 
     const paymentResult = await processCompletion(id);

@@ -365,6 +365,9 @@ export const createContract = (
 export const activateContract = (contractId: string, token: string) =>
   fetchApi(`/api/contract/${contractId}/activate`, { method: 'PUT', token });
 
+export const submitContract = (contractId: string, token: string) =>
+  fetchApi(`/api/contract/${contractId}/submit`, { method: 'PUT', token });
+
 export const completeContract = (contractId: string, token: string) =>
   fetchApi(`/api/contract/${contractId}/complete`, { method: 'PUT', token });
 

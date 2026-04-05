@@ -414,9 +414,15 @@ router.get('/browse/workers', async (req, res) => {
 
     if (error) throw error;
 
+    // Only show users who actually have the 'worker' role
+    const workerProfiles = (profiles || []).filter((p: any) => {
+      const roles = p.user?.roles || [];
+      return roles.includes('worker');
+    });
+
     // Get review stats and stake totals for each worker
     const workers = await Promise.all(
-      (profiles || []).map(async (profile) => {
+      workerProfiles.map(async (profile) => {
         const { data: reviews } = await supabase
           .from('reviews')
           .select('rating')

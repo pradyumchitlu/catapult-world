@@ -213,7 +213,7 @@ CREATE TABLE contracts (
   payment_amount INTEGER NOT NULL,          -- salary (what the worker receives)
   buy_in_amount INTEGER,                    -- total escrowed from employer (salary + staker reward + fee)
   duration_days INTEGER,                    -- estimated duration
-  status TEXT DEFAULT 'draft',              -- draft, active, completed, closed
+  status TEXT DEFAULT 'draft',              -- draft, active, submitted, completed, closed
   worker_payout INTEGER,                    -- amount paid to worker (set on completion)
   staker_payout_total INTEGER,              -- total distributed to stakers (calculated at activation)
   platform_fee INTEGER DEFAULT 0,           -- platform fee (calculated at activation)
