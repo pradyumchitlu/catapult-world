@@ -53,6 +53,83 @@ CREATE TABLE worker_profiles (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Normalized evidence extraction runs
+CREATE TABLE evidence_extraction_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  worker_profile_id UUID NOT NULL REFERENCES worker_profiles(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  trigger_source TEXT NOT NULL DEFAULT 'manual_save' CHECK (
+    trigger_source IN ('manual_save', 'pipeline_rerun', 'github_ingest', 'legacy_backfill')
+  ),
+  extraction_method TEXT NOT NULL DEFAULT 'deterministic' CHECK (
+    extraction_method IN ('gemini', 'deterministic', 'hybrid', 'backfill')
+  ),
+  parser_version TEXT NOT NULL DEFAULT 'v1',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (
+    status IN ('pending', 'processing', 'completed', 'failed')
+  ),
+  warning_message TEXT,
+  error_message TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Canonical uploaded files and URL sources that feed extraction
+CREATE TABLE evidence_sources (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  worker_profile_id UUID NOT NULL REFERENCES worker_profiles(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  extraction_run_id UUID NOT NULL REFERENCES evidence_extraction_runs(id) ON DELETE CASCADE,
+  source_kind TEXT NOT NULL CHECK (
+    source_kind IN ('linkedin_file', 'supporting_file', 'portfolio_url', 'project_url', 'legacy_json')
+  ),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  source_url TEXT,
+  storage_bucket TEXT,
+  storage_path TEXT,
+  file_name TEXT,
+  original_name TEXT,
+  content_type TEXT,
+  size_bytes INTEGER,
+  content_sha256 TEXT,
+  captured_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Normalized extracted evidence items
+CREATE TABLE evidence_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  worker_profile_id UUID NOT NULL REFERENCES worker_profiles(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  extraction_run_id UUID NOT NULL REFERENCES evidence_extraction_runs(id) ON DELETE CASCADE,
+  primary_source_id UUID REFERENCES evidence_sources(id) ON DELETE SET NULL,
+  item_kind TEXT NOT NULL CHECK (
+    item_kind IN ('experience', 'project', 'portfolio', 'work_sample')
+  ),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  title TEXT,
+  company TEXT,
+  role TEXT,
+  description TEXT,
+  url TEXT,
+  proof_urls TEXT[] NOT NULL DEFAULT '{}',
+  start_date TEXT,
+  end_date TEXT,
+  evidence_updated_at TEXT,
+  skills TEXT[] NOT NULL DEFAULT '{}',
+  technologies TEXT[] NOT NULL DEFAULT '{}',
+  tags TEXT[] NOT NULL DEFAULT '{}',
+  raw_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Reviews (staked)
 CREATE TABLE reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -176,6 +253,15 @@ ALTER TABLE reviews ADD COLUMN contract_id UUID REFERENCES contracts(id);
 CREATE INDEX idx_worker_profiles_user_id ON worker_profiles(user_id);
 CREATE INDEX idx_worker_profiles_trust_score ON worker_profiles(overall_trust_score DESC);
 CREATE INDEX idx_worker_profiles_github_username ON worker_profiles(github_username);
+CREATE INDEX idx_evidence_runs_worker_profile_created_at ON evidence_extraction_runs(worker_profile_id, created_at DESC);
+CREATE INDEX idx_evidence_runs_user_created_at ON evidence_extraction_runs(user_id, created_at DESC);
+CREATE INDEX idx_evidence_runs_status_created_at ON evidence_extraction_runs(status, created_at DESC);
+CREATE INDEX idx_evidence_sources_worker_profile_active ON evidence_sources(worker_profile_id, is_active, created_at DESC);
+CREATE INDEX idx_evidence_sources_user_active ON evidence_sources(user_id, is_active, created_at DESC);
+CREATE INDEX idx_evidence_sources_run ON evidence_sources(extraction_run_id);
+CREATE INDEX idx_evidence_items_worker_profile_kind_active ON evidence_items(worker_profile_id, item_kind, is_active, sort_order);
+CREATE INDEX idx_evidence_items_run ON evidence_items(extraction_run_id);
+CREATE INDEX idx_evidence_items_primary_source ON evidence_items(primary_source_id);
 CREATE INDEX idx_reviews_worker_id ON reviews(worker_id);
 CREATE INDEX idx_reviews_reviewer_id ON reviews(reviewer_id);
 CREATE INDEX idx_reviews_status ON reviews(status);
@@ -203,6 +289,9 @@ CREATE INDEX idx_wallet_verification_challenges_nonce ON wallet_verification_cha
 -- Enable RLS on all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE worker_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evidence_extraction_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evidence_sources ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evidence_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stakes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contextual_scores ENABLE ROW LEVEL SECURITY;
@@ -287,6 +376,21 @@ CREATE POLICY "Users can update their own wallet verification challenges"
 
 CREATE POLICY "Users can insert their own worker profile"
   ON worker_profiles FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage their own evidence extraction runs"
+  ON evidence_extraction_runs
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage their own evidence sources"
+  ON evidence_sources
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage their own evidence items"
+  ON evidence_items
+  USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update their own worker profile"

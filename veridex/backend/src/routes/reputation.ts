@@ -11,6 +11,10 @@ import {
 } from '../services/reputationProfile';
 import { syncWorkerReputation } from '../services/reputationIngestion';
 import { extractEvidenceUploadDraft } from '../services/evidenceExtraction';
+import {
+  loadWorkerEvidenceSnapshot,
+  saveNormalizedEvidenceSnapshot,
+} from '../services/evidenceRepository';
 import { storeEvidenceFile } from '../services/evidenceStorage';
 import { loadReputationScoringInputs } from '../services/reputationScoreInputs';
 
@@ -202,24 +206,27 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
     }
 
     const nextGithubUsername = normalizeGithubUsername(github_username);
-    const hasPayload =
-      nextGithubUsername !== undefined ||
+    const manualEvidenceChanged =
       linkedin_data !== undefined ||
       projects !== undefined ||
       other_platforms !== undefined;
+    const hasPayload =
+      nextGithubUsername !== undefined ||
+      manualEvidenceChanged;
 
     if (!hasPayload) {
       return res.status(400).json({ error: 'No evidence payload provided' });
     }
 
     const profile = await ensureWorkerProfile(targetUserId);
+    const currentEvidenceSnapshot = await loadWorkerEvidenceSnapshot(profile);
 
-    const mergedLinkedInData = linkedin_data !== undefined
-      ? mergeLinkedInData(profile.linkedin_data, linkedin_data)
-      : (profile.linkedin_data || {});
+    const mergedLinkedInData = manualEvidenceChanged
+      ? mergeLinkedInData(currentEvidenceSnapshot.linkedinData, linkedin_data)
+      : currentEvidenceSnapshot.linkedinData;
 
     const mergedOtherPlatforms = mergeOtherPlatforms(
-      profile.other_platforms,
+      currentEvidenceSnapshot.otherPlatforms,
       {
         ...(other_platforms || {}),
         ...(projects !== undefined ? { projects } : {}),
@@ -229,14 +236,25 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
     const githubUsernameToStore = nextGithubUsername !== undefined
       ? nextGithubUsername
       : profile.github_username;
+    const normalizedEvidenceSnapshot = manualEvidenceChanged
+      ? await saveNormalizedEvidenceSnapshot({
+          profile,
+          userId: targetUserId,
+          linkedinData: mergedLinkedInData,
+          otherPlatforms: mergedOtherPlatforms,
+          triggerSource: 'manual_save',
+          extractionMethod: 'hybrid',
+          parserVersion: 'v1',
+        })
+      : currentEvidenceSnapshot;
 
     const { reviews, stakes, employerReviews } = await loadReputationScoringInputs(targetUserId);
 
     const scoreResult = await computeOverallScore(
       {
         githubData: profile.github_data,
-        linkedinData: mergedLinkedInData,
-        otherPlatforms: mergedOtherPlatforms,
+        linkedinData: normalizedEvidenceSnapshot.linkedinData,
+        otherPlatforms: normalizedEvidenceSnapshot.otherPlatforms,
       },
       reviews,
       stakes,
@@ -247,8 +265,8 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
       .from('worker_profiles')
       .update({
         github_username: githubUsernameToStore,
-        linkedin_data: mergedLinkedInData,
-        other_platforms: mergedOtherPlatforms,
+        linkedin_data: normalizedEvidenceSnapshot.linkedinData,
+        other_platforms: normalizedEvidenceSnapshot.otherPlatforms,
         computed_skills: scoreResult.computed_skills,
         specializations: scoreResult.specializations,
         years_experience: scoreResult.years_experience,
@@ -270,7 +288,11 @@ router.post('/evidence', requireAuth, async (req: AuthenticatedRequest, res: Res
 
     return res.json({
       success: true,
-      profile: updatedProfile,
+      profile: {
+        ...updatedProfile,
+        linkedin_data: normalizedEvidenceSnapshot.linkedinData,
+        other_platforms: normalizedEvidenceSnapshot.otherPlatforms,
+      },
       warning: githubUsernameToStore && !hasMeaningfulData(profile.github_data)
         ? 'GitHub username saved. Trigger /api/reputation/ingest after OAuth completes to sync repository data.'
         : null,
@@ -351,10 +373,20 @@ router.get('/:userId', async (req, res) => {
 
     const totalStaked = stakes?.reduce((sum, s) => sum + s.amount, 0) || 0;
     const stakerCount = stakes?.length || 0;
+    const workerProfile = user.worker_profiles
+      ? await loadWorkerEvidenceSnapshot(user.worker_profiles as any).then((snapshot) => ({
+          ...user.worker_profiles,
+          linkedin_data: snapshot.linkedinData,
+          other_platforms: snapshot.otherPlatforms,
+        }))
+      : null;
 
     return res.json({
-      user,
-      profile: user.worker_profiles,
+      user: {
+        ...user,
+        worker_profiles: workerProfile,
+      },
+      profile: workerProfile,
       reviews: reviews || [],
       totalStaked,
       stakerCount,

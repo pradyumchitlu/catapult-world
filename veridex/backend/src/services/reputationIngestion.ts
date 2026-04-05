@@ -4,6 +4,7 @@ import {
 } from './github';
 import { computeOverallScore, type ScoreResult } from './scoring';
 import { ensureWorkerProfile, type WorkerProfileRecord } from './reputationProfile';
+import { loadWorkerEvidenceSnapshot } from './evidenceRepository';
 import { loadReputationScoringInputs } from './reputationScoreInputs';
 
 type JsonRecord = Record<string, any>;
@@ -93,6 +94,7 @@ export async function syncWorkerReputation(
 
   try {
     const { reviews, stakes, employerReviews } = await loadReputationScoringInputs(userId);
+    const evidenceSnapshot = await loadWorkerEvidenceSnapshot(profile);
 
     const githubUsername = options.presetGithubUsername !== undefined
       ? options.presetGithubUsername
@@ -100,7 +102,8 @@ export async function syncWorkerReputation(
     const shouldRefreshGithub = options.refreshGithub !== false;
 
     const hasManualEvidence =
-      hasMeaningfulData(profile.linkedin_data) || hasMeaningfulData(profile.other_platforms);
+      hasMeaningfulData(evidenceSnapshot.linkedinData) ||
+      hasMeaningfulData(evidenceSnapshot.otherPlatforms);
     const hasReviewEvidence = reviews.length > 0;
     const hasStakeEvidence = stakes.length > 0;
 
@@ -136,8 +139,8 @@ export async function syncWorkerReputation(
     const scoreResult = await computeOverallScore(
       {
         githubData,
-        linkedinData: profile.linkedin_data,
-        otherPlatforms: profile.other_platforms,
+        linkedinData: evidenceSnapshot.linkedinData,
+        otherPlatforms: evidenceSnapshot.otherPlatforms,
       },
       reviews,
       stakes,
@@ -149,6 +152,8 @@ export async function syncWorkerReputation(
       .update({
         github_username: githubUsername,
         github_data: githubData,
+        linkedin_data: evidenceSnapshot.linkedinData,
+        other_platforms: evidenceSnapshot.otherPlatforms,
         computed_skills: scoreResult.computed_skills,
         specializations: scoreResult.specializations,
         years_experience: scoreResult.years_experience,

@@ -2,6 +2,10 @@ import mammoth from 'mammoth';
 import { PDFParse } from 'pdf-parse';
 import { load } from 'cheerio';
 import path from 'path';
+import {
+  extractLinkedInEvidenceWithGemini,
+  extractProjectEvidenceWithGemini,
+} from './gemini';
 import type { StoredEvidenceFile } from './evidenceStorage';
 
 export interface EvidenceExperienceDraft {
@@ -50,6 +54,7 @@ interface ExtractEvidenceOptions {
 }
 
 const SUPPORTED_EXTENSIONS = new Set(['.pdf', '.docx', '.txt', '.md']);
+const GEMINI_EVIDENCE_EXTRACTION_ENABLED = process.env.ENABLE_GEMINI_EVIDENCE_EXTRACTION === 'true';
 
 const SECTION_HEADINGS = new Set([
   'about',
@@ -216,6 +221,26 @@ function extractDateRange(line: string): { start_date: string; end_date?: string
   };
 }
 
+function looksLikeUpcomingExperienceHeader(lines: string[], nextDateIndex: number): boolean {
+  if (nextDateIndex < 2) {
+    return false;
+  }
+
+  const titleCandidate = lines[nextDateIndex - 2];
+  const companyCandidate = lines[nextDateIndex - 1];
+
+  if (!titleCandidate || !companyCandidate) {
+    return false;
+  }
+
+  return (
+    !SECTION_HEADINGS.has(normalizeHeading(titleCandidate)) &&
+    !SECTION_HEADINGS.has(normalizeHeading(companyCandidate)) &&
+    !extractDateRange(titleCandidate) &&
+    !extractDateRange(companyCandidate)
+  );
+}
+
 function parseLinkedInExperiences(lines: string[], fullText: string): EvidenceExperienceDraft[] {
   const experiences: EvidenceExperienceDraft[] = [];
 
@@ -227,27 +252,41 @@ function parseLinkedInExperiences(lines: string[], fullText: string): EvidenceEx
 
     const companyLine = lines[index - 1] || '';
     const titleLine = lines[index - 2] || companyLine || 'Professional Experience';
-    const descriptionLines: string[] = [];
+    let nextDateIndex = lines.length;
 
-    let cursor = index + 1;
-    while (cursor < lines.length && !extractDateRange(lines[cursor])) {
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
       if (SECTION_HEADINGS.has(normalizeHeading(lines[cursor]))) {
+        nextDateIndex = cursor;
         break;
       }
-      descriptionLines.push(lines[cursor]);
-      cursor += 1;
+
+      if (extractDateRange(lines[cursor])) {
+        nextDateIndex = cursor;
+        break;
+      }
     }
 
+    // LinkedIn exports typically follow title -> company -> date -> description.
+    // When the next role starts, trim off that next role's title/company header
+    // instead of folding it into the previous role description.
+    const descriptionEnd = (
+      nextDateIndex < lines.length &&
+      looksLikeUpcomingExperienceHeader(lines, nextDateIndex)
+    )
+      ? Math.max(index + 1, nextDateIndex - 2)
+      : nextDateIndex;
+    const descriptionLines = lines.slice(index + 1, descriptionEnd);
     const description = descriptionLines.join(' ').trim();
-    const skillSource = `${titleLine} ${companyLine} ${description} ${fullText}`;
+    const experienceText = `${titleLine} ${companyLine} ${description}`.trim();
+    const inferredSkills = inferSkills(experienceText);
     experiences.push({
       title: titleLine,
       company: normalizeCompanyLine(companyLine),
       start_date: range.start_date,
       end_date: range.end_date,
       description: description || undefined,
-      skills: inferSkills(skillSource).slice(0, 10),
-      technologies: inferSkills(description || skillSource).slice(0, 8),
+      skills: (inferredSkills.length > 0 ? inferredSkills : inferSkills(fullText)).slice(0, 10),
+      technologies: inferSkills(description || experienceText).slice(0, 8),
     });
   }
 
@@ -279,7 +318,7 @@ async function extractTextFromFile(file: Express.Multer.File): Promise<string> {
   return file.buffer.toString('utf8');
 }
 
-function buildLinkedInDraft(file: StoredEvidenceFile, text: string): Record<string, any> {
+function buildLinkedInDraftDeterministic(file: StoredEvidenceFile, text: string): Record<string, any> {
   const lines = cleanLines(text);
   const experienceLines = getSectionLines(lines, 'Experience');
   const skillsLines = getSectionLines(lines, 'Skills');
@@ -298,7 +337,7 @@ function buildLinkedInDraft(file: StoredEvidenceFile, text: string): Record<stri
   };
 }
 
-function buildWorkSampleDraft(file: StoredEvidenceFile, text: string): EvidenceProjectDraft {
+function buildWorkSampleDraftDeterministic(file: StoredEvidenceFile, text: string): EvidenceProjectDraft {
   const urls = extractUrlsFromText(text);
   const inferredSkills = inferSkills(text);
 
@@ -311,6 +350,69 @@ function buildWorkSampleDraft(file: StoredEvidenceFile, text: string): EvidenceP
     technologies: inferredSkills.slice(0, 10),
     tags: dedupe(['uploaded file', path.extname(file.original_name).replace('.', '')]).slice(0, 5),
     source_file: file,
+  };
+}
+
+async function buildLinkedInDraft(
+  file: StoredEvidenceFile,
+  text: string,
+  warnings: string[]
+): Promise<Record<string, any>> {
+  const deterministic = buildLinkedInDraftDeterministic(file, text);
+
+  if (!GEMINI_EVIDENCE_EXTRACTION_ENABLED) {
+    return deterministic;
+  }
+
+  const llmResult = await extractLinkedInEvidenceWithGemini(text);
+
+  if (!llmResult) {
+    warnings.push('Gemini extraction was unavailable for the LinkedIn upload, so we used deterministic parsing for this draft.');
+    return deterministic;
+  }
+
+  return {
+    ...deterministic,
+    experiences: llmResult.experiences.length > 0 ? llmResult.experiences : deterministic.experiences,
+    skills: llmResult.skills.length > 0 ? llmResult.skills : deterministic.skills,
+    top_skills: llmResult.top_skills.length > 0 ? llmResult.top_skills : deterministic.top_skills,
+    specializations: llmResult.specializations.length > 0 ? llmResult.specializations : deterministic.specializations,
+  };
+}
+
+function mergeProjectDrafts(
+  deterministic: EvidenceProjectDraft,
+  llmResult: EvidenceProjectDraft | null,
+  defaults: Partial<EvidenceProjectDraft> = {}
+): EvidenceProjectDraft {
+  if (!llmResult) {
+    return {
+      ...deterministic,
+      ...defaults,
+    };
+  }
+
+  return {
+    title: llmResult.title || deterministic.title || defaults.title,
+    role: llmResult.role || deterministic.role || defaults.role,
+    description: llmResult.description || deterministic.description || defaults.description,
+    url: llmResult.url || deterministic.url || defaults.url,
+    proof_urls: (llmResult.proof_urls && llmResult.proof_urls.length > 0)
+      ? llmResult.proof_urls
+      : (deterministic.proof_urls || defaults.proof_urls),
+    start_date: llmResult.start_date || deterministic.start_date || defaults.start_date,
+    end_date: llmResult.end_date || deterministic.end_date || defaults.end_date,
+    updated_at: llmResult.updated_at || deterministic.updated_at || defaults.updated_at,
+    skills: (llmResult.skills && llmResult.skills.length > 0)
+      ? llmResult.skills
+      : (deterministic.skills || defaults.skills),
+    technologies: (llmResult.technologies && llmResult.technologies.length > 0)
+      ? llmResult.technologies
+      : (deterministic.technologies || defaults.technologies),
+    tags: (llmResult.tags && llmResult.tags.length > 0)
+      ? llmResult.tags
+      : (deterministic.tags || defaults.tags),
+    source_file: defaults.source_file || deterministic.source_file || llmResult.source_file,
   };
 }
 
@@ -336,7 +438,7 @@ async function fetchHtml(url: string): Promise<string> {
   }
 }
 
-function buildUrlDraft(url: string, type: 'portfolio' | 'project', html: string | null): EvidenceProjectDraft {
+function buildUrlDraftDeterministic(url: string, type: 'portfolio' | 'project', html: string | null): EvidenceProjectDraft {
   const normalizedUrl = safeUrl(url) || url;
   const fallbackHostname = (() => {
     try {
@@ -418,10 +520,31 @@ async function extractUrlDrafts(
 
     try {
       const html = await fetchHtml(url);
-      drafts.push(buildUrlDraft(url, type, html));
+      const deterministic = buildUrlDraftDeterministic(url, type, html);
+      if (!GEMINI_EVIDENCE_EXTRACTION_ENABLED) {
+        drafts.push(deterministic);
+        continue;
+      }
+
+      const pageText = [deterministic.title, deterministic.description, html]
+        .filter(Boolean)
+        .join('\n\n');
+      const llmDraft = await extractProjectEvidenceWithGemini({
+        kind: type,
+        text: pageText,
+        sourceUrl: url,
+        sourceName: deterministic.title,
+      });
+      if (!llmDraft) {
+        warnings.push(`Gemini extraction was unavailable for ${url}; used deterministic page parsing instead.`);
+      }
+      drafts.push(mergeProjectDrafts(deterministic, llmDraft, {
+        url,
+        updated_at: deterministic.updated_at,
+      }));
     } catch (error) {
       warnings.push(`Could not fully analyze ${url}; added it as a manual ${type} entry.`);
-      drafts.push(buildUrlDraft(url, type, null));
+      drafts.push(buildUrlDraftDeterministic(url, type, null));
     }
   }
 
@@ -440,7 +563,7 @@ export async function extractEvidenceUploadDraft(
 
   if (options.linkedinFile) {
     const text = await extractTextFromFile(options.linkedinFile.file);
-    linkedinData = buildLinkedInDraft(options.linkedinFile.stored, text);
+    linkedinData = await buildLinkedInDraft(options.linkedinFile.stored, text, warnings);
     uploadedFiles.push(options.linkedinFile.stored);
 
     if (!linkedinData.experiences?.length) {
@@ -450,7 +573,26 @@ export async function extractEvidenceUploadDraft(
 
   for (const file of options.supportingFiles || []) {
     const text = await extractTextFromFile(file.file);
-    workSamples.push(buildWorkSampleDraft(file.stored, text));
+    const deterministic = buildWorkSampleDraftDeterministic(file.stored, text);
+
+    if (!GEMINI_EVIDENCE_EXTRACTION_ENABLED) {
+      workSamples.push(deterministic);
+      uploadedFiles.push(file.stored);
+      continue;
+    }
+
+    const llmDraft = await extractProjectEvidenceWithGemini({
+      kind: 'work_sample',
+      text,
+      sourceName: file.stored.original_name,
+    });
+    if (!llmDraft) {
+      warnings.push(`Gemini extraction was unavailable for ${file.stored.original_name}; used deterministic parsing instead.`);
+    }
+    workSamples.push(mergeProjectDrafts(deterministic, llmDraft, {
+      source_file: file.stored,
+      updated_at: file.stored.uploaded_at,
+    }));
     uploadedFiles.push(file.stored);
   }
 
