@@ -1,68 +1,100 @@
 'use client';
 
-import type { Agent, User, WorkerProfile } from '@/types';
-
-interface AgentWithParent extends Agent {
-  parent: User & { worker_profile: WorkerProfile };
-}
+import GlassCard from '@/components/GlassCard';
+import { headingSm, textSecondary, textMuted, gradientText, colors } from '@/lib/styles';
+import type { Agent } from '@/types';
 
 interface AgentCardProps {
-  agent: AgentWithParent;
+  agent: Agent;
 }
 
 export default function AgentCard({ agent }: AgentCardProps) {
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  const createdDate = new Date(agent.created_at).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 
   const copyAgentId = () => {
     navigator.clipboard.writeText(agent.id);
   };
 
   return (
-    <div className="p-4 bg-worldcoin-gray-700/50 rounded-lg">
-      <div className="flex justify-between items-start">
+    <div
+      style={{
+        borderRadius: '14px',
+        border: '1px solid rgba(37,99,235,0.12)',
+        background: 'rgba(255,255,255,0.55)',
+        padding: '20px',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🤖</span>
-            <h3 className="font-semibold">{agent.name}</h3>
-          </div>
-          <div className="mt-2 text-sm text-worldcoin-gray-400">
-            <div className="flex items-center gap-2">
-              <span>Agent ID:</span>
-              <code className="bg-worldcoin-gray-800 px-2 py-0.5 rounded text-xs">
-                {agent.id.slice(0, 12)}...
-              </code>
-              <button
-                onClick={copyAgentId}
-                className="text-veridex-secondary hover:underline text-xs"
-              >
-                Copy
-              </button>
-            </div>
+          <h3 style={{ ...headingSm, fontSize: '16px', margin: '0 0 8px 0' }}>{agent.name}</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ ...textMuted, fontSize: '12px' }}>Credential ID</span>
+            <code
+              style={{
+                fontFamily: 'var(--font-geist-mono), monospace',
+                fontSize: '12px',
+                color: colors.primary,
+                background: 'rgba(37,99,235,0.06)',
+                padding: '3px 8px',
+                borderRadius: '6px',
+              }}
+            >
+              {agent.id.slice(0, 16)}...
+            </code>
+            <button
+              onClick={copyAgentId}
+              style={{
+                fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                fontSize: '11px',
+                color: colors.primary,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                textDecoration: 'underline',
+              }}
+            >
+              Copy
+            </button>
           </div>
         </div>
 
-        <div className="text-right">
-          <div className="text-2xl font-bold text-veridex-primary">
+        <div style={{ textAlign: 'right' }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-fraunces), Georgia, serif',
+              fontSize: '28px',
+              fontWeight: 700,
+              ...gradientText,
+              lineHeight: 1,
+            }}
+          >
             {agent.derived_score}
           </div>
-          <div className="text-xs text-worldcoin-gray-400">Derived Score</div>
+          <div style={{ ...textMuted, fontSize: '11px', marginTop: '4px' }}>Derived Score</div>
         </div>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-worldcoin-gray-600 flex justify-between items-center text-sm">
-        <div className="text-worldcoin-gray-400">
-          Parent: {agent.parent.display_name} (Score: {agent.parent.worker_profile.overall_trust_score})
-        </div>
-        <div className="text-worldcoin-gray-500">
-          Created {formatDate(agent.created_at)}
-        </div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderTop: '1px solid rgba(37,99,235,0.1)',
+          marginTop: '14px',
+          paddingTop: '12px',
+        }}
+      >
+        <span style={{ ...textSecondary, fontSize: '13px' }}>
+          70% of your trust score
+        </span>
+        <span style={{ ...textMuted, fontSize: '13px' }}>
+          Created {createdDate}
+        </span>
       </div>
     </div>
   );

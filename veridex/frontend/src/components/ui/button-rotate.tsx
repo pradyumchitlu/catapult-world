@@ -72,7 +72,7 @@ export function ButtonRotate({
   return (
     <div
       className={cn(
-        'inline-flex rounded-full border border-dotted border-primary/40 bg-white/70 p-2 shadow-[0_18px_50px_rgba(37,99,235,0.12)] backdrop-blur-xl',
+        'inline-flex rounded-full border border-dotted border-[#2563EB]/40 bg-white/70 p-2 shadow-[0_18px_50px_rgba(37,99,235,0.12)] backdrop-blur-xl',
         className
       )}
     >
@@ -82,7 +82,7 @@ export function ButtonRotate({
           onClick={onClick}
           disabled={disabled}
           className={cn(
-            'relative grid h-[260px] w-[260px] place-content-center overflow-hidden rounded-full border border-primary/10 bg-primary p-0 text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.24)] hover:bg-primary disabled:opacity-70',
+            'relative grid h-[260px] w-[260px] place-content-center overflow-hidden rounded-full border border-[#2563EB]/10 bg-[#2563EB] p-0 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)] hover:bg-[#2563EB] disabled:opacity-70',
             buttonClassName
           )}
         >
@@ -91,7 +91,7 @@ export function ButtonRotate({
       ) : (
         <div
           className={cn(
-            'group/button relative grid h-[260px] w-[260px] place-content-center overflow-hidden rounded-full border border-primary/10 bg-primary p-0 text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]',
+            'group/button relative grid h-[260px] w-[260px] place-content-center overflow-hidden rounded-full border border-[#2563EB]/10 bg-[#2563EB] p-0 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]',
             buttonClassName
           )}
         >

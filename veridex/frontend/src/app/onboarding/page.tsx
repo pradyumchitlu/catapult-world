@@ -704,15 +704,44 @@ function OnboardingContent() {
               fontWeight: 700,
               lineHeight: '1.15',
               letterSpacing: '-0.02em',
-              margin: '0 0 12px 0',
+              margin: '0 0 20px 0',
               ...gradientText,
             }}
           >
             Welcome to Veridex.
           </h1>
-          <p style={{ ...textSecondary, maxWidth: '520px' }}>
-            Let&apos;s set up your trust profile, connect GitHub if you want, and add proof-backed evidence without using an LLM.
-          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '20px',
+            }}
+          >
+            {[
+              { num: '01', title: 'Profile', body: 'Choose your display name and whether you\'re a worker, employer, or both.' },
+              { num: '02', title: 'Profession', body: 'Select your field so we can tailor your trust profile to the right context.' },
+              { num: '03', title: 'Connect', body: 'Link your GitHub to import developer activity and build verified evidence.' },
+              { num: '04', title: 'Evidence', body: 'Upload a LinkedIn PDF, project URLs, or supporting docs — scored without an LLM.' },
+            ].map((item) => (
+              <div key={item.num}>
+                <span
+                  style={{
+                    ...gradientText,
+                    fontFamily: 'var(--font-fraunces), Georgia, serif',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    display: 'block',
+                    marginBottom: '8px',
+                  }}
+                >
+                  {item.num}
+                </span>
+                <p style={{ ...headingSm, margin: '0 0 6px 0' }}>{item.title}</p>
+                <p style={{ ...textSecondary, fontSize: '13px', lineHeight: '1.6' }}>{item.body}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="fade-up fade-up-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px', flexWrap: 'wrap' }}>

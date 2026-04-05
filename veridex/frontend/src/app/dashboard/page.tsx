@@ -238,12 +238,6 @@ export default function DashboardPage() {
   const githubContributions = (githubData.contributions as Record<string, any>) || {};
   const githubCollaboration = (githubData.collaboration as Record<string, any>) || {};
   const scoreComponents = normalizeScoreComponents(profile.score_components);
-  const groupedScores = scoreComponents.grouped_scores || {
-    evidence: Math.round((((scoreComponents.identity_assurance * 0.10) + (scoreComponents.evidence_depth * 0.10) + (scoreComponents.consistency * 0.10) + (scoreComponents.recency * 0.05)) / 0.35)),
-    employer: scoreComponents.employer_outcomes,
-    staking: scoreComponents.staking,
-    veridex: profile.overall_trust_score,
-  };
   const topLanguages = Array.isArray(githubData.languages) ? githubData.languages.slice(0, 6) : [];
   const linkedinExperiences = Array.isArray(linkedinData.experiences) ? linkedinData.experiences : [];
   const portfolioEntries = Array.isArray(otherPlatforms.portfolio) ? otherPlatforms.portfolio : [];
@@ -278,7 +272,7 @@ export default function DashboardPage() {
 
   const renderHowCalculated = () => (
     <GlassCard style={{ padding: '28px' }}>
-      <span style={sectionLabel}>How It Was Calculated</span>
+      <span style={sectionLabel}>Current Sub-Scores</span>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         {scoreInsights.map((item) => (
           <HoverCard key={item.label} openDelay={120} closeDelay={120}>
@@ -365,23 +359,6 @@ export default function DashboardPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '24px' }}>
-              <GlassCard style={{ padding: '28px' }}>
-                <span style={sectionLabel}>Stored Scores</span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-                  {[
-                    { label: 'Evidence', value: groupedScores.evidence },
-                    { label: 'Employer', value: groupedScores.employer },
-                    { label: 'Staking', value: groupedScores.staking },
-                    { label: 'Veridex', value: groupedScores.veridex },
-                  ].map(({ label, value }) => (
-                    <div key={label} style={{ textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '24px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>{value}</div>
-                      <div style={textMuted}>{label}</div>
-                    </div>
-                  ))}
-                </div>
-              </GlassCard>
-
               {renderHowCalculated()}
 
               {(profile.computed_skills?.length > 0 || profile.specializations?.length > 0) && (
