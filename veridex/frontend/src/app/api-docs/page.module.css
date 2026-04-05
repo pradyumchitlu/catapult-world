@@ -1,0 +1,391 @@
+.docsPage {
+  background: #ffffff;
+  min-height: calc(100vh - 72px);
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: 56px 0 96px;
+}
+
+.docsFrame {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 72px;
+}
+
+.docsSidebar {
+  position: relative;
+}
+
+.sidebarInner {
+  position: sticky;
+  top: 108px;
+}
+
+.sidebarEyebrow,
+.heroEyebrow,
+.sectionKicker,
+.overviewLabel,
+.exampleLabel,
+.sidebarMeta span,
+.fact dt,
+.docTable th {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #4f46e5;
+}
+
+.sidebarEyebrow {
+  margin: 0 0 18px 0;
+}
+
+.sidebarNav {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.sidebarNav a,
+.textLink {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+  text-decoration: none;
+  transition: color 0.16s ease;
+}
+
+.sidebarNav a:hover,
+.textLink:hover {
+  color: #3730a3;
+}
+
+.textLink {
+  color: #3730a3;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.sidebarMeta {
+  display: grid;
+  gap: 18px;
+  padding: 24px 0;
+  border-top: 1px solid #e7ebf1;
+  border-bottom: 1px solid #e7ebf1;
+  margin-bottom: 24px;
+}
+
+.sidebarMeta p {
+  margin: 6px 0 0 0;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.docsMain {
+  max-width: 760px;
+}
+
+.hero {
+  padding-bottom: 42px;
+  border-bottom: 1px solid #e7ebf1;
+}
+
+.heroEyebrow {
+  margin: 0 0 14px 0;
+}
+
+.hero h1,
+.sectionHeading,
+.endpointPath {
+  font-family: var(--font-fraunces), Georgia, serif;
+  letter-spacing: -0.03em;
+  color: #111827;
+  margin: 0;
+}
+
+.hero h1 {
+  font-size: clamp(42px, 7vw, 74px);
+  line-height: 1.02;
+  margin-bottom: 20px;
+  max-width: 10ch;
+}
+
+.heroBody,
+.endpointPurpose,
+.overviewCopy,
+.editorialList,
+.docTable td,
+.noteBlock p,
+.closingCopy {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.78;
+  color: #475569;
+}
+
+.heroBody {
+  margin: 0 0 16px 0;
+  max-width: 42rem;
+}
+
+.docSection {
+  padding-top: 40px;
+  margin-top: 40px;
+  border-top: 1px solid #e7ebf1;
+}
+
+.sectionHeading {
+  font-size: 32px;
+  line-height: 1.12;
+  margin-bottom: 20px;
+}
+
+.overviewRows {
+  display: grid;
+}
+
+.overviewRow {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 24px;
+  padding: 18px 0;
+  border-top: 1px solid #eef2f6;
+}
+
+.overviewRow:last-child {
+  border-bottom: 1px solid #eef2f6;
+}
+
+.overviewLabel {
+  color: #64748b;
+}
+
+.overviewCopy {
+  margin: 0;
+}
+
+.sectionTopline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.endpointPath {
+  font-size: 34px;
+  line-height: 1.14;
+  margin-bottom: 12px;
+}
+
+.endpointPurpose {
+  margin: 0 0 24px 0;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(79, 70, 229, 0.32);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #3730a3;
+}
+
+.factsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  padding: 18px 0 22px;
+  border-top: 1px solid #eef2f6;
+  border-bottom: 1px solid #eef2f6;
+  margin: 0 0 28px 0;
+}
+
+.fact dt {
+  margin-bottom: 6px;
+}
+
+.fact dd {
+  margin: 0;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #111827;
+}
+
+.detailBlock {
+  margin-bottom: 26px;
+}
+
+.blockHeading {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #111827;
+  margin: 0 0 12px 0;
+}
+
+.docTable {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 1px solid #eef2f6;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.docTable th,
+.docTable td {
+  text-align: left;
+  vertical-align: top;
+  padding: 14px 0;
+  border-bottom: 1px solid #eef2f6;
+}
+
+.docTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.docTable th:first-child,
+.docTable td:first-child {
+  width: 190px;
+  padding-right: 24px;
+}
+
+.docTable th {
+  padding-right: 24px;
+}
+
+.editorialList {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.editorialList li {
+  margin-bottom: 10px;
+}
+
+.exampleGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.exampleLabel {
+  margin-bottom: 10px;
+  color: #64748b;
+}
+
+.codeBlock {
+  margin: 0;
+  padding: 18px 20px;
+  background: #f8fafc;
+  border: 1px solid #e7ebf1;
+  border-radius: 12px;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #0f172a;
+}
+
+.inlineCode {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92em;
+  color: #312e81;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  padding: 1px 6px;
+  vertical-align: baseline;
+}
+
+.noteBlock {
+  margin: 28px 0 0 0;
+  padding: 0 0 0 18px;
+  border-left: 2px solid #c7d2fe;
+}
+
+.noteBlock p {
+  margin: 0 0 12px 0;
+}
+
+.noteBlock p:last-child {
+  margin-bottom: 0;
+}
+
+.closingCopy {
+  margin: 24px 0 0 0;
+}
+
+@media (max-width: 960px) {
+  .docsPage {
+    padding-top: 36px;
+  }
+
+  .docsFrame {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 0 24px;
+  }
+
+  .sidebarInner {
+    position: static;
+  }
+
+  .sidebarNav {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px 18px;
+  }
+
+  .docsMain {
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .docsPage {
+    padding-bottom: 72px;
+  }
+
+  .docsFrame {
+    padding: 0 18px;
+  }
+
+  .hero h1 {
+    font-size: 40px;
+    max-width: none;
+  }
+
+  .sectionHeading,
+  .endpointPath {
+    font-size: 28px;
+  }
+
+  .overviewRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .factsGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .docTable th:first-child,
+  .docTable td:first-child {
+    width: auto;
+    padding-right: 12px;
+  }
+}

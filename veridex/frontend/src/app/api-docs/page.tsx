@@ -1,25 +1,14 @@
-import type { CSSProperties, ReactNode } from 'react';
-import type { Metadata } from 'next';
+import type { Metadata, ReactNode } from 'react';
 import Link from 'next/link';
-import GlassCard from '@/components/GlassCard';
-import {
-  col,
-  colors,
-  headingLg,
-  headingMd,
-  headingSm,
-  sectionLabel,
-  separator,
-  textMuted,
-  textSecondary,
-} from '@/lib/styles';
+import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'Veridex API Docs',
-  description: 'Production-facing API docs for the currently supported public Veridex trust endpoints.',
+  description: 'Editorial API documentation for the public Veridex trust and verification surfaces that are live today.',
 };
 
 type EndpointDoc = {
+  id: string;
   method: 'GET';
   path: string;
   auth: string;
@@ -35,10 +24,12 @@ type EndpointDoc = {
 
 const endpointDocs: EndpointDoc[] = [
   {
+    id: 'trust',
     method: 'GET',
     path: '/api/trust/:veridexId',
     auth: 'None',
-    purpose: 'Resolve the public trust surface for a Veridex user, including Veridex score, score summaries, staking totals, and review aggregates.',
+    purpose:
+      'Resolve the public trust surface for a Veridex user, including Veridex score, score summaries, staking totals, and review aggregates.',
     params: [
       {
         name: 'veridexId',
@@ -54,7 +45,7 @@ const endpointDocs: EndpointDoc[] = [
       '`404` with `{ "error": "User not found" }` when the ID does not resolve',
       '`500` with `{ "error": "Query failed" }` if the lookup fails server-side',
     ],
-    curl: `curl <base-url>/api/trust/<veridex-id>`,
+    curl: 'curl <base-url>/api/trust/<veridex-id>',
     responseExample: `{
   "veridex_id": "user-uuid",
   "display_name": "Worker Name",
@@ -91,10 +82,12 @@ const endpointDocs: EndpointDoc[] = [
     ],
   },
   {
+    id: 'reputation',
     method: 'GET',
     path: '/api/reputation/:userId',
     auth: 'None',
-    purpose: 'Return the public profile surface for a user, including the current worker profile payload, active reviews, and stake totals.',
+    purpose:
+      'Return the public profile surface for a user, including the current worker profile payload, active reviews, and stake totals.',
     params: [
       {
         name: 'userId',
@@ -110,7 +103,7 @@ const endpointDocs: EndpointDoc[] = [
       '`404` with `{ "error": "User not found" }` when the ID does not resolve',
       '`500` with `{ "error": "Failed to get reputation" }` if the profile lookup fails',
     ],
-    curl: `curl <base-url>/api/reputation/<user-id>`,
+    curl: 'curl <base-url>/api/reputation/<user-id>',
     responseExample: `{
   "user": {
     "id": "user-uuid",
@@ -156,10 +149,12 @@ const endpointDocs: EndpointDoc[] = [
     ],
   },
   {
+    id: 'reviews',
     method: 'GET',
     path: '/api/review/:workerId',
     auth: 'None',
-    purpose: 'List active public reviews for a worker in stake order, with reviewer display metadata attached.',
+    purpose:
+      'List active public reviews for a worker in stake order, with reviewer display metadata attached.',
     params: [
       {
         name: 'workerId',
@@ -174,7 +169,7 @@ const endpointDocs: EndpointDoc[] = [
     errors: [
       '`500` with `{ "error": "Failed to get reviews" }` if the query fails',
     ],
-    curl: `curl <base-url>/api/review/<worker-id>`,
+    curl: 'curl <base-url>/api/review/<worker-id>',
     responseExample: `{
   "reviews": [
     {
@@ -203,10 +198,12 @@ const endpointDocs: EndpointDoc[] = [
     ],
   },
   {
+    id: 'agent',
     method: 'GET',
     path: '/api/agent/:agentId',
     auth: 'None',
-    purpose: 'Resolve an agent credential back to its parent human, including the delegated score snapshot used for public verification.',
+    purpose:
+      'Resolve an agent credential back to its parent human, including the delegated score snapshot used for public verification.',
     status: 'Beta',
     params: [
       {
@@ -222,7 +219,7 @@ const endpointDocs: EndpointDoc[] = [
       '`404` with `{ "error": "Agent not found" }` when the credential does not exist',
       '`500` with `{ "error": "Lookup failed" }` if the lookup fails server-side',
     ],
-    curl: `curl <base-url>/api/agent/<agent-id>`,
+    curl: 'curl <base-url>/api/agent/<agent-id>',
     responseExample: `{
   "agent_id": "agent-uuid",
   "agent_name": "Shopping Agent",
@@ -243,329 +240,212 @@ const endpointDocs: EndpointDoc[] = [
   },
 ];
 
-const codeBlockStyle: CSSProperties = {
-  margin: 0,
-  padding: '18px 20px',
-  borderRadius: '16px',
-  background: '#0F172A',
-  color: '#E2E8F0',
-  overflowX: 'auto',
-  fontFamily: 'var(--font-geist-mono), monospace',
-  fontSize: '13px',
-  lineHeight: 1.65,
-  whiteSpace: 'pre',
-};
-
-const inlineCodeStyle: CSSProperties = {
-  fontFamily: 'var(--font-geist-mono), monospace',
-  fontSize: '0.95em',
-  color: colors.primaryDark,
-  background: 'rgba(37,99,235,0.08)',
-  border: '1px solid rgba(37,99,235,0.16)',
-  borderRadius: '8px',
-  padding: '2px 6px',
-};
-
-const subheadingStyle: CSSProperties = {
-  ...headingSm,
-  marginBottom: '10px',
-};
+function InlineCode({ children }: { children: ReactNode }) {
+  return <code className={styles.inlineCode}>{children}</code>;
+}
 
 function renderInlineCode(text: string) {
   const parts = text.split('`');
 
   return parts.map((part, index) => (
-    index % 2 === 1
-      ? <code key={`${part}-${index}`} style={inlineCodeStyle}>{part}</code>
-      : <span key={`${part}-${index}`}>{part}</span>
+    index % 2 === 1 ? <InlineCode key={`${part}-${index}`}>{part}</InlineCode> : <span key={`${part}-${index}`}>{part}</span>
   ));
 }
 
-function Badge({
-  children,
-  tone = 'default',
-}: {
-  children: ReactNode;
-  tone?: 'default' | 'beta';
-}) {
-  const palette = tone === 'beta'
-    ? {
-        color: '#92400E',
-        background: 'rgba(245,158,11,0.14)',
-        border: '1px solid rgba(245,158,11,0.3)',
-      }
-    : {
-        color: colors.primary,
-        background: 'rgba(37,99,235,0.08)',
-        border: '1px solid rgba(37,99,235,0.18)',
-      };
-
+function EndpointSection({ endpoint }: { endpoint: EndpointDoc }) {
   return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '6px 10px',
-        borderRadius: '999px',
-        fontSize: '12px',
-        fontWeight: 600,
-        ...palette,
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function EndpointCard({ endpoint }: { endpoint: EndpointDoc }) {
-  return (
-    <GlassCard style={{ padding: '32px' }}>
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          marginBottom: '16px',
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-            <Badge>{endpoint.method}</Badge>
-            {endpoint.status ? <Badge tone="beta">{endpoint.status}</Badge> : null}
-          </div>
-          <h2 style={{ ...headingMd, fontSize: '24px', marginBottom: '10px' }}>{endpoint.path}</h2>
-          <p style={{ ...textSecondary, fontSize: '15px', maxWidth: '760px' }}>{endpoint.purpose}</p>
-        </div>
-        <div
-          style={{
-            minWidth: '180px',
-            borderRadius: '16px',
-            border: '1px solid rgba(37,99,235,0.12)',
-            background: 'rgba(255,255,255,0.58)',
-            padding: '16px',
-          }}
-        >
-          <div style={{ ...textMuted, marginBottom: '6px' }}>Auth</div>
-          <div style={{ ...headingSm, fontSize: '14px' }}>{endpoint.auth}</div>
-        </div>
+    <section id={endpoint.id} className={`${styles.docSection} ${styles.endpointSection}`}>
+      <div className={styles.sectionTopline}>
+        <span className={styles.sectionKicker}>{endpoint.method}</span>
+        {endpoint.status ? <span className={styles.statusBadge}>{endpoint.status}</span> : null}
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          gap: '16px',
-          marginBottom: '22px',
-        }}
-      >
-        <div
-          style={{
-            borderRadius: '16px',
-            border: '1px solid rgba(37,99,235,0.12)',
-            background: 'rgba(255,255,255,0.56)',
-            padding: '18px',
-          }}
-        >
-          <h3 style={subheadingStyle}>Path Params</h3>
-          <div style={{ display: 'grid', gap: '10px' }}>
+      <h2 className={styles.endpointPath}>{endpoint.path}</h2>
+      <p className={styles.endpointPurpose}>{endpoint.purpose}</p>
+
+      <dl className={styles.factsGrid}>
+        <div className={styles.fact}>
+          <dt>Auth</dt>
+          <dd>{endpoint.auth}</dd>
+        </div>
+        <div className={styles.fact}>
+          <dt>Path params</dt>
+          <dd>
+            {endpoint.params.length} required
+          </dd>
+        </div>
+        <div className={styles.fact}>
+          <dt>Response</dt>
+          <dd>JSON</dd>
+        </div>
+      </dl>
+
+      <div className={styles.detailBlock}>
+        <h3 className={styles.blockHeading}>Path parameters</h3>
+        <table className={styles.docTable}>
+          <thead>
+            <tr>
+              <th>Param</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
             {endpoint.params.map((param) => (
-              <div key={param.name}>
-                <div style={{ ...headingSm, fontSize: '14px', marginBottom: '4px' }}>{param.name}</div>
-                <p style={{ ...textSecondary, fontSize: '14px' }}>{param.description}</p>
-              </div>
+              <tr key={param.name}>
+                <td>
+                  <InlineCode>{param.name}</InlineCode>
+                </td>
+                <td>{param.description}</td>
+              </tr>
             ))}
-          </div>
-        </div>
-
-        <div
-          style={{
-            borderRadius: '16px',
-            border: '1px solid rgba(37,99,235,0.12)',
-            background: 'rgba(255,255,255,0.56)',
-            padding: '18px',
-          }}
-        >
-          <h3 style={subheadingStyle}>Success Shape</h3>
-          <ul style={{ margin: 0, paddingLeft: '18px', color: colors.textSecondary, lineHeight: 1.7 }}>
-            {endpoint.successShape.map((item) => (
-              <li key={item} style={{ marginBottom: '8px' }}>
-                {renderInlineCode(item)}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div
-          style={{
-            borderRadius: '16px',
-            border: '1px solid rgba(37,99,235,0.12)',
-            background: 'rgba(255,255,255,0.56)',
-            padding: '18px',
-          }}
-        >
-          <h3 style={subheadingStyle}>Common Errors</h3>
-          <ul style={{ margin: 0, paddingLeft: '18px', color: colors.textSecondary, lineHeight: 1.7 }}>
-            {endpoint.errors.map((item) => (
-              <li key={item} style={{ marginBottom: '8px' }}>
-                {renderInlineCode(item)}
-              </li>
-            ))}
-          </ul>
-        </div>
+          </tbody>
+        </table>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '16px',
-        }}
-      >
-        <div>
-          <h3 style={subheadingStyle}>cURL</h3>
-          <pre style={codeBlockStyle}>{endpoint.curl}</pre>
-        </div>
-        <div>
-          <h3 style={subheadingStyle}>Response Example</h3>
-          <pre style={codeBlockStyle}>{endpoint.responseExample}</pre>
+      <div className={styles.detailBlock}>
+        <h3 className={styles.blockHeading}>Success shape</h3>
+        <ul className={styles.editorialList}>
+          {endpoint.successShape.map((item) => (
+            <li key={item}>{renderInlineCode(item)}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div className={styles.detailBlock}>
+        <h3 className={styles.blockHeading}>Common errors</h3>
+        <ul className={styles.editorialList}>
+          {endpoint.errors.map((item) => (
+            <li key={item}>{renderInlineCode(item)}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div className={styles.detailBlock}>
+        <h3 className={styles.blockHeading}>Examples</h3>
+        <div className={styles.exampleGrid}>
+          <div>
+            <div className={styles.exampleLabel}>Request</div>
+            <pre className={styles.codeBlock}>{endpoint.curl}</pre>
+          </div>
+          <div>
+            <div className={styles.exampleLabel}>Response</div>
+            <pre className={styles.codeBlock}>{endpoint.responseExample}</pre>
+          </div>
         </div>
       </div>
 
       {endpoint.notes?.length ? (
-        <>
-          <hr style={{ ...separator, margin: '22px 0 0 0' }} />
-          <div style={{ display: 'grid', gap: '10px', paddingTop: '18px' }}>
-            {endpoint.notes.map((note) => (
-              <p key={note} style={{ ...textSecondary, fontSize: '14px' }}>
-                {renderInlineCode(note)}
-              </p>
-            ))}
-          </div>
-        </>
+        <blockquote className={styles.noteBlock}>
+          {endpoint.notes.map((note) => (
+            <p key={note}>{renderInlineCode(note)}</p>
+          ))}
+        </blockquote>
       ) : null}
-    </GlassCard>
+    </section>
   );
 }
 
 export default function ApiDocsPage() {
   return (
-    <div style={{ minHeight: '100vh' }}>
-      <div style={col}>
-        <div style={{ marginBottom: '40px' }}>
-          <span style={sectionLabel}>Public API</span>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1.2fr) minmax(280px, 0.8fr)',
-              gap: '24px',
-              alignItems: 'start',
-            }}
-          >
-            <div>
-              <h1 style={{ ...headingLg, fontSize: '48px', margin: '0 0 14px 0' }}>
-                Veridex API Docs
-              </h1>
-              <p style={{ ...textSecondary, fontSize: '17px', maxWidth: '760px' }}>
-                Production-facing documentation for the public Veridex read surfaces that are live today.
-                These docs are intentionally narrow: only currently working endpoints are documented here.
-              </p>
-            </div>
+    <div className={styles.docsPage}>
+      <div className={styles.docsFrame}>
+        <aside className={styles.docsSidebar}>
+          <div className={styles.sidebarInner}>
+            <p className={styles.sidebarEyebrow}>Public API</p>
+            <nav className={styles.sidebarNav} aria-label="API sections">
+              <a href="#overview">Overview</a>
+              {endpointDocs.map((endpoint) => (
+                <a key={endpoint.id} href={`#${endpoint.id}`}>
+                  {endpoint.path}
+                </a>
+              ))}
+              <a href="#notes">Notes</a>
+            </nav>
 
-            <GlassCard style={{ padding: '24px' }}>
-              <span style={{ ...sectionLabel, marginBottom: '14px' }}>Scope</span>
-              <div style={{ display: 'grid', gap: '12px' }}>
-                <p style={{ ...textSecondary, fontSize: '14px' }}>
-                  All routes on this page are public <code style={inlineCodeStyle}>GET</code> endpoints and do not require a bearer token.
-                </p>
-                <p style={{ ...textSecondary, fontSize: '14px' }}>
-                  Response examples are sanitized and trimmed to avoid publishing raw wallet, evidence, or storage metadata.
-                </p>
-                <Link href="/agents" className="btn-secondary" style={{ width: 'fit-content', textDecoration: 'none' }}>
-                  Back to Credentials
-                </Link>
+            <div className={styles.sidebarMeta}>
+              <div>
+                <span>Scope</span>
+                <p>Public read surfaces only.</p>
               </div>
-            </GlassCard>
+              <div>
+                <span>Format</span>
+                <p>JSON responses with restrained, sanitized examples.</p>
+              </div>
+              <div>
+                <span>Status</span>
+                <p>Agent lookup is live, but still documented as beta.</p>
+              </div>
+            </div>
+
+            <Link href="/agents" className={styles.textLink}>
+              Back to Credentials
+            </Link>
           </div>
-        </div>
+        </aside>
 
-        <GlassCard style={{ marginBottom: '24px' }}>
-          <span style={sectionLabel}>Quick Start</span>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '16px',
-            }}
-          >
-            <div
-              style={{
-                borderRadius: '16px',
-                border: '1px solid rgba(37,99,235,0.12)',
-                background: 'rgba(255,255,255,0.58)',
-                padding: '20px',
-              }}
-            >
-              <div style={{ ...textMuted, marginBottom: '8px' }}>Base URL</div>
-              <p style={{ ...headingSm, fontSize: '14px', marginBottom: '8px' }}>&lt;base-url&gt;</p>
-              <p style={{ ...textSecondary, fontSize: '14px' }}>
-                Replace with the deployed API origin for your environment before issuing requests.
-              </p>
+        <main className={styles.docsMain}>
+          <header id="overview" className={styles.hero}>
+            <p className={styles.heroEyebrow}>Veridex API</p>
+            <h1>Trust surfaces, documented with restraint.</h1>
+            <p className={styles.heroBody}>
+              This documentation covers the public Veridex endpoints that are live today. It is intentionally
+              narrow, deliberately calm, and written as a reference rather than a dashboard.
+            </p>
+            <p className={styles.heroBody}>
+              Every route on this page is a public <InlineCode>GET</InlineCode> endpoint. Response examples are
+              sanitized to avoid publishing wallet addresses, evidence storage metadata, or raw platform exports.
+            </p>
+          </header>
+
+          <section className={styles.docSection}>
+            <h2 className={styles.sectionHeading}>Reading guide</h2>
+            <div className={styles.overviewRows}>
+              <div className={styles.overviewRow}>
+                <div className={styles.overviewLabel}>Base URL</div>
+                <div className={styles.overviewCopy}>
+                  Replace <InlineCode>&lt;base-url&gt;</InlineCode> with the deployed API origin for your environment.
+                </div>
+              </div>
+              <div className={styles.overviewRow}>
+                <div className={styles.overviewLabel}>Authentication</div>
+                <div className={styles.overviewCopy}>
+                  The documented routes are public and do not require a bearer token.
+                </div>
+              </div>
+              <div className={styles.overviewRow}>
+                <div className={styles.overviewLabel}>What is included</div>
+                <div className={styles.overviewCopy}>
+                  Trust, reputation, reviews, and beta agent lookup. Broken or undocumented routes stay out of this contract.
+                </div>
+              </div>
+              <div className={styles.overviewRow}>
+                <div className={styles.overviewLabel}>Tone</div>
+                <div className={styles.overviewCopy}>
+                  These docs are the public contract for what external consumers should rely on right now.
+                </div>
+              </div>
             </div>
+          </section>
 
-            <div
-              style={{
-                borderRadius: '16px',
-                border: '1px solid rgba(37,99,235,0.12)',
-                background: 'rgba(255,255,255,0.58)',
-                padding: '20px',
-              }}
-            >
-              <div style={{ ...textMuted, marginBottom: '8px' }}>Format</div>
-              <p style={{ ...headingSm, fontSize: '14px', marginBottom: '8px' }}>JSON responses</p>
-              <p style={{ ...textSecondary, fontSize: '14px' }}>
-                All documented routes return JSON and use a simple <code style={inlineCodeStyle}>{'{ "error": "..." }'}</code> pattern for documented failures.
-              </p>
-            </div>
-
-            <div
-              style={{
-                borderRadius: '16px',
-                border: '1px solid rgba(37,99,235,0.12)',
-                background: 'rgba(255,255,255,0.58)',
-                padding: '20px',
-              }}
-            >
-              <div style={{ ...textMuted, marginBottom: '8px' }}>Coverage</div>
-              <p style={{ ...headingSm, fontSize: '14px', marginBottom: '8px' }}>Current prod surfaces</p>
-              <p style={{ ...textSecondary, fontSize: '14px' }}>
-                Trust, reputation, review, and beta agent lookup are included. Undocumented or broken routes are intentionally excluded.
-              </p>
-            </div>
-          </div>
-        </GlassCard>
-
-        <div style={{ display: 'grid', gap: '24px', marginBottom: '24px' }}>
           {endpointDocs.map((endpoint) => (
-            <EndpointCard key={endpoint.path} endpoint={endpoint} />
+            <EndpointSection key={endpoint.id} endpoint={endpoint} />
           ))}
-        </div>
 
-        <GlassCard>
-          <span style={sectionLabel}>Intentionally Undocumented</span>
-          <h2 style={{ ...headingMd, fontSize: '24px', marginBottom: '12px' }}>
-            Routes excluded from the public contract
-          </h2>
-          <p style={{ ...textSecondary, marginBottom: '18px' }}>
-            <code style={inlineCodeStyle}>GET /api/reputation/browse/workers</code> is not included in the production docs yet. The current route order
-            allows <code style={inlineCodeStyle}>GET /api/reputation/:userId</code> to shadow it, so it is excluded until that bug is fixed.
-          </p>
-          <p style={{ ...textSecondary, fontSize: '14px' }}>
-            This page is the source of truth for what external consumers should rely on right now.
-          </p>
-        </GlassCard>
+          <section id="notes" className={styles.docSection}>
+            <h2 className={styles.sectionHeading}>Notes</h2>
+            <blockquote className={styles.noteBlock}>
+              <p>
+                <InlineCode>GET /api/reputation/browse/workers</InlineCode> is intentionally excluded from the public
+                contract. The current route order allows <InlineCode>GET /api/reputation/:userId</InlineCode> to shadow
+                it, so it stays undocumented until that behavior is fixed.
+              </p>
+            </blockquote>
+            <p className={styles.closingCopy}>
+              The product-facing route for this page is <InlineCode>/api-docs</InlineCode>. The legacy
+              <InlineCode>/query-demo</InlineCode> path still redirects here for compatibility.
+            </p>
+          </section>
+        </main>
       </div>
     </div>
   );
