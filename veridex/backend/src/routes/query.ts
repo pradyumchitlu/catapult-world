@@ -24,6 +24,12 @@ router.get('/trust/:veridexId', optionalAuth, async (req: AuthenticatedRequest, 
     }
 
     const profile = (user as any).worker_profiles;
+    const groupedScores = profile?.score_components?.grouped_scores || {
+      evidence: 0,
+      employer: 0,
+      staking: 0,
+      veridex: profile?.overall_trust_score || 0,
+    };
 
     // Get total stakes
     const { data: stakes } = await supabase
@@ -58,13 +64,17 @@ router.get('/trust/:veridexId', optionalAuth, async (req: AuthenticatedRequest, 
       veridex_id: veridexId,
       display_name: user.display_name,
       is_verified_human: true, // Always true if they have an account
+      veridex_score: profile?.overall_trust_score || 0,
       overall_trust_score: profile?.overall_trust_score || 0,
+      score_summary: groupedScores,
       score_components: profile?.score_components || {},
       total_staked: totalStaked,
       review_count: reviewCount,
       avg_rating: avgRating,
       profession_category: user.profession_category,
       skills: profile?.computed_skills || [],
+      specializations: profile?.specializations || [],
+      years_experience: profile?.years_experience ?? null,
     });
   } catch (error) {
     console.error('Trust query error:', error);

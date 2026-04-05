@@ -35,12 +35,18 @@ CREATE TABLE worker_profiles (
   overall_trust_score INTEGER DEFAULT 0,
   score_components JSONB DEFAULT '{}',
   -- score_components shape: {
-  --   developer_competence: number,    (0 if no GitHub connected)
-  --   collaboration: number,
+  --   identity_assurance: number,
+  --   evidence_depth: number,
   --   consistency: number,
-  --   specialization_depth: number,
-  --   activity_recency: number,
-  --   peer_trust: number               (from staked reviews)
+  --   recency: number,
+  --   employer_outcomes: number,
+  --   staking: number,
+  --   grouped_scores: {
+  --     evidence: number,
+  --     employer: number,
+  --     staking: number,
+  --     veridex: number
+  --   }
   -- }
   ingestion_status TEXT DEFAULT 'pending',  -- pending, processing, completed, failed
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -127,12 +133,13 @@ CREATE TABLE contracts (
   worker_id UUID REFERENCES users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
-  payment_amount INTEGER NOT NULL,          -- WLD amount
+  payment_amount INTEGER NOT NULL,          -- salary (what the worker receives)
+  buy_in_amount INTEGER,                    -- total escrowed from employer (salary + staker reward + fee)
   duration_days INTEGER,                    -- estimated duration
   status TEXT DEFAULT 'draft',              -- draft, active, completed, closed
   worker_payout INTEGER,                    -- amount paid to worker (set on completion)
-  staker_payout_total INTEGER,              -- total distributed to stakers (set on completion)
-  platform_fee INTEGER DEFAULT 0,
+  staker_payout_total INTEGER,              -- total distributed to stakers (calculated at activation)
+  platform_fee INTEGER DEFAULT 0,           -- platform fee (calculated at activation)
   completed_at TIMESTAMPTZ,
   closed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -205,6 +212,25 @@ ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contract_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wallet_verification_challenges ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Contracts viewable by participants"
+  ON contracts FOR SELECT
+  USING (true);
+
+CREATE POLICY "Employers can create contracts"
+  ON contracts FOR INSERT
+  WITH CHECK (auth.uid() = employer_id);
+
+CREATE POLICY "Employers can update own contracts"
+  ON contracts FOR UPDATE
+  USING (auth.uid() = employer_id);
+
+CREATE POLICY "Payment records viewable by everyone"
+  ON contract_payments FOR SELECT
+  USING (true);
+
+ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contract_payments ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Contracts viewable by participants"
   ON contracts FOR SELECT

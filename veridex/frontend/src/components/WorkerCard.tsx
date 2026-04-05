@@ -1,6 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import GlassCard from '@/components/GlassCard';
+import {
+  headingSm,
+  textSecondary,
+  textMuted,
+  gradientText,
+  colors,
+} from '@/lib/styles';
 import type { WorkerProfile, User } from '@/types';
 
 interface WorkerWithUser extends WorkerProfile {
@@ -18,77 +26,119 @@ interface WorkerCardProps {
 
 export default function WorkerCard({ worker, showContextualScore }: WorkerCardProps) {
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-veridex-success';
-    if (score >= 60) return 'text-veridex-primary';
-    if (score >= 40) return 'text-veridex-warning';
-    return 'text-veridex-error';
+    if (score >= 80) return colors.success;
+    if (score >= 60) return colors.primary;
+    if (score >= 40) return colors.warning;
+    return '#F43F5E';
   };
 
   return (
-    <Link href={`/profile/${worker.user_id}`}>
-      <div className="card hover:border-veridex-primary/50 transition-colors cursor-pointer">
+    <Link href={`/profile/${worker.user_id}`} style={{ textDecoration: 'none' }}>
+      <GlassCard
+        style={{
+          cursor: 'pointer',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        }}
+        className="hover:scale-[1.01]"
+      >
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
           <div>
-            <h3 className="font-semibold text-lg">{worker.user.display_name}</h3>
-            <p className="text-sm text-worldcoin-gray-400 capitalize">
+            <h3 style={{ ...headingSm, fontSize: '16px', margin: '0 0 4px 0' }}>
+              {worker.user.display_name}
+            </h3>
+            <p style={{ ...textMuted, textTransform: 'capitalize' }}>
               {worker.user.profession_category}
             </p>
           </div>
-          <div className="text-right">
-            <div className={`text-2xl font-bold ${getScoreColor(worker.overall_trust_score)}`}>
+          <div style={{ textAlign: 'right' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-fraunces), Georgia, serif',
+                fontSize: '28px',
+                fontWeight: 700,
+                color: getScoreColor(worker.overall_trust_score),
+              }}
+            >
               {worker.overall_trust_score}
             </div>
-            <div className="text-xs text-worldcoin-gray-400">Trust Score</div>
+            <div style={textMuted}>Trust Score</div>
           </div>
         </div>
 
-        {/* Contextual Score (if evaluating) */}
+        {/* Contextual Score */}
         {showContextualScore && worker.contextualFitScore !== undefined && (
-          <div className="mb-4 p-3 bg-worldcoin-gray-700/50 rounded-lg">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-worldcoin-gray-400">Fit Score</span>
-              <span className={`font-semibold ${getScoreColor(worker.contextualFitScore)}`}>
-                {worker.contextualFitScore}%
-              </span>
-            </div>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '10px 14px',
+              background: 'rgba(37,99,235,0.06)',
+              borderRadius: '10px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ ...textSecondary, fontSize: '13px' }}>Fit Score</span>
+            <span
+              style={{
+                fontWeight: 600,
+                color: getScoreColor(worker.contextualFitScore),
+                fontSize: '14px',
+              }}
+            >
+              {worker.contextualFitScore}%
+            </span>
           </div>
         )}
 
         {/* Skills */}
-        <div className="flex flex-wrap gap-1 mb-4">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
           {worker.computed_skills.slice(0, 4).map((skill) => (
             <span
               key={skill}
-              className="px-2 py-0.5 bg-worldcoin-gray-700 rounded text-xs"
+              style={{
+                fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                fontSize: '12px',
+                color: colors.primary,
+                background: 'rgba(37,99,235,0.08)',
+                border: '1px solid rgba(37,99,235,0.15)',
+                borderRadius: '6px',
+                padding: '3px 10px',
+              }}
             >
               {skill}
             </span>
           ))}
           {worker.computed_skills.length > 4 && (
-            <span className="px-2 py-0.5 text-xs text-worldcoin-gray-400">
+            <span style={{ ...textMuted, fontSize: '12px', padding: '3px 0' }}>
               +{worker.computed_skills.length - 4} more
             </span>
           )}
         </div>
 
         {/* Stats */}
-        <div className="flex justify-between text-sm">
-          <div>
-            <span className="text-worldcoin-gray-400">Reviews: </span>
-            <span className="font-medium">{worker.reviewCount}</span>
-          </div>
-          <div>
-            <span className="text-worldcoin-gray-400">Rating: </span>
-            <span className="font-medium">{worker.avgRating.toFixed(1)} ★</span>
-          </div>
-          <div>
-            <span className="text-veridex-primary font-medium">
-              {worker.totalStaked.toLocaleString()} WLD
-            </span>
-          </div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            borderTop: '1px solid rgba(37,99,235,0.12)',
+            paddingTop: '12px',
+            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+            fontSize: '13px',
+          }}
+        >
+          <span style={{ color: colors.textSecondary }}>
+            {worker.reviewCount} reviews
+          </span>
+          <span style={{ color: colors.textSecondary }}>
+            {worker.avgRating.toFixed(1)} ★
+          </span>
+          <span style={{ color: colors.primary, fontWeight: 500 }}>
+            {worker.totalStaked.toLocaleString()} WLD
+          </span>
         </div>
-      </div>
+      </GlassCard>
     </Link>
   );
 }

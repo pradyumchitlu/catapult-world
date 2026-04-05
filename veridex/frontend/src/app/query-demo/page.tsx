@@ -26,15 +26,22 @@ export default function QueryDemoPage() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       setTrustResult({
         veridex_id: veridexId,
+        veridex_score: 85,
         overall_trust_score: 85,
         is_verified_human: true,
+        score_summary: {
+          evidence: 82,
+          employer: 50,
+          staking: 78,
+          veridex: 85,
+        },
         score_components: {
-          developer_competence: 90,
-          collaboration: 82,
+          identity_assurance: 76,
+          evidence_depth: 88,
           consistency: 85,
-          specialization_depth: 88,
-          activity_recency: 92,
-          peer_trust: 78,
+          recency: 92,
+          employer_outcomes: 50,
+          staking: 78,
         },
         total_staked: 5000,
         review_count: 12,

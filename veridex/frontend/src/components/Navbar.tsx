@@ -5,11 +5,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-const navLinks = [
+const workerLinks = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/browse', label: 'Browse' },
   { href: '/staker', label: 'Vouches' },
   { href: '/agents', label: 'Agents' },
+];
+
+const employerLinks = [
+  { href: '/employer', label: 'Dashboard' },
+  { href: '/browse', label: 'Browse' },
+  { href: '/staker', label: 'Vouches' },
 ];
 
 export default function Navbar() {
@@ -37,8 +43,9 @@ export default function Navbar() {
     router.push('/');
   };
 
-  // Only show nav links when authenticated
-  const visibleLinks = user ? navLinks : [];
+  // Show role-appropriate links
+  const isEmployer = user?.roles?.includes('client');
+  const visibleLinks = user ? (isEmployer ? employerLinks : workerLinks) : [];
 
   return (
     <nav
@@ -48,11 +55,7 @@ export default function Navbar() {
         left: 0,
         right: 0,
         zIndex: 100,
-        backgroundColor: 'rgba(255,255,255,0.8)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.7)',
-        boxShadow: '0 1px 0 rgba(37,99,235,0.06)',
+        backgroundColor: '#DBEAFE',
         opacity: visible ? 1 : 0,
         pointerEvents: visible ? 'auto' : 'none',
         transition: 'opacity 0.3s ease',

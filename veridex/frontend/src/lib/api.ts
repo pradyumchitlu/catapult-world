@@ -1,4 +1,59 @@
+import type {
+  ContextualScoreApiResponse,
+  EvidenceProject,
+  EvidenceUploadDraft,
+  Review,
+  ScoreComponents,
+  User,
+  WorkerProfile,
+} from '@/types';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+interface VerifyWorldIdResponse {
+  success: boolean;
+  user: User;
+  isNewUser: boolean;
+  token: string;
+}
+
+interface MeResponse {
+  user: User;
+}
+
+interface UpdateProfileResponse {
+  success: boolean;
+  user: User;
+}
+
+interface IngestionResponse {
+  success: boolean;
+  overall_trust_score: number;
+  score_components: ScoreComponents;
+  computed_skills: string[];
+  specializations: string[];
+  years_experience: number | null;
+  warning?: string | null;
+}
+
+interface ReputationResponse {
+  user: User;
+  profile: WorkerProfile | null;
+  reviews: Review[];
+  totalStaked: number;
+  stakerCount: number;
+}
+
+interface SaveEvidenceResponse {
+  success: boolean;
+  profile: WorkerProfile;
+  warning?: string | null;
+}
+
+interface EvidenceUploadResponse {
+  success: boolean;
+  draft: EvidenceUploadDraft;
+}
 
 interface FetchOptions extends RequestInit {
   token?: string;
@@ -29,21 +84,42 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
   return response.json();
 }
 
+async function fetchFormApi<T>(endpoint: string, formData: FormData, token?: string): Promise<T> {
+  const headers: HeadersInit = {};
+
+  if (token) {
+    (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    body: formData,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(error.message || error.error || `HTTP error ${response.status}`);
+  }
+
+  return response.json();
+}
+
 // Auth
 export const verifyWorldId = (proof: any) =>
-  fetchApi<{ success: boolean; user: any; isNewUser: boolean; token: string }>(
+  fetchApi<VerifyWorldIdResponse>(
     '/api/auth/verify',
     { method: 'POST', body: JSON.stringify(proof) }
   );
 
 export const getMe = (token: string) =>
-  fetchApi<{ user: any }>('/api/auth/me', { token });
+  fetchApi<MeResponse>('/api/auth/me', { token });
 
 export const updateProfile = (
   data: { display_name: string; roles: string[]; profession_category: string },
   token: string
 ) =>
-  fetchApi<{ success: boolean; user: any }>('/api/auth/profile', {
+  fetchApi<UpdateProfileResponse>('/api/auth/profile', {
     method: 'PUT',
     body: JSON.stringify(data),
     token,
@@ -83,20 +159,60 @@ export const verifyWalletSignature = (
 
 // Reputation
 export const triggerIngestion = (userId: string, token: string) =>
-  fetchApi('/api/reputation/ingest', {
+  fetchApi<IngestionResponse>('/api/reputation/ingest', {
     method: 'POST',
     body: JSON.stringify({ userId }),
     token,
   });
 
 export const getReputation = (userId: string) =>
-  fetchApi<{
-    user: any;
-    profile: any;
-    reviews: any[];
-    totalStaked: number;
-    stakerCount: number;
-  }>(`/api/reputation/${userId}`);
+
+  fetchApi<ReputationResponse>(`/api/reputation/${userId}`);
+
+export const saveReputationEvidence = (
+  data: {
+    github_username?: string | null;
+    linkedin_data?: Record<string, any>;
+    projects?: EvidenceProject[];
+    other_platforms?: Record<string, any>;
+  },
+  token: string
+) =>
+  fetchApi<SaveEvidenceResponse>('/api/reputation/evidence', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    token,
+  });
+
+export const uploadEvidenceDraft = (
+  data: {
+    linkedinFile?: File | null;
+    supportingFiles?: File[];
+    portfolioUrls?: string[];
+    projectUrls?: string[];
+  },
+  token: string
+) => {
+  const formData = new FormData();
+
+  if (data.linkedinFile) {
+    formData.append('linkedin_file', data.linkedinFile);
+  }
+
+  for (const file of data.supportingFiles || []) {
+    formData.append('supporting_files', file);
+  }
+
+  if (data.portfolioUrls?.length) {
+    formData.append('portfolio_urls', JSON.stringify(data.portfolioUrls));
+  }
+
+  if (data.projectUrls?.length) {
+    formData.append('project_urls', JSON.stringify(data.projectUrls));
+  }
+
+  return fetchFormApi<EvidenceUploadResponse>('/api/reputation/evidence/upload', formData, token);
+};
 
 export const getWalletMe = (token: string) =>
   fetchApi<{
@@ -163,6 +279,7 @@ export const resolveWalletTokens = (tokenAddresses: string[], token: string) =>
     token,
   });
 
+
 // Trust Query
 export const getTrustScore = (veridexId: string) =>
   fetchApi(`/api/trust/${veridexId}`);
@@ -208,7 +325,7 @@ export const getReviews = (workerId: string) =>
 
 // Contextual Score
 export const getContextualScore = (workerId: string, jobDescription: string, token?: string) =>
-  fetchApi('/api/contextual-score', {
+  fetchApi<ContextualScoreApiResponse>('/api/contextual-score', {
     method: 'POST',
     body: JSON.stringify({ worker_id: workerId, job_description: jobDescription }),
     token,
@@ -224,6 +341,54 @@ export const spawnAgent = (name: string, token: string) =>
 
 export const listAgents = (userId: string, token: string) =>
   fetchApi(`/api/agent/list/${userId}`, { token });
+
+// Contracts
+export const estimateBuyIn = (workerId: string, salary: number, token: string) =>
+  fetchApi<{ salary: number; stakerReward: number; platformFee: number; totalBuyIn: number; totalStakedOnWorker: number; stakerRewardRate: number }>(
+    `/api/contract/estimate?worker_id=${workerId}&salary=${salary}`,
+    { token }
+  );
+
+export const createContract = (
+  data: { worker_id: string; title: string; description: string; payment_amount: number; duration_days: number },
+  token: string
+) =>
+  fetchApi('/api/contract', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    token,
+  });
+
+export const activateContract = (contractId: string, token: string) =>
+  fetchApi(`/api/contract/${contractId}/activate`, { method: 'PUT', token });
+
+export const completeContract = (contractId: string, token: string) =>
+  fetchApi(`/api/contract/${contractId}/complete`, { method: 'PUT', token });
+
+export const closeContract = (contractId: string, token: string) =>
+  fetchApi(`/api/contract/${contractId}/close`, { method: 'PUT', token });
+
+export const getEmployerContracts = (token: string) =>
+  fetchApi<{ contracts: any[] }>('/api/contract/employer', { token });
+
+export const getWorkerContracts = (token: string) =>
+  fetchApi<{ contracts: any[] }>('/api/contract/worker', { token });
+
+export const getContractDetail = (contractId: string, token: string) =>
+  fetchApi<{ contract: any; payments: any[]; review: any }>(`/api/contract/${contractId}`, { token });
+
+export const createContractReview = (
+  contractId: string,
+  rating: number,
+  content: string,
+  jobCategory: string,
+  token: string
+) =>
+  fetchApi('/api/review', {
+    method: 'POST',
+    body: JSON.stringify({ contract_id: contractId, rating, content, job_category: jobCategory, stake_amount: 0 }),
+    token,
+  });
 
 // Chat
 export const sendChatMessage = (workerId: string, message: string, sessionId: string | null, token: string) =>

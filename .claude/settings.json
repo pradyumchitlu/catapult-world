@@ -8,7 +8,8 @@
       "Bash(npm install:*)",
       "WebFetch(domain:ui.aceternity.com)",
       "Bash(npx shadcn@latest add \"https://ui.aceternity.com/r/typewriter-effect.json\")",
-      "Bash(npx shadcn@latest add \"@aceternity/typewriter-effect\")"
+      "Bash(npx shadcn@latest add \"@aceternity/typewriter-effect\")",
+      "Bash(npx tsc:*)"
     ]
   }
 }
