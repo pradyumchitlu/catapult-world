@@ -128,3 +128,23 @@ export async function sendMiniKitStakeTransaction(
     ],
   });
 }
+
+export async function sendMiniKitEthTransfers(
+  transfers: Array<{ to: string; amountEth: string }>
+): Promise<CommandResultByVia<SendTransactionResult>> {
+  if (!MiniKit.isInstalled()) {
+    throw new Error('Open Veridex inside World App to complete payouts with your World wallet.');
+  }
+
+  if (transfers.length === 0) {
+    throw new Error('No payout transfers were prepared for this contract.');
+  }
+
+  return MiniKit.sendTransaction({
+    chainId: getWorldChain().id,
+    transactions: transfers.map((transfer) => ({
+      to: transfer.to,
+      value: toHex(parseEther(transfer.amountEth)),
+    })),
+  });
+}

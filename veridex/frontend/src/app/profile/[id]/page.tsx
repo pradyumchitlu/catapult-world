@@ -246,7 +246,6 @@ export default function ProfilePage() {
         <CreateContractModal
           workerName={user.display_name || 'Worker'}
           workerId={workerId}
-          balance={currentUser.wld_balance ?? 0}
           token={token}
           onSubmit={handleCreateContract}
           onClose={() => setShowHireModal(false)}

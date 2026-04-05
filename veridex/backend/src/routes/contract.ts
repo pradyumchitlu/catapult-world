@@ -1,7 +1,8 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 import supabase from '../lib/supabase';
-import { calculateBuyIn, processCompletion } from '../services/contractPayment';
+import { calculateBuyIn, prepareCompletionSettlement, processCompletion } from '../services/contractPayment';
+import { getWorldUserOperationStatus } from '../services/worldUserOperation';
 
 const router = Router();
 
@@ -79,7 +80,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
 
 /**
  * PUT /api/contract/:id/activate
- * Activate a draft contract — calculates buy-in and escrows from employer.
+ * Activate a draft contract — calculates the payout breakdown and starts the work period.
  * buy_in = salary + staker_reward + platform_fee
  */
 router.put('/:id/activate', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -102,13 +103,9 @@ router.put('/:id/activate', requireAuth, async (req: AuthenticatedRequest, res: 
       return res.status(400).json({ error: `Contract is ${contract.status}, expected draft` });
     }
 
-    // Calculate buy-in at activation time (stakes may have changed since creation)
+    // Calculate payout totals at activation time so both parties see the expected economics.
     const buyIn = await calculateBuyIn(contract.worker_id, contract.payment_amount);
 
-    // Note: On-chain escrow for contract payments is a future feature.
-    // For now we record the breakdown and activate the contract.
-
-    // Store the breakdown on the contract
     const { data: updated, error: updateError } = await supabase
       .from('contracts')
       .update({
@@ -175,10 +172,10 @@ router.put('/:id/submit', requireAuth, async (req: AuthenticatedRequest, res: Re
 });
 
 /**
- * PUT /api/contract/:id/complete
- * Employer approves submitted work — distributes escrowed funds to worker + stakers
+ * GET /api/contract/:id/settlement
+ * Build the current payout plan for a submitted contract.
  */
-router.put('/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/:id/settlement', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const employerId = req.userId!;
@@ -198,7 +195,76 @@ router.put('/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: 
       return res.status(400).json({ error: `Contract is ${contract.status}, expected submitted` });
     }
 
-    const paymentResult = await processCompletion(id);
+    const settlement = await prepareCompletionSettlement(id);
+
+    return res.json({ settlement });
+  } catch (error) {
+    console.error('Get contract settlement error:', error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to prepare settlement' });
+  }
+});
+
+/**
+ * PUT /api/contract/:id/complete
+ * Employer approves submitted work after an on-chain World App payout.
+ */
+router.put('/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const employerId = req.userId!;
+    const userWalletAddress = typeof req.user?.wallet_address === 'string' ? req.user.wallet_address.trim() : '';
+    const userOpHash = typeof req.body?.user_op_hash === 'string' ? req.body.user_op_hash.trim() : '';
+    const fromWalletAddress = typeof req.body?.from_wallet_address === 'string'
+      ? req.body.from_wallet_address.trim()
+      : '';
+    const transactionHash = typeof req.body?.transaction_hash === 'string'
+      ? req.body.transaction_hash.trim()
+      : '';
+
+    const { data: contract, error: fetchError } = await supabase
+      .from('contracts')
+      .select('*')
+      .eq('id', id)
+      .eq('employer_id', employerId)
+      .single();
+
+    if (fetchError || !contract) {
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+
+    if (contract.status !== 'submitted') {
+      return res.status(400).json({ error: `Contract is ${contract.status}, expected submitted` });
+    }
+
+    if (!userWalletAddress) {
+      return res.status(400).json({ error: 'Link your payout wallet before completing a contract' });
+    }
+
+    if (!userOpHash || !fromWalletAddress) {
+      return res.status(400).json({
+        error: 'user_op_hash and from_wallet_address are required to finalize an on-chain contract payout',
+      });
+    }
+
+    if (fromWalletAddress.toLowerCase() !== userWalletAddress.toLowerCase()) {
+      return res.status(400).json({ error: 'The payout wallet does not match the employer wallet linked to this account' });
+    }
+
+    const userOpStatus = await getWorldUserOperationStatus(userOpHash);
+    if (userOpStatus.transactionStatus !== 'mined' || !userOpStatus.transactionHash) {
+      return res.status(400).json({ error: 'The World App payout has not been mined yet' });
+    }
+
+    if (transactionHash && userOpStatus.transactionHash.toLowerCase() !== transactionHash.toLowerCase()) {
+      return res.status(400).json({ error: 'The supplied transaction hash does not match the mined user operation' });
+    }
+
+    if (userOpStatus.sender && userOpStatus.sender.toLowerCase() !== userWalletAddress.toLowerCase()) {
+      return res.status(400).json({ error: 'The mined user operation was sent from a different wallet' });
+    }
+
+    const settlement = await prepareCompletionSettlement(id);
+    const paymentResult = await processCompletion(id, settlement);
 
     const { data: updated } = await supabase
       .from('contracts')
@@ -210,10 +276,16 @@ router.put('/:id/complete', requireAuth, async (req: AuthenticatedRequest, res: 
       success: true,
       contract: updated,
       payment: paymentResult,
+      settlement,
+      proof: {
+        user_op_hash: userOpHash,
+        transaction_hash: userOpStatus.transactionHash,
+        from_wallet_address: fromWalletAddress,
+      },
     });
   } catch (error) {
     console.error('Complete contract error:', error);
-    return res.status(500).json({ error: 'Failed to complete contract' });
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to complete contract' });
   }
 });
 

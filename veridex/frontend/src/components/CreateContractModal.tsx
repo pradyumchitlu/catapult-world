@@ -16,7 +16,6 @@ interface BuyInEstimate {
 interface CreateContractModalProps {
   workerName: string;
   workerId: string;
-  balance: number;
   token: string;
   onSubmit: (data: { worker_id: string; title: string; description: string; payment_amount: number; duration_days: number }) => void;
   onClose: () => void;
@@ -26,7 +25,6 @@ interface CreateContractModalProps {
 export default function CreateContractModal({
   workerName,
   workerId,
-  balance,
   token,
   onSubmit,
   onClose,
@@ -54,12 +52,9 @@ export default function CreateContractModal({
     return () => clearTimeout(timer);
   }, [salary, workerId, token]);
 
-  const totalCost = estimate?.totalBuyIn || salary;
-  const canAfford = balance >= totalCost;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || salary <= 0 || !canAfford) return;
+    if (!title.trim() || salary <= 0) return;
     onSubmit({
       worker_id: workerId,
       title: title.trim(),
@@ -104,7 +99,7 @@ export default function CreateContractModal({
             Hire {workerName}
           </h2>
           <p style={{ ...textMuted, marginBottom: '24px' }}>
-            Balance: {balance.toLocaleString()} ETH
+            Payment happens when you approve submitted work from your linked wallet in World App.
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -189,7 +184,7 @@ export default function CreateContractModal({
                     <span style={{ color: colors.textTertiary }}>{estimate.platformFee} ETH</span>
                   </div>
                   <div style={{ borderTop: '1px solid rgba(37,99,235,0.12)', paddingTop: '8px', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 600, color: colors.textPrimary }}>Total buy-in</span>
+                    <span style={{ fontWeight: 600, color: colors.textPrimary }}>Total approval payout</span>
                     <span style={{ fontWeight: 700, ...gradientText }}>{estimate.totalBuyIn} ETH</span>
                   </div>
                 </div>
@@ -201,20 +196,14 @@ export default function CreateContractModal({
               </div>
             )}
 
-            {!canAfford && salary > 0 && (
-              <p style={{ color: colors.rose, fontSize: '13px' }}>
-                Insufficient balance. You need {totalCost.toLocaleString()} ETH but have {balance.toLocaleString()}.
-              </p>
-            )}
-
             <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
               <button
                 type="submit"
-                disabled={isLoading || !title.trim() || salary <= 0 || !canAfford}
+                disabled={isLoading || !title.trim() || salary <= 0}
                 className="btn-primary"
                 style={{ flex: 1 }}
               >
-                {isLoading ? 'Creating...' : `Create Contract (${totalCost} ETH)`}
+                {isLoading ? 'Creating...' : 'Create Contract'}
               </button>
               <button type="button" onClick={onClose} className="btn-secondary">
                 Cancel

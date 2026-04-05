@@ -92,7 +92,7 @@ export default function ContractCard({
         </div>
         {contract.buy_in_amount != null && (
           <div>
-            <span style={{ color: colors.textMuted }}>Buy-in </span>
+            <span style={{ color: colors.textMuted }}>Approval payout </span>
             <span style={{ fontWeight: 500, color: colors.textPrimary }}>
               {contract.buy_in_amount.toLocaleString()} ETH
             </span>
@@ -148,7 +148,7 @@ export default function ContractCard({
             className="btn-primary"
             style={{ fontSize: '13px', padding: '8px 20px' }}
           >
-            Activate & Escrow
+            Activate Contract
           </button>
         )}
         {contract.status === 'active' && onSubmit && (
@@ -173,7 +173,7 @@ export default function ContractCard({
             className="btn-primary"
             style={{ fontSize: '13px', padding: '8px 20px' }}
           >
-            Approve & Pay
+            Approve & Pay in World App
           </button>
         )}
         {contract.status === 'submitted' && !onComplete && (

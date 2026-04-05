@@ -297,6 +297,28 @@ export interface Contract {
   review?: Review;
 }
 
+export interface ContractSettlementTransfer {
+  recipient_id: string | null;
+  wallet_address: string;
+  amount: number;
+  payment_type: 'worker_payout' | 'staker_share' | 'platform_fee';
+  stake_id: string | null;
+  label: string;
+}
+
+export interface ContractSettlementPlan {
+  contract_id: string;
+  worker_id: string;
+  worker_wallet_address: string;
+  platform_wallet_address: string | null;
+  worker_payout: number;
+  staker_payout_total: number;
+  platform_fee: number;
+  total_amount: number;
+  unclaimed_staker_amount: number;
+  transfers: ContractSettlementTransfer[];
+}
+
 export interface ContractPayment {
   id: string;
   contract_id: string;
