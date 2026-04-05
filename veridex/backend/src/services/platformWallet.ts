@@ -19,10 +19,16 @@ export function getPlatformWallet(): Wallet {
 
 export function getPlatformAddress(): string {
   const address = process.env.PLATFORM_WALLET_ADDRESS;
-  if (!address) {
-    throw new Error('PLATFORM_WALLET_ADDRESS is not configured');
+  if (address) {
+    return address;
   }
-  return address;
+
+  const privateKey = process.env.PLATFORM_WALLET_PRIVATE_KEY;
+  if (!privateKey) {
+    throw new Error('PLATFORM_WALLET_ADDRESS and PLATFORM_WALLET_PRIVATE_KEY are not configured');
+  }
+
+  return new Wallet(privateKey).address;
 }
 
 export async function sendETH(to: string, amountWei: bigint): Promise<string> {
