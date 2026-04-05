@@ -7,6 +7,7 @@ import type { Contract } from '@/types';
 const STATUS_STYLES: Record<string, { color: string; bg: string; border: string; label: string }> = {
   draft: { color: colors.textTertiary, bg: 'rgba(100,116,139,0.08)', border: 'rgba(100,116,139,0.2)', label: 'Draft' },
   active: { color: colors.primary, bg: 'rgba(37,99,235,0.08)', border: 'rgba(37,99,235,0.2)', label: 'Active' },
+  submitted: { color: '#8B5CF6', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.2)', label: 'Submitted' },
   completed: { color: colors.warning, bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)', label: 'Completed' },
   closed: { color: colors.success, bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)', label: 'Closed' },
 };
@@ -14,6 +15,7 @@ const STATUS_STYLES: Record<string, { color: string; bg: string; border: string;
 interface ContractCardProps {
   contract: Contract;
   onActivate?: (id: string) => void;
+  onSubmit?: (id: string) => void;
   onComplete?: (id: string) => void;
   onReview?: (id: string) => void;
   onClose?: (id: string) => void;
@@ -23,6 +25,7 @@ interface ContractCardProps {
 export default function ContractCard({
   contract,
   onActivate,
+  onSubmit,
   onComplete,
   onReview,
   onClose,
@@ -148,15 +151,35 @@ export default function ContractCard({
             Activate & Escrow
           </button>
         )}
-        {contract.status === 'active' && onComplete && (
+        {contract.status === 'active' && onSubmit && (
+          <button
+            onClick={() => onSubmit(contract.id)}
+            disabled={isLoading}
+            className="btn-primary"
+            style={{ fontSize: '13px', padding: '8px 20px' }}
+          >
+            Submit Work
+          </button>
+        )}
+        {contract.status === 'active' && !onSubmit && (
+          <span style={{ fontSize: '13px', color: colors.textMuted, padding: '8px 0' }}>
+            Waiting for worker to submit
+          </span>
+        )}
+        {contract.status === 'submitted' && onComplete && (
           <button
             onClick={() => onComplete(contract.id)}
             disabled={isLoading}
             className="btn-primary"
             style={{ fontSize: '13px', padding: '8px 20px' }}
           >
-            Mark Complete
+            Approve & Pay
           </button>
+        )}
+        {contract.status === 'submitted' && !onComplete && (
+          <span style={{ fontSize: '13px', color: '#8B5CF6', padding: '8px 0' }}>
+            Submitted — awaiting employer approval
+          </span>
         )}
         {contract.status === 'completed' && !contract.has_review && onReview && (
           <button

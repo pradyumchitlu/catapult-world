@@ -78,7 +78,7 @@ async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promis
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(error.message || `HTTP error ${response.status}`);
+    throw new Error(error.error || error.message || `HTTP error ${response.status}`);
   }
 
   return response.json();
@@ -168,6 +168,10 @@ export const triggerIngestion = (userId: string, token: string) =>
 export const getReputation = (userId: string) =>
 
   fetchApi<ReputationResponse>(`/api/reputation/${userId}`);
+
+// Browse
+export const browseWorkers = () =>
+  fetchApi<{ workers: any[] }>('/api/reputation/browse/workers');
 
 export const saveReputationEvidence = (
   data: {
@@ -279,7 +283,6 @@ export const resolveWalletTokens = (tokenAddresses: string[], token: string) =>
     token,
   });
 
-
 // Trust Query
 export const getTrustScore = (veridexId: string) =>
   fetchApi(`/api/trust/${veridexId}`);
@@ -361,6 +364,9 @@ export const createContract = (
 
 export const activateContract = (contractId: string, token: string) =>
   fetchApi(`/api/contract/${contractId}/activate`, { method: 'PUT', token });
+
+export const submitContract = (contractId: string, token: string) =>
+  fetchApi(`/api/contract/${contractId}/submit`, { method: 'PUT', token });
 
 export const completeContract = (contractId: string, token: string) =>
   fetchApi(`/api/contract/${contractId}/complete`, { method: 'PUT', token });

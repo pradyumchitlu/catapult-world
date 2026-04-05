@@ -86,6 +86,7 @@ export default function Navbar() {
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
             letterSpacing: '-0.01em',
+            paddingRight: '0.5vw',
           }}
         >
           Veridex

@@ -32,6 +32,7 @@ const STATUS_TABS: { id: ContractStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'draft', label: 'Draft' },
   { id: 'active', label: 'Active' },
+  { id: 'submitted', label: 'Submitted' },
   { id: 'completed', label: 'Completed' },
   { id: 'closed', label: 'Closed' },
 ];
