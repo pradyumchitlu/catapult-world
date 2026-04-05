@@ -27,7 +27,6 @@ export default function ReviewPage() {
           display_name: 'Alice Developer',
           roles: ['worker'],
           profession_category: 'software',
-          wld_balance: 1000,
           wallet_address: null,
           wallet_verified_at: null,
           wallet_verification_method: null,
@@ -77,7 +76,7 @@ export default function ReviewPage() {
   if (!worker) {
     return (
       <div className="text-center py-12">
-        <p className="text-worldcoin-gray-400">Worker not found.</p>
+        <p className="text-veridex-gray-400">Worker not found.</p>
       </div>
     );
   }
@@ -85,7 +84,7 @@ export default function ReviewPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-3xl font-bold mb-2">Leave a Review</h1>
-      <p className="text-worldcoin-gray-400 mb-8">
+      <p className="text-veridex-gray-400 mb-8">
         Share your experience working with <span className="text-white font-medium">{worker.display_name}</span>
       </p>
 
@@ -101,9 +100,9 @@ export default function ReviewPage() {
 
       {/* Staking Info */}
       <div className="mt-6 card bg-veridex-primary/10 border-veridex-primary/30">
-        <h3 className="font-semibold mb-2">Back Your Review with WLD</h3>
-        <p className="text-sm text-worldcoin-gray-300">
-          Staking WLD on your review proves you stand behind it. Reviews with higher stakes
+        <h3 className="font-semibold mb-2">Back Your Review with ETH</h3>
+        <p className="text-sm text-veridex-gray-300">
+          Staking ETH on your review proves you stand behind it. Reviews with higher stakes
           have more impact on the worker&apos;s trust score. Your stake is also visible to
           others evaluating this worker.
         </p>

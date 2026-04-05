@@ -127,7 +127,7 @@ export default function LandingPage() {
               {
                 num: '03',
                 title: 'Stake',
-                body: "People who believe in you stake WLD on your reputation. Staking creates skin-in-the-game — higher stakes mean more impact on your trust score. Three integrity mechanisms prevent gaming.",
+                body: "People who believe in you stake ETH on your reputation. Staking creates skin-in-the-game — higher stakes mean more impact on your trust score. Three integrity mechanisms prevent gaming.",
               },
               {
                 num: '04',
@@ -179,11 +179,11 @@ export default function LandingPage() {
                 },
                 {
                   title: 'Staked Reviews',
-                  body: 'Reviewers back their feedback with WLD — higher stakes mean more accountability.',
+                  body: 'Reviewers back their feedback with ETH — higher stakes mean more accountability.',
                 },
                 {
                   title: 'Social Staking',
-                  body: "Anyone can stake WLD on workers they believe in. Your network's conviction becomes signal.",
+                  body: "Anyone can stake ETH on workers they believe in. Your network's conviction becomes signal.",
                 },
                 {
                   title: 'AI Evaluation',
@@ -257,8 +257,8 @@ export default function LandingPage() {
               detected and flagged.
             </p>
             <p style={{ ...textSecondary, fontSize: '14px', lineHeight: '1.7' }}>
-              Stake concentration has diminishing returns — the first 100 WLD from
-              one staker counts fully, but each additional 100 WLD is worth
+              Stake concentration has diminishing returns — the first 0.1 ETH from
+              one staker counts fully, but each additional 0.1 ETH is worth
               progressively less. No single actor can inflate a score.
             </p>
           </GlassCard>
@@ -276,7 +276,7 @@ export default function LandingPage() {
 
             <p style={{ ...textSecondary, maxWidth: '420px', margin: '0 0 28px 0' }}>
               Verify with World ID, connect your credentials, and start building
-              reputation that belongs to you. Every verified user starts with 1,000 WLD.
+              reputation that belongs to you. Every verified user starts with 1,000 ETH.
             </p>
 
             <Link

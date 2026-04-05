@@ -57,7 +57,7 @@ interface Review {
 }
 
 interface StakeEvidence {
-  amount: number;
+  amount_eth?: number | string | null;
   staker_score?: number | null;
   created_at?: string;
   staker?: {
@@ -251,7 +251,7 @@ function computeEvidenceGroupScore(components: ScoreComponents): number {
 
 function computeStaking(stakes: StakeEvidence[]): number {
   const effectiveStakeTotal = stakes.reduce((sum, stake) => {
-    const amount = Math.max(0, Number(stake.amount || 0));
+    const amount = Math.max(0, Number(stake.amount_eth || 0));
     if (amount <= 0) {
       return sum;
     }
@@ -265,7 +265,7 @@ function computeStaking(stakes: StakeEvidence[]): number {
     return 0;
   }
 
-  return clampScore((effectiveStakeTotal / 500) * 100);
+  return clampScore((effectiveStakeTotal / 0.5) * 100);
 }
 
 function countExtraPlatformSignals(otherPlatforms: any): number {
@@ -805,9 +805,9 @@ function hasGitHubEvidence(github: any): boolean {
 }
 
 function applyStakeTranches(stakeAmount: number): number {
-  const firstTranche = Math.min(stakeAmount, 100);
-  const secondTranche = Math.min(Math.max(stakeAmount - 100, 0), 100) * 0.5;
-  const remaining = Math.max(stakeAmount - 200, 0) * 0.25;
+  const firstTranche = Math.min(stakeAmount, 0.1);
+  const secondTranche = Math.min(Math.max(stakeAmount - 0.1, 0), 0.1) * 0.5;
+  const remaining = Math.max(stakeAmount - 0.2, 0) * 0.25;
   return firstTranche + secondTranche + remaining;
 }
 

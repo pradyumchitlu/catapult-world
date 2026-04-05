@@ -55,7 +55,7 @@ export default function ReviewForm({ onSubmit, isSubmitting }: ReviewFormProps) 
                 className={
                   star <= (hoverRating || rating)
                     ? 'text-veridex-warning'
-                    : 'text-worldcoin-gray-600'
+                    : 'text-veridex-gray-600'
                 }
               >
                 ★
@@ -98,7 +98,7 @@ export default function ReviewForm({ onSubmit, isSubmitting }: ReviewFormProps) 
       {/* Stake Amount */}
       <div className="mb-6">
         <label className="block text-sm font-medium mb-2">
-          Stake Amount (WLD) — Back your review
+          Stake Amount (ETH) — Back your review
         </label>
         <input
           type="range"
@@ -110,11 +110,11 @@ export default function ReviewForm({ onSubmit, isSubmitting }: ReviewFormProps) 
           className="w-full"
         />
         <div className="flex justify-between text-sm mt-2">
-          <span className="text-worldcoin-gray-400">0 WLD</span>
-          <span className="font-medium text-veridex-primary">{stakeAmount} WLD</span>
-          <span className="text-worldcoin-gray-400">500 WLD</span>
+          <span className="text-veridex-gray-400">0 ETH</span>
+          <span className="font-medium text-veridex-primary">{stakeAmount} ETH</span>
+          <span className="text-veridex-gray-400">500 ETH</span>
         </div>
-        <p className="text-xs text-worldcoin-gray-500 mt-2">
+        <p className="text-xs text-veridex-gray-500 mt-2">
           Higher stakes mean more impact on their trust score. You lose stake if your review is flagged as dishonest.
         </p>
       </div>
@@ -131,7 +131,7 @@ export default function ReviewForm({ onSubmit, isSubmitting }: ReviewFormProps) 
             <span>Submitting...</span>
           </div>
         ) : (
-          `Submit Review${stakeAmount > 0 ? ` (${stakeAmount} WLD stake)` : ''}`
+          `Submit Review${stakeAmount > 0 ? ` (${stakeAmount} ETH stake)` : ''}`
         )}
       </button>
     </form>

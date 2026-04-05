@@ -48,7 +48,7 @@ export async function loadReputationScoringInputs(
         id,
         staker_id,
         worker_id,
-        amount,
+        amount_eth,
         status,
         created_at,
         staker:staker_id(

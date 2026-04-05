@@ -1,11 +1,17 @@
-import { v4 as uuidv4 } from 'uuid';
 import supabase from '../lib/supabase';
 
 export interface Agent {
   id: string;
   parent_user_id: string;
   name: string;
+  identifier: string | null;
+  identifier_type: string;
+  inheritance_fraction: number;
   derived_score: number;
+  authorized_domains: string[];
+  stake_amount: number;
+  status: string;
+  dispute_count: number;
   created_at: string;
 }
 
@@ -17,24 +23,47 @@ export interface AgentWithParent extends Agent {
   };
 }
 
+export interface RegisterAgentParams {
+  userId: string;
+  name: string;
+  parentScore: number;
+  identifier?: string;
+  identifier_type?: string;
+  inheritance_fraction?: number;
+  authorized_domains?: string[];
+  stake_amount?: number;
+}
+
 /**
- * Spawn a new agent tied to a user
- * Agent's derived score = 70% of parent's overall trust score
+ * Register a new Agent Credential tied to a verified human.
+ * derived_score = inheritance_fraction × parent's trust score.
+ * stake_amount is recorded but not deducted here — on-chain ETH staking via MetaMask is a future feature.
  */
-export async function spawnAgent(
-  userId: string,
-  name: string,
-  parentScore: number
-): Promise<Agent> {
-  // Calculate derived score (70% of parent's score)
-  const derivedScore = Math.round(parentScore * 0.7);
+export async function registerAgent(params: RegisterAgentParams): Promise<Agent> {
+  const {
+    userId,
+    name,
+    parentScore,
+    identifier,
+    identifier_type = 'other',
+    inheritance_fraction = 0.7,
+    authorized_domains = [],
+    stake_amount = 0,
+  } = params;
+
+  const derivedScore = Math.round(parentScore * inheritance_fraction);
 
   const { data: agent, error } = await supabase
     .from('agents')
     .insert({
       parent_user_id: userId,
       name: name.trim(),
+      identifier: identifier?.trim() || null,
+      identifier_type,
+      inheritance_fraction,
       derived_score: derivedScore,
+      authorized_domains,
+      stake_amount,
     })
     .select()
     .single();
@@ -46,8 +75,12 @@ export async function spawnAgent(
   return agent;
 }
 
+// Keep spawnAgent as alias for backwards compatibility with existing route name
+export const spawnAgent = registerAgent;
+
 /**
- * Lookup an agent by ID, including parent information
+ * Lookup an agent by ID — verification endpoint for counterparties.
+ * Returns credential details including domains, stake, and parent info.
  */
 export async function lookupAgent(agentId: string): Promise<AgentWithParent | null> {
   const { data: agent, error } = await supabase
@@ -74,7 +107,14 @@ export async function lookupAgent(agentId: string): Promise<AgentWithParent | nu
     id: agent.id,
     parent_user_id: agent.parent_user_id,
     name: agent.name,
+    identifier: agent.identifier,
+    identifier_type: agent.identifier_type,
+    inheritance_fraction: parseFloat(agent.inheritance_fraction),
     derived_score: agent.derived_score,
+    authorized_domains: agent.authorized_domains || [],
+    stake_amount: agent.stake_amount,
+    status: agent.status,
+    dispute_count: agent.dispute_count,
     created_at: agent.created_at,
     parent: {
       id: parent.id,
@@ -85,16 +125,26 @@ export async function lookupAgent(agentId: string): Promise<AgentWithParent | nu
 }
 
 /**
- * Update an agent's derived score based on parent's current score
- * Called when parent's score changes
+ * Update all agents' derived scores when parent's score changes.
+ * Each agent uses its own inheritance_fraction.
  */
 export async function updateAgentScores(userId: string, newParentScore: number): Promise<void> {
-  const derivedScore = Math.round(newParentScore * 0.7);
-
-  await supabase
+  // Fetch all agents for user to get individual inheritance fractions
+  const { data: agents, error } = await supabase
     .from('agents')
-    .update({ derived_score: derivedScore })
+    .select('id, inheritance_fraction')
     .eq('parent_user_id', userId);
+
+  if (error || !agents) return;
+
+  for (const agent of agents) {
+    const fraction = parseFloat(agent.inheritance_fraction) || 0.7;
+    const derivedScore = Math.round(newParentScore * fraction);
+    await supabase
+      .from('agents')
+      .update({ derived_score: derivedScore })
+      .eq('id', agent.id);
+  }
 }
 
 /**
@@ -111,5 +161,9 @@ export async function listUserAgents(userId: string): Promise<Agent[]> {
     throw error;
   }
 
-  return agents || [];
+  return (agents || []).map((a) => ({
+    ...a,
+    inheritance_fraction: parseFloat(a.inheritance_fraction),
+    authorized_domains: a.authorized_domains || [],
+  }));
 }

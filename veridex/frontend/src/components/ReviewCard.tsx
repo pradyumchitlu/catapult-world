@@ -69,7 +69,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '14px', fontWeight: 600, color: colors.primary }}>
-            {review.stake_amount.toLocaleString()} WLD
+            {review.stake_amount.toLocaleString()} ETH
           </div>
           <div style={{ fontSize: '11px', color: colors.textMuted }}>staked</div>
         </div>

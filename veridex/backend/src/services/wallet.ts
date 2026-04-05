@@ -1,11 +1,8 @@
 import crypto from 'crypto';
 import { Contract, JsonRpcProvider, ethers } from 'ethers';
 import supabase from '../lib/supabase';
+import { getChainConfig } from '../lib/chainConfig';
 
-const WORLD_CHAIN_ID = 480;
-const WORLD_CHAIN_NAME = 'World Chain';
-const WORLD_CHAIN_NATIVE_SYMBOL = 'ETH';
-const DEFAULT_RPC_URL = 'https://worldchain-mainnet.g.alchemy.com/public';
 const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const MAX_TRACKED_TOKENS = 25;
 
@@ -71,26 +68,24 @@ interface WalletChallengeRow {
 let provider: JsonRpcProvider | null = null;
 const tokenMetadataCache = new Map<string, ResolvedToken>();
 
-function getRpcUrl(): string {
-  return process.env.WORLDCHAIN_RPC_URL || process.env.WORLD_CHAIN_RPC_URL || DEFAULT_RPC_URL;
-}
-
 export function getWorldChainMetadata() {
+  const chain = getChainConfig();
   return {
-    chainId: WORLD_CHAIN_ID,
-    name: WORLD_CHAIN_NAME,
+    chainId: chain.chainId,
+    name: chain.name,
     nativeCurrency: {
-      symbol: WORLD_CHAIN_NATIVE_SYMBOL,
+      symbol: chain.nativeSymbol,
       decimals: 18,
     },
-    rpcUrl: getRpcUrl(),
-    blockExplorerUrl: process.env.WORLDCHAIN_BLOCK_EXPLORER_URL || 'https://worldscan.org',
+    rpcUrl: chain.rpcUrl,
+    blockExplorerUrl: chain.blockExplorerUrl,
   };
 }
 
 function getProvider(): JsonRpcProvider {
   if (!provider) {
-    provider = new JsonRpcProvider(getRpcUrl(), WORLD_CHAIN_ID, {
+    const chain = getChainConfig();
+    provider = new JsonRpcProvider(chain.rpcUrl, chain.chainId, {
       staticNetwork: true,
     });
   }
@@ -376,6 +371,7 @@ export async function getWalletBalances(
   ]);
 
   const fetchedAt = new Date().toISOString();
+  const chain = getChainConfig();
 
   await supabase
     .from('users')
@@ -384,11 +380,11 @@ export async function getWalletBalances(
 
   return {
     wallet_address: normalizedAddress,
-    chain_id: WORLD_CHAIN_ID,
-    chain_name: WORLD_CHAIN_NAME,
+    chain_id: chain.chainId,
+    chain_name: chain.name,
     native_balance: nativeBalanceRaw !== null
       ? {
-          symbol: WORLD_CHAIN_NATIVE_SYMBOL,
+          symbol: chain.nativeSymbol,
           decimals: 18,
           raw_balance: nativeBalanceRaw.toString(),
           formatted_balance: ethers.formatEther(nativeBalanceRaw),

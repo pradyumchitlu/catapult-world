@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import TrustScoreCard from '@/components/TrustScoreCard';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
@@ -88,7 +88,7 @@ function shouldRecoverProfile(profile: WorkerProfile | null): boolean {
   );
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, token, isLoading: authLoading, updateUser } = useAuth();
@@ -257,7 +257,7 @@ export default function DashboardPage() {
     { label: 'Consistency', score: scoreComponents.consistency, detail: `${githubContributions.total_commits_last_year ?? 0} estimated commits last year · ${githubContributions.active_months ?? 0} estimated active months · ${linkedinExperiences.length + manualEvidenceEntries.length} saved evidence records` },
     { label: 'Recency', score: scoreComponents.recency, detail: `${githubContributions.commits_last_30_days ?? 0} estimated commits / 30d · ${githubContributions.commits_last_90_days ?? 0} estimated commits / 90d · ${reviews.length} active reviews` },
     { label: 'Employer Reviews', score: scoreComponents.employer_outcomes, detail: `${clientReviewCount} client review${clientReviewCount !== 1 ? 's' : ''} currently affect employer outcomes; rating 4-5 is positive, 3 is neutral, 1-2 is negative.` },
-    { label: 'Staking', score: scoreComponents.staking, detail: `${totalStaked.toLocaleString()} WLD across ${stakerCount} active stake${stakerCount !== 1 ? 's' : ''}, weighted by each staker's current trust score` },
+    { label: 'Staking', score: scoreComponents.staking, detail: `${totalStaked.toLocaleString()} ETH across ${stakerCount} active stake${stakerCount !== 1 ? 's' : ''}, weighted by each staker's current trust score` },
   ];
   const githubEvidence = [
     { label: 'Public Repos', value: githubData.public_repos ?? githubData.profile?.public_repos ?? '—' },
@@ -513,17 +513,17 @@ export default function DashboardPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 320px) 1fr', gap: '24px', alignItems: 'start', marginBottom: '24px' }}>
               <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: '16px' }}>
                 <GlassCard style={{ padding: '24px', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <span style={sectionLabel}>Balance</span>
+                  <span style={sectionLabel}>Wallet Status</span>
                   <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '28px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>
-                    {(user?.wld_balance || 0).toLocaleString()} WLD
+                    {user?.wallet_address ? 'Connected' : 'No Wallet'}
                   </div>
-                  <div style={textMuted}>Veridex Credits</div>
+                  <div style={textMuted}>{user?.wallet_address ? `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}` : 'Connect a wallet to stake ETH'}</div>
                 </GlassCard>
 
                 <GlassCard style={{ padding: '24px', minHeight: '200px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <span style={sectionLabel}>Staked on You</span>
                   <div style={{ fontFamily: 'var(--font-fraunces), Georgia, serif', fontSize: '28px', fontWeight: 700, ...gradientText, marginBottom: '4px' }}>
-                    {totalStaked.toLocaleString()} WLD
+                    {totalStaked.toLocaleString()} ETH
                   </div>
                   <div style={textMuted}>{stakerCount} staker{stakerCount !== 1 ? 's' : ''}</div>
                 </GlassCard>
@@ -549,5 +549,13 @@ export default function DashboardPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}><LoadingSpinner /></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

@@ -65,7 +65,7 @@ export default function ContractReviewForm({
             Review {workerName}
           </h2>
           <p style={{ ...textMuted, marginBottom: '24px' }}>
-            Contract: {contractTitle} ({contractPayment.toLocaleString()} WLD)
+            Contract: {contractTitle} ({contractPayment.toLocaleString()} ETH)
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

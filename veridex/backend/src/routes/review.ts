@@ -24,8 +24,6 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     let flagReason: string | null = null;
     const stakeAmount = stake_amount || 0;
 
-    // Reviews still stake internal Veridex credits in this phase.
-    // On-chain wallet balances are displayed separately and are not spent here.
     // Contract-based review: validate contract ownership and state
     if (contract_id) {
       const { data: contract, error: contractError } = await supabase
@@ -64,19 +62,15 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       return res.status(400).json({ error: 'Missing worker_id or contract_id' });
     }
 
-    // Get reviewer's balance and trust score
+    // Get reviewer's trust score
     const { data: reviewer, error: reviewerError } = await supabase
       .from('users')
-      .select('wld_balance, worker_profiles(overall_trust_score)')
+      .select('worker_profiles(overall_trust_score)')
       .eq('id', reviewerId)
       .single();
 
     if (reviewerError || !reviewer) {
       return res.status(404).json({ error: 'Reviewer not found' });
-    }
-
-    if (stakeAmount > 0 && reviewer.wld_balance < stakeAmount) {
-      return res.status(400).json({ error: 'Insufficient WLD balance' });
     }
 
     // Verify worker exists
@@ -116,14 +110,6 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       flagReason = mutualReview ? 'mutual_review_detected' : null;
     }
 
-    // Deduct stake from reviewer if applicable
-    if (stakeAmount > 0) {
-      await supabase
-        .from('users')
-        .update({ wld_balance: reviewer.wld_balance - stakeAmount })
-        .eq('id', reviewerId);
-    }
-
     // Get reviewer's trust score
     const reviewerProfile = (reviewer as any).worker_profiles;
     const reviewerTrustScore = reviewerProfile?.overall_trust_score || 0;
@@ -148,13 +134,6 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
       .single();
 
     if (reviewError) {
-      // Rollback stake deduction
-      if (stakeAmount > 0) {
-        await supabase
-          .from('users')
-          .update({ wld_balance: reviewer.wld_balance })
-          .eq('id', reviewerId);
-      }
       throw reviewError;
     }
 

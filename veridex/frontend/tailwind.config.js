@@ -71,7 +71,7 @@ module.exports = {
           warning: '#F59E0B',
           error: '#F43F5E',
         },
-        worldcoin: {
+        veridex: {
           gray: {
             100: '#F5F5F5',
             200: '#E5E5E5',
