@@ -117,7 +117,7 @@ export default function TrustScoreCard({ score, size = 'lg', minHeight }: TrustS
               marginBottom: '4px',
             }}
           >
-            Trust Score
+            Veridex Score
           </div>
           <div
             style={{

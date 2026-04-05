@@ -103,7 +103,7 @@ export default function ReviewPage() {
         <h3 className="font-semibold mb-2">Back Your Review with ETH</h3>
         <p className="text-sm text-veridex-gray-300">
           Staking ETH on your review proves you stand behind it. Reviews with higher stakes
-          have more impact on the worker&apos;s trust score. Your stake is also visible to
+          have more impact on the worker&apos;s Veridex score. Your stake is also visible to
           others evaluating this worker.
         </p>
       </div>

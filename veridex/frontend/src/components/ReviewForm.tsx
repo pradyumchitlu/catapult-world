@@ -115,7 +115,7 @@ export default function ReviewForm({ onSubmit, isSubmitting }: ReviewFormProps) 
           <span className="text-veridex-gray-400">500 ETH</span>
         </div>
         <p className="text-xs text-veridex-gray-500 mt-2">
-          Higher stakes mean more impact on their trust score. You lose stake if your review is flagged as dishonest.
+          Higher stakes mean more impact on their Veridex score. You lose stake if your review is flagged as dishonest.
         </p>
       </div>
 

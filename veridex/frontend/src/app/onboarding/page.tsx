@@ -105,11 +105,11 @@ const PROFESSION_CATEGORIES = [
 
 const ROLES = [
   { id: 'worker', label: 'Worker', description: 'Build reputation and get hired' },
-  { id: 'staker', label: 'Staker', description: 'Stake ETH on workers you believe in' },
   { id: 'client', label: 'Client', description: 'Find and evaluate workers' },
 ];
 
-const STEPS = ['Profile', 'Profession', 'Wallet', 'Connect', 'Evidence'];
+const WORKER_STEPS = ['Profile', 'Profession', 'Wallet', 'Connect', 'Evidence'];
+const EMPLOYER_STEPS = ['Profile', 'Profession', 'Wallet'];
 
 const fieldLabelStyle = {
   ...headingSm,
@@ -407,6 +407,8 @@ function OnboardingContent() {
   const [isAnalyzingEvidence, setIsAnalyzingEvidence] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>(['worker']);
+  const isEmployerOnly = selectedRoles.includes('client') && !selectedRoles.includes('worker');
+  const STEPS = isEmployerOnly ? EMPLOYER_STEPS : WORKER_STEPS;
   const [professionCategory, setProfessionCategory] = useState<string | null>(null);
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
@@ -479,7 +481,7 @@ function OnboardingContent() {
   useEffect(() => {
     if (githubStatus === 'connected') {
       setGithubConnected(true);
-      setGithubMessage('GitHub connected. We will sync your repositories and calculate your trust score after setup.');
+      setGithubMessage('GitHub connected. We will sync your repositories and calculate your Veridex score after setup.');
     } else if (githubStatus === 'error') {
       setGithubMessage('GitHub connection did not complete. You can try again anytime.');
     }
@@ -1084,17 +1086,20 @@ function OnboardingContent() {
                   ← Back
                 </button>
                 <button
-                  onClick={() => setStep(4)}
+                  onClick={() => isEmployerOnly ? handleComplete() : setStep(4)}
+                  disabled={isEmployerOnly && isLoading}
                   className="btn-primary"
-                  style={{ flex: 2 }}
+                  style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
-                  {walletConnected ? 'Continue →' : 'Skip for now →'}
+                  {isEmployerOnly
+                    ? (isLoading ? <LoadingSpinner /> : 'Finish Setup')
+                    : (walletConnected ? 'Continue →' : 'Skip for now →')}
                 </button>
               </div>
             </div>
           )}
 
-          {step === 4 && (
+          {step === 4 && !isEmployerOnly && (
             <div>
               <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>Connect platforms</h2>
               <p style={{ ...textSecondary, fontSize: '14px', marginBottom: '28px' }}>
@@ -1147,7 +1152,7 @@ function OnboardingContent() {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 5 && !isEmployerOnly && (
             <div>
               <h2 style={{ ...headingMd, fontSize: '22px', marginBottom: '8px' }}>
                 Add evidence

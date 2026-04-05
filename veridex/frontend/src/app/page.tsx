@@ -122,12 +122,12 @@ export default function LandingPage() {
               {
                 num: '02',
                 title: 'Score',
-                body: "An auditable algorithm computes your trust score from verified signals — developer activity, peer reviews, and staking data. Six components, weighted by what's available.",
+                body: "An auditable algorithm computes your Veridex score from verified signals — developer activity, peer reviews, and staking data. Six components, weighted by what's available.",
               },
               {
                 num: '03',
                 title: 'Stake',
-                body: "People who believe in you stake ETH on your reputation. Staking creates skin-in-the-game — higher stakes mean more impact on your trust score. Three integrity mechanisms prevent gaming.",
+                body: "People who believe in you stake ETH on your reputation. Staking creates skin-in-the-game — higher stakes mean more impact on your Veridex score. Three integrity mechanisms prevent gaming.",
               },
               {
                 num: '04',
@@ -175,7 +175,7 @@ export default function LandingPage() {
               {[
                 {
                   title: 'Portable Identity',
-                  body: 'Your trust score travels with you across every platform and collaboration.',
+                  body: 'Your Veridex score travels with you across every platform and collaboration.',
                 },
                 {
                   title: 'Staked Reviews',
@@ -195,7 +195,7 @@ export default function LandingPage() {
                 },
                 {
                   title: 'Open Protocol',
-                  body: 'External APIs let any platform verify trust scores, agent credentials, and the human behind an automated action.',
+                  body: 'External APIs let any platform verify Veridex scores, agent credentials, and the human behind an automated action.',
                 },
               ].map((feature) => (
                 <div key={feature.title}>

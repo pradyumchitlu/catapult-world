@@ -49,7 +49,7 @@ const verificationSteps = [
   {
     step: '03',
     title: 'The service verifies the agent',
-    description: 'The service calls the Veridex API to see who owns the agent and what their trust score is.',
+    description: 'The service calls the Veridex API to see who owns the agent and what their Veridex score is.',
   },
   {
     step: '04',
@@ -124,7 +124,7 @@ export default function AgentsPage() {
             AI Agents
           </h1>
           <p style={textSecondary}>
-            Register agents tied to your verified identity. Each agent gets a credential ID and a trust score derived from yours.
+            Register agents tied to your verified identity. Each agent gets a credential ID and a Veridex score derived from yours.
           </p>
         </div>
 

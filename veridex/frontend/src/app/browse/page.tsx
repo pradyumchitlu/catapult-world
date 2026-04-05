@@ -137,7 +137,7 @@ export default function BrowsePage() {
             Browse Workers
           </h1>
           <p style={textSecondary}>
-            Find verified workers with portable trust scores backed by real evidence.
+            Find verified workers with portable Veridex scores backed by real evidence.
           </p>
         </div>
 
@@ -182,7 +182,7 @@ export default function BrowsePage() {
             </div>
             <div>
               <label style={{ ...headingSm, fontSize: '13px', display: 'block', marginBottom: '8px' }}>
-                Min Trust Score
+                Min Veridex Score
               </label>
               <input
                 type="number"
@@ -195,7 +195,7 @@ export default function BrowsePage() {
             </div>
             <div>
               <label style={{ ...headingSm, fontSize: '13px', display: 'block', marginBottom: '8px' }}>
-                Max Trust Score
+                Max Veridex Score
               </label>
               <input
                 type="number"

@@ -90,7 +90,7 @@ export default function AgentCard({ agent }: AgentCardProps) {
         }}
       >
         <span style={{ ...textSecondary, fontSize: '13px' }}>
-          70% of your trust score
+          70% of your Veridex score
         </span>
         <span style={{ ...textMuted, fontSize: '13px' }}>
           Created {createdDate}
