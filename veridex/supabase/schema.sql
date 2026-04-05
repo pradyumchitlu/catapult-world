@@ -185,12 +185,27 @@ CREATE TABLE agents (
   name TEXT NOT NULL,
   identifier TEXT,                        -- signing key, API endpoint, wallet address, etc.
   identifier_type TEXT DEFAULT 'other',   -- 'signing_key', 'api_endpoint', 'wallet', 'other'
+  deployment_surface TEXT DEFAULT 'custom',
   inheritance_fraction NUMERIC(3,2) DEFAULT 0.70 CHECK (inheritance_fraction >= 0 AND inheritance_fraction <= 1),
   derived_score INTEGER DEFAULT 0,        -- inheritance_fraction × parent's overall_trust_score
   authorized_domains TEXT[] DEFAULT '{}', -- e.g. {'defi','content','negotiation'}
   stake_amount INTEGER DEFAULT 0,         -- collateral for this agent
+  agent_score INTEGER DEFAULT 100 CHECK (agent_score >= 0 AND agent_score <= 100),
+  action_count INTEGER DEFAULT 0,
+  last_action_at TIMESTAMPTZ,
   status TEXT DEFAULT 'active',           -- 'active', 'suspended', 'revoked'
   dispute_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE agent_action_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id UUID REFERENCES agents(id) ON DELETE CASCADE,
+  parent_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  action_type TEXT NOT NULL,
+  score_delta INTEGER DEFAULT 0,
+  note TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -282,6 +297,9 @@ CREATE INDEX idx_stakes_worker_id ON stakes(worker_id);
 CREATE INDEX idx_stakes_status ON stakes(status);
 CREATE INDEX idx_contextual_scores_worker_id ON contextual_scores(worker_id);
 CREATE INDEX idx_agents_parent_user_id ON agents(parent_user_id);
+CREATE INDEX idx_agent_action_events_parent_user_id ON agent_action_events(parent_user_id);
+CREATE INDEX idx_agent_action_events_agent_id ON agent_action_events(agent_id);
+CREATE INDEX idx_agent_action_events_created_at ON agent_action_events(created_at DESC);
 CREATE INDEX idx_contracts_employer_id ON contracts(employer_id);
 CREATE INDEX idx_contracts_worker_id ON contracts(worker_id);
 CREATE INDEX idx_contracts_status ON contracts(status);
@@ -308,6 +326,7 @@ ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stakes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contextual_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_action_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE query_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
@@ -423,6 +442,14 @@ CREATE POLICY "Users can view their own stakes"
 
 CREATE POLICY "Users can create their own agents"
   ON agents FOR INSERT
+  WITH CHECK (auth.uid() = parent_user_id);
+
+CREATE POLICY "Users can view their own agent action events"
+  ON agent_action_events FOR SELECT
+  USING (auth.uid() = parent_user_id);
+
+CREATE POLICY "Users can create their own agent action events"
+  ON agent_action_events FOR INSERT
   WITH CHECK (auth.uid() = parent_user_id);
 
 CREATE POLICY "Users can view their own chat sessions"

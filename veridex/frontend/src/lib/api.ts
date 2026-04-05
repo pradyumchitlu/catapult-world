@@ -1,4 +1,6 @@
 import type {
+  AgentActionType,
+  AgentListResponse,
   ContextualScoreApiResponse,
   EvidenceProject,
   EvidenceUploadDraft,
@@ -394,11 +396,10 @@ export const getContextualScore = (workerId: string, jobDescription: string, tok
 export const spawnAgent = (
   params: {
     name: string;
-    identifier?: string;
+    identifier: string;
     identifier_type?: string;
+    deployment_surface?: string;
     inheritance_fraction?: number;
-    authorized_domains?: string[];
-    stake_amount?: number;
   },
   token: string
 ) =>
@@ -409,7 +410,30 @@ export const spawnAgent = (
   });
 
 export const listAgents = (userId: string, token: string) =>
-  fetchApi(`/api/agent/list/${userId}`, { token });
+  fetchApi<AgentListResponse>(`/api/agent/list/${userId}`, { token });
+
+export const applyAgentAction = (
+  agentId: string,
+  action_type: Exclude<AgentActionType, 'reset_demo'>,
+  token: string,
+  note?: string
+) =>
+  fetchApi(`/api/agent/${agentId}/action`, {
+    method: 'POST',
+    body: JSON.stringify({ action_type, note }),
+    token,
+  });
+
+export const resetAgentDemo = (
+  agentId: string,
+  token: string,
+  note?: string
+) =>
+  fetchApi(`/api/agent/${agentId}/reset-demo`, {
+    method: 'POST',
+    body: JSON.stringify({ note }),
+    token,
+  });
 
 // Contracts
 export const estimateBuyIn = (workerId: string, salary: number, token: string) =>

@@ -6,6 +6,7 @@ import { computeOverallScore, type ScoreResult } from './scoring';
 import { ensureWorkerProfile, type WorkerProfileRecord } from './reputationProfile';
 import { loadWorkerEvidenceSnapshot } from './evidenceRepository';
 import { loadReputationScoringInputs } from './reputationScoreInputs';
+import { updateAgentScores } from './agent';
 
 type JsonRecord = Record<string, any>;
 
@@ -172,6 +173,8 @@ export async function syncWorkerReputation(
     if (updateError || !updatedProfile) {
       throw updateError || new Error('Failed to update worker profile');
     }
+
+    await updateAgentScores(userId, scoreResult.overall);
 
     return {
       profile: updatedProfile as WorkerProfileRecord,

@@ -42,13 +42,19 @@ veridex/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20 LTS (recommended)
 - npm or yarn
 - Supabase project
 - World ID app credentials
 - World Developer Portal Mini App entry for hackathon demos
 - GitHub OAuth app
 - Gemini API key
+
+Use the repo's Node version with:
+
+```bash
+nvm use
+```
 
 ### Installation
 
@@ -91,6 +97,22 @@ cd frontend && npm run dev
 
 # Terminal 2
 cd backend && npm run dev
+```
+
+### Frontend Chunk/Asset 404 Troubleshooting
+
+If the page partially renders and terminal logs include repeated `.next` chunk 404s or `vendor-chunks/*` missing errors, reset the Next.js build cache and restart dev:
+
+```bash
+cd frontend
+npm run dev:clean
+```
+
+If it still happens on your machine, run development without webpack filesystem cache:
+
+```bash
+cd frontend
+npm run dev:no-cache
 ```
 
 ## Wallet Demo Flow

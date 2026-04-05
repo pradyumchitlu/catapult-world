@@ -42,7 +42,7 @@ app.get('/health', (req, res) => {
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reputation', reputationRoutes);
-app.use('/api', queryRoutes); // /api/trust/:veridexId, /api/agent/:agentId
+app.use('/api', queryRoutes); // /api/trust/:veridexId
 app.use('/api/stake', stakeRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api', contextualRoutes); // /api/contextual-score

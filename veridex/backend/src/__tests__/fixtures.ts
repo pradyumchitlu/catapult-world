@@ -98,13 +98,18 @@ export const fakeAgent = {
   name: 'Trading Bot',
   identifier: '0xABCDEF1234567890',
   identifier_type: 'wallet',
+  deployment_surface: 'wallet',
   inheritance_fraction: '0.70', // Supabase returns NUMERIC as string
   derived_score: 60,
   authorized_domains: ['defi', 'trading'],
   stake_amount: 200,
+  agent_score: 100,
+  action_count: 0,
+  last_action_at: null,
   status: 'active',
   dispute_count: 0,
   created_at: '2025-06-01T00:00:00Z',
+  updated_at: '2025-06-01T00:00:00Z',
   parent: {
     id: TEST_USER_ID,
     display_name: 'Alice Developer',
@@ -118,13 +123,32 @@ export const fakeAgentMinimal = {
   name: 'Simple Agent',
   identifier: null,
   identifier_type: 'other',
+  deployment_surface: 'custom',
   inheritance_fraction: '0.50',
   derived_score: 43,
   authorized_domains: [],
   stake_amount: 0,
+  agent_score: 100,
+  action_count: 0,
+  last_action_at: null,
   status: 'active',
   dispute_count: 0,
   created_at: '2025-07-01T00:00:00Z',
+  updated_at: '2025-07-01T00:00:00Z',
+};
+
+export const fakeAgentActionEvent = {
+  id: 'event-1',
+  agent_id: TEST_AGENT_ID,
+  parent_user_id: TEST_USER_ID,
+  action_type: 'warning',
+  score_delta: -5,
+  note: null,
+  created_at: '2025-07-02T00:00:00Z',
+  agent: {
+    id: TEST_AGENT_ID,
+    name: 'Trading Bot',
+  },
 };
 
 export const fakeChatSession = {
