@@ -1,14 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import TrustScoreCard from '@/components/TrustScoreCard';
 import ScoreBreakdown from '@/components/ScoreBreakdown';
 import ReviewsList from '@/components/ReviewsList';
 import StakeButton from '@/components/StakeButton';
 import ChatPanel from '@/components/ChatPanel';
+import CreateContractModal from '@/components/CreateContractModal';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { useAuth } from '@/contexts/AuthContext';
+import { createContract, getReputation } from '@/lib/api';
 import type { WorkerProfile, User, Review } from '@/types';
 
 interface ProfileData {
@@ -21,87 +24,42 @@ interface ProfileData {
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const workerId = params.id as string;
+  const { user: currentUser, token } = useAuth();
 
   const [data, setData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showChat, setShowChat] = useState(false);
+  const [showHireModal, setShowHireModal] = useState(false);
+  const [isCreatingContract, setIsCreatingContract] = useState(false);
+
+  const isEmployer = currentUser?.roles?.includes('client');
+
+  const handleCreateContract = async (contractData: { worker_id: string; title: string; description: string; payment_amount: number; duration_days: number }) => {
+    if (!token) return;
+    setIsCreatingContract(true);
+    try {
+      await createContract(contractData, token);
+      setShowHireModal(false);
+      router.push('/employer');
+    } catch (error) {
+      console.error('Failed to create contract:', error);
+    } finally {
+      setIsCreatingContract(false);
+    }
+  };
 
   useEffect(() => {
-    // TODO: Fetch worker profile, reviews, and staking data
     const fetchProfile = async () => {
       try {
-        // Placeholder data
+        const result = await getReputation(workerId);
         setData({
-          user: {
-            id: workerId,
-            world_id_hash: 'hash1',
-            display_name: 'Alice Developer',
-            roles: ['worker'],
-            profession_category: 'software',
-            wld_balance: 1000,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          profile: {
-            id: '1',
-            user_id: workerId,
-            github_username: 'alice',
-            github_data: {
-              repos: [
-                { name: 'awesome-project', stars: 120, language: 'TypeScript' },
-                { name: 'react-components', stars: 45, language: 'TypeScript' },
-              ],
-              languages: ['TypeScript', 'JavaScript', 'Python', 'Go'],
-              totalCommits: 2341,
-            },
-            linkedin_data: {},
-            other_platforms: {},
-            computed_skills: ['TypeScript', 'React', 'Node.js', 'PostgreSQL', 'GraphQL'],
-            specializations: ['Full-stack', 'Web3', 'APIs'],
-            years_experience: 5,
-            overall_trust_score: 85,
-            score_components: {
-              developer_competence: 90,
-              collaboration: 82,
-              consistency: 85,
-              specialization_depth: 88,
-              activity_recency: 92,
-              peer_trust: 78,
-            },
-            ingestion_status: 'completed',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          reviews: [
-            {
-              id: '1',
-              reviewer_id: '2',
-              worker_id: workerId,
-              rating: 5,
-              content: 'Excellent work on our React dashboard. Delivered ahead of schedule with great attention to detail.',
-              job_category: 'software',
-              stake_amount: 500,
-              reviewer_trust_score_at_time: 72,
-              is_flagged: false,
-              flag_reason: null,
-              contract_id: null,
-              status: 'active',
-              created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-              reviewer: {
-                id: '2',
-                world_id_hash: 'hash2',
-                display_name: 'Bob Client',
-                roles: ['client'],
-                profession_category: null,
-                wld_balance: 800,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-            },
-          ],
-          totalStaked: 5000,
-          stakerCount: 12,
+          user: result.user,
+          profile: result.profile!,
+          reviews: result.reviews || [],
+          totalStaked: result.totalStaked || 0,
+          stakerCount: result.stakerCount || 0,
         });
       } catch (error) {
         console.error('Failed to fetch profile:', error);
@@ -141,7 +99,15 @@ export default function ProfilePage() {
             {profile.computed_skills.map((skill) => (
               <span
                 key={skill}
-                className="px-2 py-1 bg-worldcoin-gray-700 rounded text-sm"
+                style={{
+                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                  fontSize: '13px',
+                  color: '#2563EB',
+                  background: 'rgba(37,99,235,0.08)',
+                  border: '1px solid rgba(37,99,235,0.15)',
+                  borderRadius: '6px',
+                  padding: '4px 12px',
+                }}
               >
                 {skill}
               </span>
@@ -159,6 +125,11 @@ export default function ProfilePage() {
           )}
         </div>
         <div className="flex gap-3">
+          {isEmployer && (
+            <button onClick={() => setShowHireModal(true)} className="btn-primary">
+              Hire
+            </button>
+          )}
           <Link href={`/review/${workerId}`} className="btn-secondary">
             Leave Review
           </Link>
@@ -170,14 +141,14 @@ export default function ProfilePage() {
         {/* Trust Score */}
         <div className="lg:col-span-1">
           <TrustScoreCard score={profile.overall_trust_score} />
-          <div className="card mt-4">
-            <div className="flex justify-between mb-2">
-              <span className="text-worldcoin-gray-400">Total Staked</span>
-              <span className="font-semibold text-veridex-primary">{totalStaked.toLocaleString()} WLD</span>
+          <div className="glass-card mt-4">
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '14px', color: '#94A3B8' }}>Total Staked</span>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#2563EB' }}>{totalStaked.toLocaleString()} WLD</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-worldcoin-gray-400">Stakers</span>
-              <span className="font-semibold">{stakerCount}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '14px', color: '#94A3B8' }}>Stakers</span>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>{stakerCount}</span>
             </div>
           </div>
         </div>
@@ -190,32 +161,33 @@ export default function ProfilePage() {
 
       {/* GitHub Highlights */}
       {profile.github_data.repos && profile.github_data.repos.length > 0 && (
-        <div className="card mb-8">
-          <h2 className="text-xl font-semibold mb-4">GitHub Highlights</h2>
+        <div className="glass-card mb-8">
+          <h2 style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '18px', fontWeight: 600, color: '#1E293B', marginBottom: '16px' }}>GitHub Highlights</h2>
           <div className="grid md:grid-cols-2 gap-4">
             {profile.github_data.repos.slice(0, 4).map((repo: any) => (
-              <div key={repo.name} className="p-4 bg-worldcoin-gray-700 rounded-lg">
-                <div className="font-medium">{repo.name}</div>
-                <div className="text-sm text-worldcoin-gray-400">
-                  {repo.language} • {repo.stars} stars
+              <div key={repo.name} style={{ padding: '16px', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.12)', borderRadius: '12px' }}>
+                <div style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '14px', fontWeight: 600, color: '#1E293B' }}>{repo.name}</div>
+                <div style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: '#64748B', marginTop: '4px' }}>
+                  {repo.language} · {repo.stars} stars
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-4 text-sm text-worldcoin-gray-400">
-            {profile.github_data.totalCommits?.toLocaleString()} total commits •
+          <div style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '13px', color: '#94A3B8', marginTop: '16px' }}>
+            {profile.github_data.totalCommits?.toLocaleString()} total commits ·
             Languages: {profile.github_data.languages?.join(', ')}
           </div>
         </div>
       )}
 
       {/* AI Chat Panel */}
-      <div className="card mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Ask About This Worker</h2>
+      <div className="glass-card mb-8">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2 style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '18px', fontWeight: 600, color: '#1E293B' }}>Ask About This Worker</h2>
           <button
             onClick={() => setShowChat(!showChat)}
-            className="btn-secondary text-sm"
+            className="btn-secondary"
+            style={{ fontSize: '13px', padding: '8px 16px' }}
           >
             {showChat ? 'Hide Chat' : 'Open Chat'}
           </button>
@@ -224,17 +196,29 @@ export default function ProfilePage() {
           <ChatPanel workerId={workerId} workerName={user.display_name || 'Worker'} />
         )}
         {!showChat && (
-          <p className="text-worldcoin-gray-400">
+          <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '14px', color: '#94A3B8' }}>
             Chat with our AI to get detailed insights about this worker&apos;s qualifications, grounded in their real data.
           </p>
         )}
       </div>
 
       {/* Reviews */}
-      <div className="card">
-        <h2 className="text-xl font-semibold mb-4">Reviews</h2>
+      <div className="glass-card">
+        <h2 style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontSize: '18px', fontWeight: 600, color: '#1E293B', marginBottom: '16px' }}>Reviews</h2>
         <ReviewsList reviews={reviews} />
       </div>
+
+      {showHireModal && currentUser && token && (
+        <CreateContractModal
+          workerName={user.display_name || 'Worker'}
+          workerId={workerId}
+          balance={currentUser.wld_balance}
+          token={token}
+          onSubmit={handleCreateContract}
+          onClose={() => setShowHireModal(false)}
+          isLoading={isCreatingContract}
+        />
+      )}
     </div>
   );
 }

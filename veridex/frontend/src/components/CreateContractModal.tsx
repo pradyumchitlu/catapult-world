@@ -85,8 +85,18 @@ export default function CreateContractModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="liquid-glass"
-        style={{ maxWidth: '520px', width: '100%', margin: '24px' }}
+        style={{
+          maxWidth: '520px',
+          width: '100%',
+          margin: '48px 24px',
+          backgroundColor: 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.85)',
+          boxShadow: '0 8px 40px rgba(37,99,235,0.12)',
+          borderRadius: '20px',
+          maxHeight: 'calc(100vh - 96px)',
+          overflowY: 'auto',
+        }}
       >
         <div className="p-10">
           <span style={sectionLabel}>New Contract</span>

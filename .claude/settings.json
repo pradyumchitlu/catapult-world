@@ -9,7 +9,15 @@
       "WebFetch(domain:ui.aceternity.com)",
       "Bash(npx shadcn@latest add \"https://ui.aceternity.com/r/typewriter-effect.json\")",
       "Bash(npx shadcn@latest add \"@aceternity/typewriter-effect\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(curl -s -X POST http://localhost:8000/api/contract -H \"Content-Type: application/json\" -H \"Authorization: Bearer test\" -d '{\"worker_id\":\"test\",\"title\":\"test\",\"payment_amount\":100}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/health)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST http://localhost:8000/api/contract -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(ls -la /home/prady/code/catapult-world/veridex/frontend/.env*)",
+      "Bash(curl -v -X POST http://localhost:8000/api/contract -H \"Content-Type: application/json\" -H \"Authorization: Bearer fake\" -d '{\"worker_id\":\"test\",\"title\":\"test\",\"payment_amount\":100}')",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql"
     ]
   }
 }

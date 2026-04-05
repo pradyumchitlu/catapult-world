@@ -5,6 +5,7 @@ import WorkerCard from '@/components/WorkerCard';
 import JobDescriptionInput from '@/components/JobDescriptionInput';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import GlassCard from '@/components/GlassCard';
+import { browseWorkers } from '@/lib/api';
 import {
   col,
   headingLg,
@@ -43,50 +44,18 @@ export default function BrowsePage() {
   const [isEvaluating, setIsEvaluating] = useState(false);
 
   useEffect(() => {
-    // TODO: Fetch workers from API
     const fetchWorkers = async () => {
       try {
-        // Placeholder data
-        const placeholderWorkers: WorkerWithUser[] = [
-          {
-            id: '1',
-            user_id: '1',
-            user: {
-              id: '1',
-              world_id_hash: 'hash1',
-              display_name: 'Alice Developer',
-              roles: ['worker'],
-              profession_category: 'software',
-              wld_balance: 1000,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-            github_username: 'alice',
-            github_data: {},
-            linkedin_data: {},
-            other_platforms: {},
-            computed_skills: ['TypeScript', 'React', 'Node.js', 'PostgreSQL'],
-            specializations: ['Full-stack', 'Web3'],
-            years_experience: 5,
-            overall_trust_score: 85,
-            score_components: {
-              developer_competence: 90,
-              collaboration: 82,
-              consistency: 85,
-              specialization_depth: 88,
-              activity_recency: 92,
-              peer_trust: 78,
-            },
-            ingestion_status: 'completed',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            reviewCount: 12,
-            avgRating: 4.8,
-            totalStaked: 5000,
-          },
-        ];
-        setWorkers(placeholderWorkers);
-        setFilteredWorkers(placeholderWorkers);
+        const data = await browseWorkers();
+        const mapped = (data.workers || []).map((w: any) => ({
+          ...w,
+          user: w.user || {},
+          reviewCount: w.reviewCount || 0,
+          avgRating: w.avgRating || 0,
+          totalStaked: w.totalStaked || 0,
+        }));
+        setWorkers(mapped);
+        setFilteredWorkers(mapped);
       } catch (error) {
         console.error('Failed to fetch workers:', error);
       } finally {

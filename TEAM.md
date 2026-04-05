@@ -665,3 +665,15 @@ const { user, token } = useAuth();
 ## Team notes
 
 Our API shouldn't be able to be invoked by anyone who isn't signed in with us (there is a cost involved)
+
+Onboarding flow should be different for workers / employers.
+
+Split score into 3 subscores.
+
+Employers don't need a score at all.
+
+Employers should be able to search through all the workers before initializing a contract.
+
+Had issues with creating world id mini app, instead just did connections with crypto wallet directly.
+
+Linkedin API integration jus ttakes a pdf right now, since getting the LinkedIn api takes a long time to get verified properly.

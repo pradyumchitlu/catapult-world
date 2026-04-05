@@ -223,9 +223,12 @@ router.get('/:userId', async (req, res) => {
     const totalStaked = stakes?.reduce((sum, s) => sum + s.amount, 0) || 0;
     const stakerCount = stakes?.length || 0;
 
+    // Separate worker_profiles from the user object
+    const { worker_profiles, ...userData } = user as any;
+
     return res.json({
-      user,
-      profile: user.worker_profiles,
+      user: userData,
+      profile: worker_profiles || null,
       reviews: reviews || [],
       totalStaked,
       stakerCount,
@@ -233,6 +236,60 @@ router.get('/:userId', async (req, res) => {
   } catch (error) {
     console.error('Get reputation error:', error);
     return res.status(500).json({ error: 'Failed to get reputation' });
+  }
+});
+
+/**
+ * GET /api/reputation/browse/workers
+ * Get all workers with profiles for the browse page
+ */
+router.get('/browse/workers', async (req, res) => {
+  try {
+    // Get all worker profiles with user data
+    const { data: profiles, error } = await supabase
+      .from('worker_profiles')
+      .select(`
+        *,
+        user:user_id(id, display_name, roles, profession_category, wld_balance)
+      `)
+      .order('overall_trust_score', { ascending: false });
+
+    if (error) throw error;
+
+    // Get review stats and stake totals for each worker
+    const workers = await Promise.all(
+      (profiles || []).map(async (profile) => {
+        const { data: reviews } = await supabase
+          .from('reviews')
+          .select('rating')
+          .eq('worker_id', profile.user_id)
+          .eq('status', 'active');
+
+        const { data: stakes } = await supabase
+          .from('stakes')
+          .select('amount')
+          .eq('worker_id', profile.user_id)
+          .eq('status', 'active');
+
+        const reviewCount = reviews?.length || 0;
+        const avgRating = reviewCount > 0
+          ? (reviews ?? []).reduce((sum, r) => sum + r.rating, 0) / reviewCount
+          : 0;
+        const totalStaked = (stakes || []).reduce((sum, s) => sum + s.amount, 0);
+
+        return {
+          ...profile,
+          reviewCount,
+          avgRating: Math.round(avgRating * 10) / 10,
+          totalStaked,
+        };
+      })
+    );
+
+    return res.json({ workers });
+  } catch (error) {
+    console.error('Browse workers error:', error);
+    return res.status(500).json({ error: 'Failed to browse workers' });
   }
 });
 
